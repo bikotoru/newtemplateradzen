@@ -1,0 +1,36 @@
+@using Radzen.Blazor
+
+<div style="margin-bottom: 8px; border-radius: 4px; overflow: hidden;">
+    <div @onclick="Toggle" 
+         style="display: flex; align-items: center; padding: 12px 8px; cursor: pointer; background-color: var(--rz-base-200); hover:background-color: var(--rz-base-300); transition: background-color 0.2s;">
+        <RadzenIcon Icon="@Icon" Style="margin-right: 8px; font-size: 18px;" />
+        <span style="font-weight: 500; font-size: 14px;">@Title</span>
+        <RadzenIcon Icon="expand_more" Style="@GetArrowStyle()" />
+    </div>
+    
+    <div style="overflow: hidden; transition: max-height 0.3s ease-in-out; max-height: @(IsExpanded ? "500px" : "0");">
+        <div style="padding: @(IsExpanded ? "8px 0" : "0");">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "folder";
+    [Parameter] public bool IsExpanded { get; set; } = false;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task Toggle()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+
+    private string GetArrowStyle()
+    {
+        var rotation = IsExpanded ? "180deg" : "0deg";
+        return $"margin-left: auto; font-size: 18px; transition: transform 0.3s; transform: rotate({rotation});";
+    }
+}

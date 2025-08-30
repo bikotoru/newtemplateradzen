@@ -4,32 +4,80 @@
 
 <RadzenLayout>
     <RadzenHeader>
-        <RadzenRow JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 60px; padding: 0 1rem;">
-            <RadzenColumn Size="6">
-                <RadzenText TextStyle="TextStyle.H4" Style="margin: 0;">Mi Aplicación</RadzenText>
-            </RadzenColumn>
-            <RadzenColumn Size="6" Style="text-align: right;">
-                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center" Gap="1rem">
-                    <RadzenLink Path="https://learn.microsoft.com/aspnet/core/" Target="_blank" Text="About" />
-                    <ThemeToggle />
-                </RadzenStack>
-            </RadzenColumn>
-        </RadzenRow>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenSidebarToggle Click="@(() => sidebar1Expanded = !sidebar1Expanded)" />
+                <RadzenText TextStyle="TextStyle.H4" Style="margin: 0;">NuevoProyecto</RadzenText>
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenLink Path="https://learn.microsoft.com/aspnet/core/" Target="_blank" Text="About" />
+                <ThemeToggle />
+            </RadzenStack>
+        </RadzenStack>
     </RadzenHeader>
     
-    <RadzenSidebar>
-        <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
-            <RadzenPanelMenuItem Text="Counter" Icon="plus_one" Path="/counter" />
-            <RadzenPanelMenuItem Text="Weather" Icon="wb_sunny" Path="/weather" />
-        </RadzenPanelMenu>
+    <RadzenSidebar @bind-Expanded="@sidebar1Expanded">
+        <ModularMenu Modules="@menuModules" UserPermissions="@userPermissions" />
     </RadzenSidebar>
     
     <RadzenBody>
-        <RadzenContentContainer>
+        <div class="rz-p-4">
             @Body
-        </RadzenContentContainer>
+        </div>
     </RadzenBody>
+    
+    <RadzenFooter>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.Caption">© 2025 NuevoProyecto</RadzenText>
+        </RadzenStack>
+    </RadzenFooter>
 </RadzenLayout>
 
 <RadzenComponents @rendermode="RenderMode.InteractiveWebAssembly" />
+
+@code {
+    bool sidebar1Expanded = true;
+    
+    private List<MenuModule> menuModules = new();
+    private List<string> userPermissions = new() { "view_reports", "manage_users", "admin" };
+
+    protected override void OnInitialized()
+    {
+        menuModules = new List<MenuModule>
+        {
+            new MenuModule
+            {
+                Text = "📊 Módulo Principal",
+                Icon = "dashboard",
+                MenuItems = new List<MenuItem>
+                {
+                    new MenuItem { Text = "Home", Icon = "home", Path = "/", Permissions = new List<string>() },
+                    new MenuItem { Text = "Counter", Icon = "plus_one", Path = "/counter", Permissions = new List<string>() },
+                    new MenuItem { Text = "Weather", Icon = "wb_sunny", Path = "/weather", Permissions = new List<string>() }
+                }
+            },
+            new MenuModule
+            {
+                Text = "⚙️ Administración",
+                Icon = "settings",
+                MenuItems = new List<MenuItem>
+                {
+                    new MenuItem { Text = "Users", Icon = "account_box", Path = "/users", Permissions = new List<string> { "manage_users" } },
+                    new MenuItem { Text = "Roles", Icon = "admin_panel_settings", Path = "/roles", Permissions = new List<string> { "admin" } },
+                    new MenuItem { Text = "Configuración", Icon = "tune", Path = "/config", Permissions = new List<string> { "admin" } }
+                }
+            },
+            new MenuModule
+            {
+                Text = "📈 Reportes",
+                Icon = "assessment",
+                MenuItems = new List<MenuItem>
+                {
+                    new MenuItem { Text = "Ventas", Icon = "trending_up", Path = "/reports/sales", Permissions = new List<string> { "view_reports" } },
+                    new MenuItem { Text = "Usuarios", Icon = "people", Path = "/reports/users", Permissions = new List<string> { "view_reports" } },
+                    new MenuItem { Text = "Sistema", Icon = "bar_chart", Path = "/reports/system", Permissions = new List<string> { "admin" } }
+                }
+            }
+        };
+    }
+}

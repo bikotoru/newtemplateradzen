@@ -1,0 +1,131 @@
+@using Radzen.Blazor
+
+<div style="padding: 4px;">
+    <!-- Buscador -->
+    <div style="padding: 8px; margin-bottom: 8px;">
+        <RadzenTextBox @bind-Value="searchTerm" 
+                       @oninput="OnSearchChanged"
+                       Placeholder="Buscar menús..." 
+                       Style="width: 100%;"
+                       aria-label="Buscar menús">
+            <RadzenIcon Icon="search" Style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none;" />
+        </RadzenTextBox>
+    </div>
+
+    <!-- Módulos filtrados -->
+    @if (filteredModules.Any())
+    {
+        @foreach (var module in filteredModules)
+        {
+            var moduleExpanded = expandedModules.ContainsKey(module.Text) ? expandedModules[module.Text] : false;
+            
+            <ModuleExpander Title="@module.Text" 
+                           Icon="@module.Icon" 
+                           IsExpanded="@moduleExpanded"
+                           IsExpandedChanged="@((bool expanded) => OnModuleExpandedChanged(module.Text, expanded))">
+                <RadzenPanelMenu>
+                    @foreach (var item in GetFilteredMenuItems(module))
+                    {
+                        <RadzenPanelMenuItem Text="@item.Text" 
+                                           Icon="@item.Icon" 
+                                           Path="@item.Path" />
+                    }
+                </RadzenPanelMenu>
+            </ModuleExpander>
+        }
+    }
+    else if (!string.IsNullOrEmpty(searchTerm))
+    {
+        <div style="padding: 16px; text-align: center; color: var(--rz-text-disabled-color);">
+            <RadzenIcon Icon="search_off" Style="font-size: 48px; margin-bottom: 8px;" />
+            <div>No se encontraron resultados</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<MenuModule> Modules { get; set; } = new();
+    [Parameter] public List<string> UserPermissions { get; set; } = new();
+
+    private string searchTerm = "";
+    private List<MenuModule> filteredModules = new();
+    private Dictionary<string, bool> expandedModules = new();
+
+    protected override void OnInitialized()
+    {
+        filteredModules = Modules.ToList();
+        // Expandir el primer módulo por defecto
+        if (Modules.Any())
+        {
+            expandedModules[Modules.First().Text] = true;
+        }
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs args)
+    {
+        searchTerm = args.Value?.ToString() ?? "";
+        await FilterModules();
+        StateHasChanged();
+    }
+
+    private async Task FilterModules()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredModules = Modules.ToList();
+        }
+        else
+        {
+            filteredModules = new List<MenuModule>();
+            
+            foreach (var module in Modules)
+            {
+                // Buscar en el nombre del módulo
+                var moduleMatches = module.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+                
+                // Buscar en los items del módulo
+                var matchingItems = module.MenuItems.Where(item => 
+                    item.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) &&
+                    HasPermission(item.Permissions)
+                ).ToList();
+
+                // Si el módulo o algún item coincide, incluir el módulo
+                if (moduleMatches || matchingItems.Any())
+                {
+                    var filteredModule = new MenuModule
+                    {
+                        Text = module.Text,
+                        Icon = module.Icon,
+                        MenuItems = matchingItems.Any() ? matchingItems : 
+                                   module.MenuItems.Where(item => HasPermission(item.Permissions)).ToList()
+                    };
+                    
+                    filteredModules.Add(filteredModule);
+                    
+                    // Auto-expandir módulos que tienen coincidencias
+                    if (matchingItems.Any())
+                    {
+                        expandedModules[module.Text] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    private List<MenuItem> GetFilteredMenuItems(MenuModule module)
+    {
+        return module.MenuItems.Where(item => HasPermission(item.Permissions)).ToList();
+    }
+
+    private bool HasPermission(List<string> requiredPermissions)
+    {
+        if (!requiredPermissions.Any()) return true;
+        return requiredPermissions.Any(permission => UserPermissions.Contains(permission));
+    }
+
+    private async Task OnModuleExpandedChanged(string moduleText, bool expanded)
+    {
+        expandedModules[moduleText] = expanded;
+        StateHasChanged();
+    }
+}
