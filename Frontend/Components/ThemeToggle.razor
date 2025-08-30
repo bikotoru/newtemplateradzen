@@ -1,0 +1,89 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<RadzenButton Click="@ToggleTheme" 
+              Variant="Variant.Text" 
+              Icon="@GetIcon()"
+              Title="@GetTooltip()"
+              Style="@GetButtonStyle()" />
+
+@code {
+    private bool isDarkMode = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadThemeFromStorage();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadThemeFromStorage()
+    {
+        try
+        {
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            isDarkMode = savedTheme == "dark";
+            await ApplyTheme();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading theme: {ex.Message}");
+            isDarkMode = false;
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        Console.WriteLine($"ToggleTheme called, current state: {isDarkMode}");
+        isDarkMode = !isDarkMode;
+        await ApplyTheme();
+        await SaveThemeToStorage();
+        StateHasChanged();
+    }
+
+    private async Task ApplyTheme()
+    {
+        var cssFile = isDarkMode ? "/style/fluent-dark-base.css" : "/style/fluent-base.css";
+        try
+        {
+            Console.WriteLine($"Switching to: {cssFile}");
+            await JSRuntime.InvokeVoidAsync("window.switchTheme", cssFile);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error switching theme: {ex.Message}");
+        }
+    }
+
+    private async Task SaveThemeToStorage()
+    {
+        try
+        {
+            var themeValue = isDarkMode ? "dark" : "light";
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", themeValue);
+            Console.WriteLine($"Theme saved: {themeValue}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving theme: {ex.Message}");
+        }
+    }
+
+    private string GetIcon()
+    {
+        return isDarkMode ? "light_mode" : "dark_mode";
+    }
+
+    private string GetTooltip()
+    {
+        return isDarkMode ? "Cambiar a modo día" : "Cambiar a modo noche";
+    }
+
+    private string GetButtonStyle()
+    {
+        var color = isDarkMode ? "inherit" : "white";
+        return $"padding: 8px; color: {color};";
+    }
+}

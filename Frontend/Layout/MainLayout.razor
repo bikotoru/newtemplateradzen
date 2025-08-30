@@ -1,16 +1,35 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@using Microsoft.AspNetCore.Components.Web
+@using Radzen.Blazor
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenRow JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 60px; padding: 0 1rem;">
+            <RadzenColumn Size="6">
+                <RadzenText TextStyle="TextStyle.H4" Style="margin: 0;">Mi Aplicación</RadzenText>
+            </RadzenColumn>
+            <RadzenColumn Size="6" Style="text-align: right;">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenLink Path="https://learn.microsoft.com/aspnet/core/" Target="_blank" Text="About" />
+                    <ThemeToggle />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenHeader>
+    
+    <RadzenSidebar>
+        <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
+            <RadzenPanelMenuItem Text="Counter" Icon="plus_one" Path="/counter" />
+            <RadzenPanelMenuItem Text="Weather" Icon="wb_sunny" Path="/weather" />
+        </RadzenPanelMenu>
+    </RadzenSidebar>
+    
+    <RadzenBody>
+        <RadzenContentContainer>
             @Body
-        </article>
-    </main>
-</div>
+        </RadzenContentContainer>
+    </RadzenBody>
+</RadzenLayout>
+
+<RadzenComponents @rendermode="RenderMode.InteractiveWebAssembly" />

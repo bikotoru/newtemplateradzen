@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Frontend</title>
     <base href="/" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/app.css" />
+    <link href="/style/fluent-base.css" rel="stylesheet" data-light="true" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Frontend.styles.css" rel="stylesheet" />
 </head>
@@ -27,6 +26,14 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+    <script src="js/theme-switcher.js"></script>
+    <script>
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            window.initializeTheme();
+        });
+    </script>
 </body>
 
 </html>
