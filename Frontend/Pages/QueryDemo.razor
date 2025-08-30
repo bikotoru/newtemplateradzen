@@ -1,0 +1,418 @@
+@page "/querydemo"
+@inject QueryService QueryService
+@inject NotificationService NotificationService
+
+<PageTitle>Query Builder Demo</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H3" Class="rz-mb-4">Type-Safe Query Builder Demo</RadzenText>
+
+<RadzenCard Class="rz-mb-4">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+        <RadzenButton Text="Productos Caros (> $100)" 
+                      ButtonStyle="ButtonStyle.Primary" 
+                      Click="@LoadProductosCaros" 
+                      Loading="@loading" />
+        
+        <RadzenButton Text="Productos por Categoría" 
+                      ButtonStyle="ButtonStyle.Secondary" 
+                      Click="@LoadProductosPorCategoria" 
+                      Loading="@loading" />
+        
+        <RadzenButton Text="Query Select (Solo Nombres)" 
+                      ButtonStyle="ButtonStyle.Info" 
+                      Click="@LoadProductosSelect" 
+                      Loading="@loading" />
+        
+        <RadzenButton Text="Query Paginado" 
+                      ButtonStyle="ButtonStyle.Success" 
+                      Click="@LoadProductosPaginados" 
+                      Loading="@loading" />
+        
+        <RadzenButton Text="Query Complejo" 
+                      ButtonStyle="ButtonStyle.Warning" 
+                      Click="@LoadQueryComplejo" 
+                      Loading="@loading" />
+        
+        <RadzenButton Text="Todos los Productos" 
+                      ButtonStyle="ButtonStyle.Light" 
+                      Click="@LoadTodosProductos" 
+                      Loading="@loading" />
+    </RadzenStack>
+</RadzenCard>
+
+@if (queryInfo != null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Info" Class="rz-mb-4">
+        <strong>Última Query:</strong> @queryInfo
+    </RadzenAlert>
+}
+
+@if (pagedResult != null)
+{
+    <RadzenCard Class="rz-mb-4">
+        <RadzenText TextStyle="TextStyle.H5">Resultado Paginado</RadzenText>
+        <RadzenText>Total: @pagedResult.TotalCount | Página: @pagedResult.Page | Tamaño: @pagedResult.PageSize</RadzenText>
+    </RadzenCard>
+}
+
+<RadzenDataGrid @ref="grid" 
+                Data="@productos" 
+                TItem="ProductoDisplayModel"
+                AllowFiltering="true" 
+                AllowSorting="true" 
+                Loading="@loading"
+                Class="rz-mb-4">
+    <Columns>
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="Id" Title="ID" Width="200px" />
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="Nombre" Title="Nombre" />
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="Precio" Title="Precio" FormatString="{0:C}" />
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="Stock" Title="Stock" />
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="CategoriaNombre" Title="Categoría" />
+        <RadzenDataGridColumn TItem="ProductoDisplayModel" Property="Active" Title="Activo">
+            <Template Context="data">
+                <RadzenBadge BadgeStyle="@(data.Active ? BadgeStyle.Success : BadgeStyle.Danger)" 
+                           Text="@(data.Active ? "Sí" : "No")" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@if (selectResults.Any())
+{
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H5" Class="rz-mb-3">Resultados Select (Solo campos específicos)</RadzenText>
+        <RadzenDataGrid Data="@selectResults" TItem="ProductoSelectModel">
+            <Columns>
+                <RadzenDataGridColumn TItem="ProductoSelectModel" Property="Id" Title="ID" />
+                <RadzenDataGridColumn TItem="ProductoSelectModel" Property="Nombre" Title="Nombre" />
+                <RadzenDataGridColumn TItem="ProductoSelectModel" Property="Precio" Title="Precio" FormatString="{0:C}" />
+                <RadzenDataGridColumn TItem="ProductoSelectModel" Property="CategoriaNombre" Title="Categoría" />
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+}
+
+@code {
+    private RadzenDataGrid<ProductoDisplayModel>? grid;
+    private List<ProductoDisplayModel> productos = new();
+    private List<ProductoSelectModel> selectResults = new();
+    private PagedResult<ProductoDisplayModel>? pagedResult;
+    private bool loading = false;
+    private string? queryInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTodosProductos();
+    }
+
+    private async Task LoadProductosCaros()
+    {
+        loading = true;
+        queryInfo = "Productos con precio > $100";
+        selectResults.Clear();
+        pagedResult = null;
+        
+        try
+        {
+            // Simulamos el uso del QueryService
+            // En realidad esto llamará al backend que por ahora retorna datos dummy
+            var productosResponse = await QueryService.For<Shared.Models.Entities.Producto>()
+                .Where(p => p.Precio > 100)
+                .OrderBy(p => p.Precio, descending: true)
+                .Take(20)
+                .ToListAsync();
+            
+            // Como el backend retorna datos dummy, creamos datos de ejemplo
+            productos = GenerateProductosSample("Producto Caro", 5);
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Success, 
+                Summary = "Query Ejecutado", 
+                Detail = $"Cargados {productos.Count} productos caros" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadProductosPorCategoria()
+    {
+        loading = true;
+        queryInfo = "Productos filtrados por categoría = 'Lacteos'";
+        selectResults.Clear();
+        pagedResult = null;
+        
+        try
+        {
+            var productosResponse = await QueryService.For<Shared.Models.Entities.Producto>()
+                .Where(p => p.Categoria!.Nombre == "Lacteos")
+                .OrderBy(p => p.Nombre)
+                .ToListAsync(autoInclude: true); // Con auto-includes para traer Categoria
+            
+            productos = GenerateProductosSample("Producto Lácteo", 8);
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Success, 
+                Summary = "Query Ejecutado", 
+                Detail = $"Cargados {productos.Count} productos lácteos" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadProductosSelect()
+    {
+        loading = true;
+        queryInfo = "Select type-safe - Solo campos específicos";
+        productos.Clear();
+        pagedResult = null;
+        
+        try
+        {
+            var selectResponse = await QueryService.For<Shared.Models.Entities.Producto>()
+                .Where(p => p.Stock > 0)
+                .OrderBy(p => p.Nombre)
+                .Select(p => new ProductoSelectModel
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    Precio = p.Precio,
+                    CategoriaNombre = p.Categoria!.Nombre
+                })
+                .Take(10)
+                .ToListAsync();
+            
+            selectResults = GenerateSelectSample(6);
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Info, 
+                Summary = "Select Query Ejecutado", 
+                Detail = $"Select optimizado: {selectResults.Count} resultados" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadProductosPaginados()
+    {
+        loading = true;
+        queryInfo = "Query paginado - Skip(0).Take(5)";
+        selectResults.Clear();
+        
+        try
+        {
+            pagedResult = await QueryService.For<Shared.Models.Entities.Producto>()
+                .Where(p => p.Active == true)
+                .OrderBy(p => p.Nombre)
+                .Skip(0)
+                .Take(5)
+                .ToPagedResultAsync(autoInclude: true);
+            
+            // Simulamos datos paginados
+            productos = GenerateProductosSample("Producto Paginado", 5);
+            
+            // Simulamos el resultado paginado
+            pagedResult = new PagedResult<ProductoDisplayModel>
+            {
+                Data = productos,
+                TotalCount = 25,
+                Page = 1,
+                PageSize = 5
+            };
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Success, 
+                Summary = "Query Paginado Ejecutado", 
+                Detail = $"Página {pagedResult.Page}: {productos.Count} de {pagedResult.TotalCount} total" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadQueryComplejo()
+    {
+        loading = true;
+        queryInfo = "Query complejo con múltiples filtros y navegación";
+        selectResults.Clear();
+        pagedResult = null;
+        
+        try
+        {
+            var fechaLimite = DateTime.Now.AddDays(-30);
+            
+            var productosComplejos = await QueryService.For<Shared.Models.Entities.Producto>()
+                .Where(p => p.Categoria!.Nombre.Contains("Lact"))
+                .Where(p => p.Precio >= 50 && p.Precio <= 200)
+                .Where(p => p.Stock > 0)
+                .Where(p => p.FechaCreacion >= fechaLimite)
+                .OrderBy(p => p.Categoria!.Orden)
+                .Take(15)
+                .ToListAsync();
+            
+            productos = GenerateProductosSample("Producto Complejo", 7);
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Warning, 
+                Summary = "Query Complejo Ejecutado", 
+                Detail = $"Query con múltiples filtros: {productos.Count} resultados" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadTodosProductos()
+    {
+        loading = true;
+        queryInfo = "Todos los productos (limitado a 100)";
+        selectResults.Clear();
+        pagedResult = null;
+        
+        try
+        {
+            var todosProductos = await QueryService.For<Shared.Models.Entities.Producto>()
+                .OrderBy(p => p.Nombre)
+                .Take(100)
+                .ToListAsync();
+            
+            productos = GenerateProductosSample("Producto", 12);
+            
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Info, 
+                Summary = "Datos Cargados", 
+                Detail = $"Cargados {productos.Count} productos" 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Error", 
+                Detail = ex.Message 
+            });
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    // Métodos para generar datos de ejemplo (hasta tener BD real)
+    private List<ProductoDisplayModel> GenerateProductosSample(string baseName, int count)
+    {
+        var random = new Random();
+        var categorias = new[] { "Lácteos", "Carnes", "Vegetales", "Frutas", "Bebidas" };
+        
+        return Enumerable.Range(1, count).Select(i => new ProductoDisplayModel
+        {
+            Id = Guid.NewGuid(),
+            Nombre = $"{baseName} {i}",
+            Precio = Math.Round((decimal)(random.NextDouble() * 200 + 10), 2),
+            Stock = random.Next(0, 100),
+            CategoriaNombre = categorias[random.Next(categorias.Length)],
+            Active = random.NextDouble() > 0.2,
+            FechaCreacion = DateTime.Now.AddDays(-random.Next(365)),
+            FechaModificacion = DateTime.Now.AddDays(-random.Next(30))
+        }).ToList();
+    }
+
+    private List<ProductoSelectModel> GenerateSelectSample(int count)
+    {
+        var random = new Random();
+        var categorias = new[] { "Lácteos", "Carnes", "Vegetales", "Frutas", "Bebidas" };
+        
+        return Enumerable.Range(1, count).Select(i => new ProductoSelectModel
+        {
+            Id = Guid.NewGuid(),
+            Nombre = $"Producto Select {i}",
+            Precio = Math.Round((decimal)(random.NextDouble() * 150 + 20), 2),
+            CategoriaNombre = categorias[random.Next(categorias.Length)]
+        }).ToList();
+    }
+
+    // Modelos para mostrar datos
+    public class ProductoDisplayModel
+    {
+        public Guid Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public int Stock { get; set; }
+        public string? CategoriaNombre { get; set; }
+        public bool Active { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaModificacion { get; set; }
+    }
+
+    public class ProductoSelectModel
+    {
+        public Guid Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public string? CategoriaNombre { get; set; }
+    }
+}

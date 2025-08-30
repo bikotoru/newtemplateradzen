@@ -1,0 +1,301 @@
+﻿using System;
+using System.Collections.Generic;
+using Shared.Models.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace Backend.Utils.Data;
+
+public partial class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options)
+    {
+    }
+
+    public virtual DbSet<SystemOrganization> SystemOrganizations { get; set; }
+
+    public virtual DbSet<SystemPermission> SystemPermissions { get; set; }
+
+    public virtual DbSet<SystemRole> SystemRoles { get; set; }
+
+    public virtual DbSet<SystemRolesPermission> SystemRolesPermissions { get; set; }
+
+    public virtual DbSet<SystemUser> SystemUsers { get; set; }
+
+    public virtual DbSet<SystemUsersPermission> SystemUsersPermissions { get; set; }
+
+    public virtual DbSet<SystemUsersRole> SystemUsersRoles { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SystemOrganization>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_o__3214EC07309563DA");
+
+            entity.ToTable("system_organization");
+
+            entity.HasIndex(e => e.Active, "IX_system_organization_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_organization_FechaCreacion");
+
+            entity.HasIndex(e => e.Nombre, "IX_system_organization_Nombre");
+
+            entity.HasIndex(e => e.Rut, "IX_system_organization_Rut");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre).HasMaxLength(255);
+            entity.Property(e => e.Rut).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<SystemPermission>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_p__3214EC07F5E16A5C");
+
+            entity.ToTable("system_permissions");
+
+            entity.HasIndex(e => e.Active, "IX_system_permissions_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_permissions_FechaCreacion");
+
+            entity.HasIndex(e => e.Nombre, "IX_system_permissions_Nombre");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_permissions_OrganizationId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre).HasMaxLength(255);
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemPermissionCreadors)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_permissions_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemPermissionModificadors)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_permissions_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemPermissions)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_permissions_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemRole>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC0797BFD949");
+
+            entity.ToTable("system_roles");
+
+            entity.HasIndex(e => e.Active, "IX_system_roles_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_roles_FechaCreacion");
+
+            entity.HasIndex(e => e.Nombre, "IX_system_roles_Nombre");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_roles_OrganizationId");
+
+            entity.HasIndex(e => e.TypeRole, "IX_system_roles_TypeRole");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre).HasMaxLength(255);
+            entity.Property(e => e.TypeRole)
+                .HasMaxLength(100)
+                .HasDefaultValue("Access");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRoleCreadors)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_roles_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRoleModificadors)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_roles_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemRoles)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_roles_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemRolesPermission>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC07194EC8EF");
+
+            entity.ToTable("system_roles_permissions");
+
+            entity.HasIndex(e => e.Active, "IX_system_roles_permissions_Active");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_roles_permissions_OrganizationId");
+
+            entity.HasIndex(e => e.SystemPermissionsId, "IX_system_roles_permissions_PermissionId");
+
+            entity.HasIndex(e => e.SystemRolesId, "IX_system_roles_permissions_RoleId");
+
+            entity.HasIndex(e => new { e.SystemRolesId, e.SystemPermissionsId }, "UK_system_roles_permissions_RolePermission").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SystemPermissionsId).HasColumnName("system_permissions_id");
+            entity.Property(e => e.SystemRolesId).HasColumnName("system_roles_id");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRolesPermissionCreadors)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_roles_permissions_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRolesPermissionModificadors)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_roles_permissions_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemRolesPermissions)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_roles_permissions_OrganizationId");
+
+            entity.HasOne(d => d.SystemPermissions).WithMany(p => p.SystemRolesPermissions)
+                .HasForeignKey(d => d.SystemPermissionsId)
+                .HasConstraintName("FK_system_roles_permissions_PermissionId");
+
+            entity.HasOne(d => d.SystemRoles).WithMany(p => p.SystemRolesPermissions)
+                .HasForeignKey(d => d.SystemRolesId)
+                .HasConstraintName("FK_system_roles_permissions_RoleId");
+        });
+
+        modelBuilder.Entity<SystemUser>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07791C48C0");
+
+            entity.ToTable("system_users");
+
+            entity.HasIndex(e => e.Active, "IX_system_users_Active");
+
+            entity.HasIndex(e => e.Email, "IX_system_users_Email");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_users_FechaCreacion");
+
+            entity.HasIndex(e => e.Nombre, "IX_system_users_Nombre");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_users_OrganizationId");
+
+            entity.HasIndex(e => e.Email, "UQ__system_u__A9D10534ED32FE68").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre).HasMaxLength(255);
+            entity.Property(e => e.Password).HasMaxLength(255);
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.InverseCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_users_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.InverseModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_users_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemUsers)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_users_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemUsersPermission>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07F445A514");
+
+            entity.ToTable("system_users_permissions");
+
+            entity.HasIndex(e => e.Active, "IX_system_users_permissions_Active");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_users_permissions_OrganizationId");
+
+            entity.HasIndex(e => e.SystemPermissionsId, "IX_system_users_permissions_PermissionId");
+
+            entity.HasIndex(e => e.SystemUsersId, "IX_system_users_permissions_UserId");
+
+            entity.HasIndex(e => new { e.SystemUsersId, e.SystemPermissionsId }, "UK_system_users_permissions_UserPermission").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SystemPermissionsId).HasColumnName("system_permissions_id");
+            entity.Property(e => e.SystemUsersId).HasColumnName("system_users_id");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersPermissionCreadors)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_users_permissions_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersPermissionModificadors)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_users_permissions_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemUsersPermissions)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_users_permissions_OrganizationId");
+
+            entity.HasOne(d => d.SystemPermissions).WithMany(p => p.SystemUsersPermissions)
+                .HasForeignKey(d => d.SystemPermissionsId)
+                .HasConstraintName("FK_system_users_permissions_PermissionId");
+
+            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersPermissionSystemUsers)
+                .HasForeignKey(d => d.SystemUsersId)
+                .HasConstraintName("FK_system_users_permissions_UserId");
+        });
+
+        modelBuilder.Entity<SystemUsersRole>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07EA0FD9CD");
+
+            entity.ToTable("system_users_roles");
+
+            entity.HasIndex(e => e.Active, "IX_system_users_roles_Active");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_users_roles_OrganizationId");
+
+            entity.HasIndex(e => e.SystemRolesId, "IX_system_users_roles_RoleId");
+
+            entity.HasIndex(e => e.SystemUsersId, "IX_system_users_roles_UserId");
+
+            entity.HasIndex(e => new { e.SystemUsersId, e.SystemRolesId }, "UK_system_users_roles_UserRole").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SystemRolesId).HasColumnName("system_roles_id");
+            entity.Property(e => e.SystemUsersId).HasColumnName("system_users_id");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersRoleCreadors)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_users_roles_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersRoleModificadors)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_users_roles_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemUsersRoles)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_users_roles_OrganizationId");
+
+            entity.HasOne(d => d.SystemRoles).WithMany(p => p.SystemUsersRoles)
+                .HasForeignKey(d => d.SystemRolesId)
+                .HasConstraintName("FK_system_users_roles_RoleId");
+
+            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersRoleSystemUsers)
+                .HasForeignKey(d => d.SystemUsersId)
+                .HasConstraintName("FK_system_users_roles_UserId");
+        });
+
+        OnModelCreatingPartial(modelBuilder);
+    }
+
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+}
