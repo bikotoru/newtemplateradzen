@@ -10,6 +10,7 @@ public partial class SystemPermissions
     public string Nombre { get; set; } = null!;
 
     public string? Descripcion { get; set; }
+    public string? ActionKey { get; set; }
 
     public DateTime FechaCreacion { get; set; }
 
