@@ -84,6 +84,7 @@ python tools/db/table.py --name "app_settings" \
 | **Fecha/Hora** | `datetime` | `DATETIME2` | `fecha_venta:datetime` |
 | **Booleano** | `bool` | `BIT` | `activo:bool` |
 | **GUID** | `guid` | `UNIQUEIDENTIFIER` | `external_id:guid` |
+| **AutoIncremental** | `autoincremental` | `NVARCHAR(255)` | `codigo:autoincremental` |
 
 ---
 
@@ -223,6 +224,9 @@ python tools/dbsync/generate-models.py
 var query = await QueryService.For<MiTabla>()
     .Where(x => x.Active)
     .ToListAsync();
+
+// Los campos autoincrementales tienen metadata [AutoIncremental]
+// disponible por reflection
 ```
 
 ---
@@ -275,6 +279,50 @@ python tools/db/table.py --name "test" --fields "campo:string:255"   # ✅ Corre
 ```bash
 # Verifica launchSettings.json tenga la variable SQL configurada
 ```
+
+---
+
+## 🔢 Campos AutoIncrementales
+
+### **¿Qué son?**
+Campos que generan códigos automáticamente con prefijo + número secuencial.
+
+### **Ejemplo de uso:**
+```bash
+python tools/db/table.py --name "productos" \
+    --fields "nombre:string:255" "codigo:autoincremental" \
+    --execute
+```
+
+### **Lo que sucede automáticamente:**
+1. **Crear campo** `codigo` como `NVARCHAR(255)` en la tabla
+2. **Insertar en system_config**:
+   - `productos.codigo.suffix` → `varchar`
+   - `productos.codigo.number` → `int`  
+3. **Sincronizar modelos** EF Core
+4. **Agregar metadata** `[AutoIncremental]` al campo
+
+### **Resultado en .NET:**
+```csharp
+// productos.Metadata.cs (generado automáticamente)
+public class ProductosMetadata 
+{
+    [AutoIncremental]
+    public string Codigo;
+}
+
+// Disponible por reflection:
+var attr = typeof(Productos).GetProperty("Codigo")
+    .GetCustomAttribute<AutoIncrementalAttribute>();
+```
+
+### **Configuración generada en BD:**
+| Field | TypeField | Value |
+|-------|-----------|-------|
+| `productos.codigo.suffix` | `varchar` | Prefijo (ej: "PROD") |
+| `productos.codigo.number` | `int` | Contador (ej: 1, 2, 3...) |
+
+**Resultado final:** `PROD001`, `PROD002`, `PROD003`...
 
 ---
 

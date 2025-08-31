@@ -29,8 +29,12 @@ class DatabaseTableGenerator:
             'decimal': self._handle_decimal_type,
             'datetime': lambda size: 'DATETIME2',
             'bool': lambda size: 'BIT',
-            'guid': lambda size: 'UNIQUEIDENTIFIER'
+            'guid': lambda size: 'UNIQUEIDENTIFIER',
+            'autoincremental': self._handle_autoincremental_type
         }
+        
+        # Campos marcados como autoincrementales (para post-procesamiento)
+        self.autoincremental_fields = []
         
     def print_header(self):
         print("=" * 70)
@@ -78,6 +82,10 @@ class DatabaseTableGenerator:
             return f"DECIMAL({size})"
         return "DECIMAL(18,2)"  # Default
     
+    def _handle_autoincremental_type(self, size):
+        """Maneja campos autoincrementales - se almacena como string por defecto"""
+        return "NVARCHAR(255)"
+    
     def validate_table_name(self, name):
         """Valida nombre de tabla"""
         if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', name):
@@ -96,6 +104,10 @@ class DatabaseTableGenerator:
         
         if field_type not in self.type_mapping:
             raise ValueError(f"Tipo de dato no soportado: {field_type}. Tipos válidos: {list(self.type_mapping.keys())}")
+        
+        # Marcar campos autoincrementales para post-procesamiento
+        if field_type == 'autoincremental':
+            self.autoincremental_fields.append(field_name)
         
         sql_type = self.type_mapping[field_type](field_size)
         
@@ -305,6 +317,99 @@ GO"""
             print(f"   ❌ ERROR regenerando modelos: {e}")
             return False
     
+    def insert_system_config_records(self, table_name, field_name):
+        """Inserta registros en system_config para campos autoincrementales"""
+        try:
+            connection_string = self.read_connection_string()
+            if not connection_string:
+                return False
+            
+            print(f"   🔧 Insertando configuración autoincremental para {table_name}.{field_name}")
+            
+            # Crear registros SQL
+            suffix_field = f"{table_name}.{field_name}.suffix"
+            number_field = f"{table_name}.{field_name}.number"
+            
+            sql_commands = f"""
+-- Insertar configuración para campo autoincremental {table_name}.{field_name}
+INSERT INTO system_config (Field, TypeField, OrganizationId, CreadorId, ModificadorId, Active)
+VALUES 
+('{suffix_field}', 'varchar', NULL, NULL, NULL, 1),
+('{number_field}', 'int', NULL, NULL, NULL, 1);
+"""
+            
+            # Ejecutar con sqlcmd
+            result = subprocess.run([
+                'sqlcmd', '-S', 'localhost', '-U', 'sa', '-P', 'Soporte.2019', '-C',
+                '-Q', sql_commands
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print(f"      ✅ Registros system_config creados")
+                return True
+            else:
+                print(f"      ❌ Error insertando system_config: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ ERROR insertando system_config: {e}")
+            return False
+    
+    def process_autoincremental_fields(self, table_name):
+        """Procesa campos autoincrementales después de crear la tabla"""
+        if not self.autoincremental_fields:
+            return True
+            
+        print(f"\n🔄 Procesando {len(self.autoincremental_fields)} campo(s) autoincremental(es)")
+        
+        success = True
+        
+        for field_name in self.autoincremental_fields:
+            print(f"📝 Procesando campo autoincremental: {field_name}")
+            
+            # 1. Insertar registros en system_config
+            if not self.insert_system_config_records(table_name, field_name):
+                success = False
+                continue
+            
+            # 2. Ejecutar sync de modelos
+            print(f"   🔄 Sincronizando modelos...")
+            if not self.regenerate_models():
+                success = False
+                continue
+            
+            # 3. Agregar metadata autoincremental
+            print(f"   🏷️  Agregando metadata AutoIncremental...")
+            if not self.add_autoincremental_metadata(table_name, field_name):
+                success = False
+                continue
+                
+            print(f"   ✅ Campo {field_name} procesado completamente")
+        
+        return success
+    
+    def add_autoincremental_metadata(self, table_name, field_name):
+        """Agrega metadata AutoIncremental usando EntityMetadataManager"""
+        try:
+            # Importar la clase EntityMetadataManager
+            sys.path.append(str(self.root_path / "tools" / "entities"))
+            from customvalidator import EntityMetadataManager
+            
+            # Crear instancia y agregar metadata
+            manager = EntityMetadataManager()
+            success = manager.add_attribute(table_name, field_name, "AutoIncremental")
+            
+            if success:
+                print(f"      ✅ Metadata [AutoIncremental] agregada a {field_name}")
+                return True
+            else:
+                print(f"      ❌ Error agregando metadata AutoIncremental")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ ERROR agregando metadata: {e}")
+            return False
+    
     def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False):
         """Ejecuta el proceso completo"""
         self.print_header()
@@ -356,12 +461,21 @@ GO"""
                 
                 # Ejecutar SQL
                 if self.execute_sql(sql, connection_string):
-                    # Regenerar modelos automáticamente si se especifica autosync o si no se especifica nada
-                    if autosync or not (execute or preview):
-                        self.regenerate_models()
+                    # Procesar campos autoincrementales si existen
+                    if self.autoincremental_fields:
+                        print(f"\n🔄 Procesando campos autoincrementales...")
+                        if not self.process_autoincremental_fields(table_name):
+                            print("⚠️  Algunos campos autoincrementales no se procesaron correctamente")
+                    else:
+                        # Regenerar modelos solo si no hay campos autoincrementales (ya se hace en process_autoincremental_fields)
+                        if autosync or not (execute or preview):
+                            self.regenerate_models()
                     
                     print("\n🎉 PROCESO COMPLETADO EXITOSAMENTE")
                     print(f"✅ Tabla '{table_name}' creada en base de datos")
+                    if self.autoincremental_fields:
+                        print(f"✅ Campos autoincrementales configurados: {', '.join(self.autoincremental_fields)}")
+                        print(f"✅ Metadata [AutoIncremental] agregada automáticamente")
                     if autosync or not (execute or preview):
                         print(f"✅ Modelos .NET actualizados automáticamente")
                     else:

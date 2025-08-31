@@ -318,13 +318,7 @@ BEGIN
         ModificadorId UNIQUEIDENTIFIER NULL,
         Active BIT DEFAULT 1 NOT NULL,
         
-        -- Foreign Keys
-        CONSTRAINT FK_system_config_OrganizationId 
-            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
-        CONSTRAINT FK_system_config_CreadorId 
-            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
-        CONSTRAINT FK_system_config_ModificadorId 
-            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+        -- No Foreign Keys - Global configuration records
     );
     
     -- Índices para system_config
@@ -359,13 +353,8 @@ BEGIN
         
         -- Foreign Keys
         CONSTRAINT FK_system_config_values_SystemConfigId 
-            FOREIGN KEY (SystemConfigId) REFERENCES system_config(Id) ON DELETE CASCADE,
-        CONSTRAINT FK_system_config_values_OrganizationId 
-            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
-        CONSTRAINT FK_system_config_values_CreadorId 
-            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
-        CONSTRAINT FK_system_config_values_ModificadorId 
-            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+            FOREIGN KEY (SystemConfigId) REFERENCES system_config(Id) ON DELETE CASCADE
+        -- No other Foreign Keys - Global configuration records
     );
     
     -- Índices para system_config_values

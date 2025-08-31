@@ -36,6 +36,11 @@ class EntityMetadataManager:
                 "class_name": "SoloCrearAttribute",
                 "usage": "[SoloCrear]",
                 "description": "Campo solo modificable durante creación"
+            },
+            "AutoIncremental": {
+                "class_name": "AutoIncrementalAttribute",
+                "usage": "[AutoIncremental]",
+                "description": "Campo con numeración automática incremental"
             }
         }
     
@@ -512,6 +517,7 @@ Convención de nombres de entidades:
 
 Atributos disponibles:
   SoloCrear             - Campo solo modificable durante creación
+  AutoIncremental       - Campo con numeración automática incremental
         """
     )
     
