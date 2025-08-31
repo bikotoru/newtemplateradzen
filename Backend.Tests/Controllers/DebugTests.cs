@@ -76,6 +76,11 @@ namespace Backend.Tests.Controllers
 
             _client = _factory.CreateClient();
             
+            // Agregar headers de autenticación mock para las pruebas
+            _client.DefaultRequestHeaders.Add("Authorization", "Bearer test-token");
+            _client.DefaultRequestHeaders.Add("X-User-Id", "11111111-1111-1111-1111-111111111111");
+            _client.DefaultRequestHeaders.Add("X-Organization-Id", "22222222-2222-2222-2222-222222222222");
+            
             // Obtener contexto del DI container con el mismo nombre de BD
             var scope = _factory.Services.CreateScope();
             _context = scope.ServiceProvider.GetRequiredService<AppDbContext>();

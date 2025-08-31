@@ -11,8 +11,22 @@ namespace Backend.Tests.Mocks
     public class MockTokenEncryptionService : TokenEncryptionService
     {
         public MockTokenEncryptionService(IConfiguration configuration, ILogger<TokenEncryptionService> logger) 
-            : base(configuration, logger)
+            : base(CreateMockConfiguration(), logger)
         {
+        }
+
+        private static IConfiguration CreateMockConfiguration()
+        {
+            var mockConfig = new Dictionary<string, string>
+            {
+                { "SECRETKEY", "mock-secret-key-for-tests-1234567890abcdef" }
+            };
+            
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(mockConfig!)
+                .Build();
+                
+            return configuration;
         }
 
         public new string GenerateEncryptedToken(Guid tokenId, Guid organizationId, DateTime expiredDate)

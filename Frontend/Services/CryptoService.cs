@@ -107,7 +107,6 @@ public class CryptoService
         }
         catch (JSException ex)
         {
-            Console.WriteLine($"Crypto test failed: {ex.Message}");
             return false;
         }
     }

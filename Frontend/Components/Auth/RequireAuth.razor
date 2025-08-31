@@ -151,7 +151,6 @@ else
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error verificando autorización: {ex.Message}");
             _isAuthorized = false;
             _isAuthenticated = false;
             _isLoading = false;
@@ -216,7 +215,6 @@ else
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error verificando permisos específicos: {ex.Message}");
             return false;
         }
     }

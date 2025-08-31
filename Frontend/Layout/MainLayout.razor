@@ -77,32 +77,25 @@
 
     protected override void OnInitialized()
     {
-        Console.WriteLine("🏠 MainLayout OnInitialized iniciado");
         try 
         {
             // Solo suscribirse a cambios en el estado de auth
             // NO inicializar el AuthService aquí para evitar bloqueos
             AuthService.OnAuthStateChanged += OnAuthStateChanged;
-            Console.WriteLine("🏠 MainLayout suscrito a OnAuthStateChanged");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error en MainLayout OnInitialized: {ex.Message}");
         }
-        Console.WriteLine("🏠 MainLayout OnInitialized completado");
     }
 
     private async void OnAuthStateChanged()
     {
-        Console.WriteLine("🏠 MainLayout OnAuthStateChanged disparado");
         try 
         {
             await InvokeAsync(StateHasChanged);
-            Console.WriteLine("🏠 MainLayout StateHasChanged ejecutado");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error en OnAuthStateChanged: {ex.Message}");
         }
     }
 
@@ -110,14 +103,11 @@
     {
         try
         {
-            Console.WriteLine("🏠 MainLayout GetDisplayName llamado");
             var name = AuthService.GetDisplayName();
-            Console.WriteLine($"🏠 MainLayout nombre obtenido: {name}");
             return name;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error obteniendo nombre de usuario: {ex.Message}");
             return "Usuario";
         }
     }
@@ -152,7 +142,6 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error al desuscribirse del evento: {ex.Message}");
         }
     }
 }

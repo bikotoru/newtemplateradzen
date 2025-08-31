@@ -55,32 +55,23 @@
 @code {
     protected override void OnInitialized()
     {
-        Console.WriteLine("📱 App.razor: OnInitialized iniciado");
         base.OnInitialized();
-        Console.WriteLine("📱 App.razor: OnInitialized completado");
     }
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("📱 App.razor: OnInitializedAsync iniciado");
         try
         {
-            Console.WriteLine("📱 App.razor: Llamando base.OnInitializedAsync()");
             await base.OnInitializedAsync();
-            Console.WriteLine("📱 App.razor: base.OnInitializedAsync() completado");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ App.razor: Error en OnInitializedAsync: {ex.Message}");
-            Console.WriteLine($"❌ App.razor: StackTrace: {ex.StackTrace}");
             throw;
         }
-        Console.WriteLine("📱 App.razor: OnInitializedAsync completado");
     }
 
     protected override void OnAfterRender(bool firstRender)
     {
-        Console.WriteLine($"📱 App.razor: OnAfterRender - firstRender: {firstRender}");
         base.OnAfterRender(firstRender);
     }
 }

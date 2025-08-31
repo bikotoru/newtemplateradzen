@@ -15,7 +15,6 @@ public static class JavaScriptInterop
     public static void Initialize(AuthService authService)
     {
         _authService = authService;
-        Console.WriteLine("🔗 JavaScriptInterop inicializado con AuthService");
     }
     
     /// <summary>
@@ -26,18 +25,14 @@ public static class JavaScriptInterop
     {
         try
         {
-            Console.WriteLine("📞 InitializeAuthFromJavaScript llamado desde JavaScript");
-            Console.WriteLine($"📞 Token recibido: {(!string.IsNullOrEmpty(token) ? $"{token.Substring(0, Math.Min(20, token.Length))}..." : "null")}");
             
             if (_authService == null)
             {
-                Console.WriteLine("❌ AuthService no está inicializado");
                 return false;
             }
             
             if (string.IsNullOrEmpty(token))
             {
-                Console.WriteLine("❌ Token vacío recibido");
                 return false;
             }
             
@@ -47,13 +42,10 @@ public static class JavaScriptInterop
             // Cargar el contexto de usuario desde el servidor
             await _authService.InitializeAsync();
             
-            Console.WriteLine("✅ AuthService inicializado correctamente desde JavaScript");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error inicializando AuthService desde JavaScript: {ex.Message}");
-            Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
             return false;
         }
     }

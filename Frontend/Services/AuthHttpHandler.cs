@@ -13,9 +13,7 @@ public class AuthHttpHandler : DelegatingHandler
 
     public AuthHttpHandler(AuthService authService)
     {
-        Console.WriteLine("🌐 AuthHttpHandler constructor iniciado");
         _authService = authService;
-        Console.WriteLine("🌐 AuthHttpHandler constructor completado");
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -29,7 +27,6 @@ public class AuthHttpHandler : DelegatingHandler
             if (!string.IsNullOrEmpty(token) && !IsLoginRequest(request))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                Console.WriteLine($"🔒 Token inyectado en request a: {request.RequestUri?.PathAndQuery}");
             }
 
             // Enviar request
@@ -42,12 +39,10 @@ public class AuthHttpHandler : DelegatingHandler
         }
         catch (HttpRequestException ex)
         {
-            Console.WriteLine($"❌ Error en request HTTP: {ex.Message}");
             throw;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error inesperado en AuthHttpHandler: {ex.Message}");
             throw;
         }
     }
@@ -73,12 +68,10 @@ public class AuthHttpHandler : DelegatingHandler
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Unauthorized: // 401
-                    Console.WriteLine($"🚫 401 Unauthorized recibido de: {request.RequestUri?.PathAndQuery}");
                     await HandleUnauthorizedAsync();
                     break;
 
                 case HttpStatusCode.Forbidden: // 403
-                    Console.WriteLine($"🚫 403 Forbidden recibido de: {request.RequestUri?.PathAndQuery}");
                     await HandleForbiddenAsync();
                     break;
 
@@ -90,7 +83,6 @@ public class AuthHttpHandler : DelegatingHandler
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error manejando respuesta de autenticación: {ex.Message}");
         }
     }
 
@@ -101,7 +93,6 @@ public class AuthHttpHandler : DelegatingHandler
     {
         try
         {
-            Console.WriteLine("🔄 Token expirado o inválido, limpiando sesión...");
             
             // Limpiar estado de autenticación
             await _authService.RemoveTokenAsync();
@@ -111,7 +102,6 @@ public class AuthHttpHandler : DelegatingHandler
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error manejando 401: {ex.Message}");
         }
     }
 
@@ -122,14 +112,12 @@ public class AuthHttpHandler : DelegatingHandler
     {
         try
         {
-            Console.WriteLine("⚠️ Acceso prohibido - permisos insuficientes");
             
             // En este caso no limpiamos la sesión, solo logueamos
             // La aplicación puede mostrar una página de "Sin permisos"
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error manejando 403: {ex.Message}");
         }
     }
 
@@ -156,14 +144,12 @@ public class AuthHttpHandler : DelegatingHandler
                 var newToken = tokenValues.FirstOrDefault();
                 if (!string.IsNullOrEmpty(newToken))
                 {
-                    Console.WriteLine("🔄 Token actualizado automáticamente");
                     await _authService.SetTokenAsync(newToken);
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error actualizando token: {ex.Message}");
         }
     }
 }

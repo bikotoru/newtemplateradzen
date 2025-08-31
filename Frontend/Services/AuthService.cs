@@ -33,7 +33,6 @@ public class AuthService
                                 _session.Organization != null && 
                                 _session.Organization.Id != Guid.Empty;
                                 
-            Console.WriteLine($"🔍 IsAuthenticated getter: token={!string.IsNullOrEmpty(_authToken)}, session={_session != null}, orgId={_session?.OrganizationId}, result={isAuthenticated}");
             return isAuthenticated;
         }
     }
@@ -43,10 +42,8 @@ public class AuthService
 
     public AuthService(IJSRuntime jsRuntime, HttpClient httpClient)
     {
-        Console.WriteLine("🔐 AuthService constructor iniciado");
         _jsRuntime = jsRuntime;
         _httpClient = httpClient;
-        Console.WriteLine("🔐 AuthService constructor completado");
     }
 
     #region Inicialización
@@ -58,45 +55,34 @@ public class AuthService
     {
         if (_isInitialized) 
         {
-            Console.WriteLine("🟢 AuthService ya inicializado, saltando...");
             return;
         }
 
-        Console.WriteLine("🟡 Iniciando EnsureInitializedAsync...");
 
         try
         {
             // Verificar si hay token en localStorage (persistente)
             var localToken = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
-            Console.WriteLine($"🔑 localStorage authToken presente: {!string.IsNullOrEmpty(localToken)}");
 
             if (!string.IsNullOrEmpty(localToken))
             {
-                Console.WriteLine("✅ Token encontrado en localStorage, configurando AuthService...");
                 
                 // Configurar token
                 _authToken = localToken;
                 
                 // Cargar contexto desde servidor usando /api/auth/me
-                Console.WriteLine("🌐 Cargando contexto desde servidor...");
                 await LoadUserContextFromServer();
                 
-                Console.WriteLine("📢 Notificando cambio de estado...");
                 NotifyAuthStateChanged();
-                Console.WriteLine("✅ Estado notificado");
             }
             else 
             {
-                Console.WriteLine("❌ No hay token en localStorage");
             }
             
             _isInitialized = true;
-            Console.WriteLine("✅ AuthService inicializado correctamente");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error inicializando AuthService: {ex.Message}");
-            Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
             _isInitialized = true; // Marcar como inicializado para evitar loops
         }
     }
@@ -114,7 +100,6 @@ public class AuthService
     /// </summary>
     public async Task<bool> IsAuthenticatedAsync()
     {
-        Console.WriteLine("🔍 IsAuthenticatedAsync llamado");
         await EnsureInitializedAsync();
         
         // Verificar que tenemos una sesión válida con OrganizationId
@@ -127,8 +112,6 @@ public class AuthService
         {
             await LoadUserContextFromServer();
         }
-        Console.WriteLine($"🔍 IsAuthenticatedAsync: token={!string.IsNullOrEmpty(_authToken)}, session={_session != null}, orgId={_session?.OrganizationId}");
-        Console.WriteLine($"🔍 IsAuthenticatedAsync retornando: {isAuthenticated}");
         
         return isAuthenticated;
     }
@@ -177,7 +160,6 @@ public class AuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error en logout: {ex.Message}");
             // Forzar recarga de página como fallback
             await _jsRuntime.InvokeVoidAsync("location.reload");
         }
@@ -194,14 +176,12 @@ public class AuthService
     {
         try
         {
-            Console.WriteLine("🔓 Desencriptando datos del usuario usando JavaScript...");
             
             // Primero asegurar que el objeto unifiedCrypto esté disponible
             await _jsRuntime.InvokeVoidAsync("eval", Shared.Models.Security.UnifiedEncryption.GetJavaScriptEncryptionCode());
             
             // Desencriptar usando JavaScript SubtleCrypto
             var decryptedJson = await _jsRuntime.InvokeAsync<string>("unifiedCrypto.decrypt", encryptedData);
-            Console.WriteLine($"🔓 Datos desencriptados exitosamente con JavaScript");
             
             var options = new JsonSerializerOptions
             {
@@ -212,17 +192,13 @@ public class AuthService
             if (userData != null)
             {
                 _session = userData;
-                Console.WriteLine($"✅ Contexto de usuario cargado: {userData.Nombre}, {userData.Permisos?.Count} permisos, {userData.Roles?.Count} roles");
             }
             else
             {
-                Console.WriteLine("❌ Los datos desencriptados no pudieron ser deserializados");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error desencriptando/cargando contexto de usuario con JavaScript: {ex.Message}");
-            Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
             // Intentar cargar datos del servidor como fallback
             await LoadUserContextFromServer();
         }
@@ -237,25 +213,20 @@ public class AuthService
         {
             if (string.IsNullOrEmpty(_authToken)) 
             {
-                Console.WriteLine("❌ No hay token disponible para cargar contexto del servidor");
                 return;
             }
 
-            Console.WriteLine("🌐 Cargando contexto de usuario desde /api/auth/me...");
             
             var request = new HttpRequestMessage(HttpMethod.Get, $"{Variables.URLBackend}/api/auth/me");
             
             // El token encriptado contiene caracteres especiales - usar TryAddWithoutValidation
-            Console.WriteLine($"🔑 Enviando token: {_authToken.Substring(0, Math.Min(50, _authToken.Length))}...");
             request.Headers.TryAddWithoutValidation("Authorization", _authToken);
 
             var response = await _httpClient.SendAsync(request);
-            Console.WriteLine($"🌐 Respuesta del servidor: {response.StatusCode}");
 
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"🌐 JSON recibido del servidor (primeros 200 chars): {json.Substring(0, Math.Min(200, json.Length))}...");
                 
                 // El servidor devuelve: { "Token": "...", "Expired": "...", "Data": "encrypted_data" }
                 var options = new JsonSerializerOptions
@@ -266,25 +237,19 @@ public class AuthService
 
                 if (authResponse != null && !string.IsNullOrEmpty(authResponse.Data))
                 {
-                    Console.WriteLine("🔓 Datos encriptados recibidos, desencriptando...");
                     await LoadUserContextFromEncryptedData(authResponse.Data);
                 }
                 else
                 {
-                    Console.WriteLine("❌ Respuesta del servidor no contiene datos del usuario");
                 }
             }
             else
             {
-                Console.WriteLine($"❌ Error del servidor: {response.StatusCode}");
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"❌ Contenido del error: {errorContent}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error cargando contexto desde servidor: {ex.Message}");
-            Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
         }
     }
 
@@ -479,7 +444,6 @@ public class AuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error obteniendo token: {ex.Message}");
         }
 
         return null;
@@ -500,7 +464,6 @@ public class AuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error guardando token: {ex.Message}");
         }
 
         NotifyAuthStateChanged();
@@ -523,7 +486,6 @@ public class AuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error removiendo token: {ex.Message}");
         }
 
         NotifyAuthStateChanged();
@@ -538,29 +500,23 @@ public class AuthService
     /// </summary>
     public string GetDisplayName()
     {
-        Console.WriteLine("🔍 GetDisplayName llamado");
 
         if (_session == null)
         {
-            Console.WriteLine("❌ GetDisplayName: _userContext es null");
             return "Usuario";
         }
 
-        Console.WriteLine($"🔍 GetDisplayName: FullName='{_session.Nombre}', Username='{_session.Email}'");
 
         if (!string.IsNullOrWhiteSpace(_session.Nombre))
         {
-            Console.WriteLine($"✅ GetDisplayName retornando FullName: {_session.Nombre}");
             return _session.Nombre;
         }
 
         if (!string.IsNullOrWhiteSpace(_session.Email))
         {
-            Console.WriteLine($"✅ GetDisplayName retornando Email: {_session.Email}");
             return _session.Email;
         }
 
-        Console.WriteLine("⚠️ GetDisplayName retornando 'Usuario' por defecto");
         return "Usuario";
     }
 
