@@ -141,10 +141,10 @@ namespace Backend.Modules.Auth.Login
 
                 // Obtener datos de sesión para logging
                 var sessionData = await _tokenCache.GetTokenDataAsync(tokenId);
-                var userId = sessionData?.Id ?? "desconocido";
+                var userId = sessionData?.Id ?? Guid.Empty;
 
                 // Marcar token para logout (esto invalidará inmediatamente el token)
-                await _tokenCache.MarkUserForLogoutAsync(Guid.Parse(userId));
+                await _tokenCache.MarkUserForLogoutAsync(userId);
                 
                 _logger.LogInformation("Usuario {UserId} cerró sesión exitosamente", userId);
                 

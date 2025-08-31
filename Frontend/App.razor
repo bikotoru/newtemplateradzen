@@ -1,12 +1,86 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized Context="context">
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <h4 class="alert-heading">Acceso denegado</h4>
+                            <p>Necesitas iniciar sesión para acceder a esta página.</p>
+                            <hr>
+                            <p class="mb-0">
+                                <button class="btn btn-primary" @onclick=@(() => Navigation.NavigateTo("/", true))>
+                                    Iniciar Sesión
+                                </button>
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <h4 class="alert-heading">Sin permisos</h4>
+                            <p>No tienes los permisos necesarios para acceder a esta página.</p>
+                            <hr>
+                            <p class="mb-0">
+                                <button class="btn btn-secondary" @onclick=@(() => Navigation.NavigateTo("/"))>
+                                    Ir al inicio
+                                </button>
+                            </p>
+                        </div>
+                    }
+                </NotAuthorized>
+                <Authorizing>
+                    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Verificando permisos...</span>
+                        </div>
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("📱 App.razor: OnInitialized iniciado");
+        base.OnInitialized();
+        Console.WriteLine("📱 App.razor: OnInitialized completado");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("📱 App.razor: OnInitializedAsync iniciado");
+        try
+        {
+            Console.WriteLine("📱 App.razor: Llamando base.OnInitializedAsync()");
+            await base.OnInitializedAsync();
+            Console.WriteLine("📱 App.razor: base.OnInitializedAsync() completado");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ App.razor: Error en OnInitializedAsync: {ex.Message}");
+            Console.WriteLine($"❌ App.razor: StackTrace: {ex.StackTrace}");
+            throw;
+        }
+        Console.WriteLine("📱 App.razor: OnInitializedAsync completado");
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        Console.WriteLine($"📱 App.razor: OnAfterRender - firstRender: {firstRender}");
+        base.OnAfterRender(firstRender);
+    }
+}

@@ -21,7 +21,7 @@ namespace Backend.Tests.Mocks
             await Task.Delay(1); // Para evitar warnings de async
             return new SessionDataDto
             {
-                Id = "11111111-1111-1111-1111-111111111111",
+                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 Nombre = "Usuario Test",
                 Permisos = new List<string>
                 {
@@ -31,7 +31,7 @@ namespace Backend.Tests.Mocks
                 },
                 Organization = new OrganizationDto
                 {
-                    Id = "22222222-2222-2222-2222-222222222222",
+                    Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
                     Nombre = "Organización Test"
                 },
                 Roles = new List<RoleDto>()

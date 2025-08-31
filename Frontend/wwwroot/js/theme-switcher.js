@@ -39,11 +39,19 @@ window.switchTheme = (cssFile) => {
     }
 };
 
+// Set theme function
+window.setTheme = (theme) => {
+    console.log('Setting theme to:', theme);
+    localStorage.setItem('fluentTheme', theme);
+    const cssFile = theme === 'dark' ? '/style/fluent-dark-base.css' : '/style/fluent-base.css';
+    window.switchTheme(cssFile);
+};
+
 // Initialize theme on page load
 window.initializeTheme = () => {
     console.log('Initializing theme...');
     try {
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedTheme = localStorage.getItem('fluentTheme') || 'light';
         console.log('Saved theme from localStorage:', savedTheme);
         const cssFile = savedTheme === 'dark' ? '/style/fluent-dark-base.css' : '/style/fluent-base.css';
         console.log(cssFile);

@@ -3,37 +3,190 @@
 
 <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Frontend</title>
+    <title>Sistema Empresarial</title>
     <base href="/" />
     <link href="/style/fluent-base.css" rel="stylesheet" data-light="true" />
+    <link href="css/login.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Frontend.styles.css" rel="stylesheet" />
 </head>
 
-<body>
-    <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+<body style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+    <!-- Auth Checking Screen -->
+    <div id="auth-checking" style="display: none;">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif;">
+            <div style="text-align: center;">
+                <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #0078d4; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                <p style="color: #666; font-size: 16px;">Verificando sesión...</p>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
     </div>
 
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+    <!-- Main App -->
+    <div id="app" style="display: none;">
+        <div style="text-align: center;">
+            <svg class="loading-progress" viewBox="0 0 80 80" width="80" height="80">
+                <defs>
+                    <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#0078d4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00bcf2;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <circle r="32" cx="40" cy="40" stroke="#e5e7eb" stroke-width="6" fill="none" opacity="0.3" />
+                <circle r="32" cx="40" cy="40" stroke="url(#loadingGradient)" stroke-width="6" fill="none" stroke-linecap="round" />
+            </svg>
+            <div class="loading-progress-text"></div>
+            <div style="margin-top: 0.5rem; color: #6b7280; font-size: 14px; opacity: 0.8;">
+                Inicializando aplicación...
+            </div>
+        </div>
     </div>
-    <script src="_framework/blazor.webassembly.js"></script>
-    <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+
+    <!-- Login Form -->
+    <div id="login-form" style="display: none;">
+        <div class="fluent-login-container">
+            <!-- Theme Toggle Button -->
+            <button type="button" id="themeToggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema">
+                <svg class="theme-icon light-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
+                    <path d="m12 1 0 2M12 21l0 2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12l2 0M21 12l2 0M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <svg class="theme-icon dark-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" />
+                </svg>
+            </button>
+
+            <div class="fluent-login-card">
+                <div class="fluent-login-header">
+                    <div class="fluent-logo">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="20" height="20" rx="2" fill="#0078d4" />
+                            <path d="M8 12h8M12 8v8" stroke="white" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h1 class="fluent-login-title">Sistema Empresarial</h1>
+                    <p class="fluent-login-subtitle">Inicia sesión para continuar</p>
+                </div>
+
+                <form id="loginFormInline" class="fluent-login-form">
+                    <div class="fluent-form-group">
+                        <label for="usernameInline" class="fluent-label">Usuario</label>
+                        <div class="fluent-input-container">
+                            <input type="text" id="usernameInline" required class="fluent-input" placeholder="Ingresa tu usuario" value="admin@admin.cl">
+                        </div>
+                    </div>
+
+                    <div class="fluent-form-group">
+                        <label for="passwordInline" class="fluent-label">Contraseña</label>
+                        <div class="fluent-input-container">
+                            <input type="password" id="passwordInline" required class="fluent-input" placeholder="Ingresa tu contraseña" value="Soporte.2019">
+                        </div>
+                    </div>
+
+                    <div class="fluent-options">
+                        <label class="fluent-checkbox">
+                            <input type="checkbox" id="rememberMe">
+                            <span class="fluent-checkbox-mark"></span>
+                            <span class="fluent-checkbox-text">Mantener sesión iniciada</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" id="loginBtnInline" class="fluent-button fluent-button-primary">
+                        <span class="fluent-button-text">Iniciar sesión</span>
+                        <div class="fluent-button-spinner" style="display: none;">
+                            <div class="fluent-spinner"></div>
+                        </div>
+                    </button>
+
+                    <div id="messageInline" class="fluent-message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organization Selection Form -->
+    <div id="organization-selection" style="display: none;">
+        <div class="fluent-login-container">
+            <!-- Theme Toggle Button -->
+            <button type="button" id="themeToggleOrg" class="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema">
+                <svg class="theme-icon light-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
+                    <path d="m12 1 0 2M12 21l0 2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12l2 0M21 12l2 0M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <svg class="theme-icon dark-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" />
+                </svg>
+            </button>
+
+            <div class="fluent-login-card organization-selection-card">
+                <div class="fluent-login-header">
+                    <div class="fluent-logo">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="4" width="18" height="16" rx="2" fill="#0078d4" />
+                            <path d="M7 8h10M7 12h6" stroke="white" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h1 class="fluent-login-title">🏢 Seleccionar Organización</h1>
+                    <p class="fluent-login-subtitle">Tienes acceso a múltiples organizaciones. Selecciona una para continuar.</p>
+                </div>
+
+                <!-- Search Organizations -->
+                <div class="fluent-form-group">
+                    <div class="search-container">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="11" cy="11" r="8" stroke="#605e5c" stroke-width="2" />
+                            <path d="m21 21-4.35-4.35" stroke="#605e5c" stroke-width="2" />
+                        </svg>
+                        <input type="text" id="orgSearch" class="fluent-input search-input" placeholder="Buscar organización...">
+                        <div class="search-results-count" id="searchResultsCount"></div>
+                    </div>
+                </div>
+
+                <div class="organization-list-container">
+                    <div class="organization-list" id="organizationList">
+                        <!-- Organizations will be populated here -->
+                    </div>
+                </div>
+
+                <div class="fluent-form-actions">
+                    <button type="button" id="selectOrgBtn" class="fluent-button fluent-button-primary" disabled>
+                        <span class="fluent-button-text">Continuar con Organización</span>
+                        <div class="fluent-button-spinner" style="display: none;">
+                            <div class="fluent-spinner"></div>
+                        </div>
+                    </button>
+
+                    <button type="button" id="backToLoginBtn" class="fluent-button fluent-button-secondary">
+                        <svg class="back-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="fluent-button-text">Volver al Login</span>
+                    </button>
+                </div>
+
+                <div id="orgMessageInline" class="fluent-message"></div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="js/auth.js"></script>
     <script src="js/theme-switcher.js"></script>
-    <script>
-        // Initialize theme on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            window.initializeTheme();
-        });
-    </script>
+    <!-- Blazor scripts se cargan dinámicamente después del login -->
 </body>
 
 </html>

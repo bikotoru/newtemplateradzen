@@ -98,7 +98,7 @@ namespace Backend.Utils.Security
                     .Where(ur => ur.SystemRoles.Active && ur.SystemRoles.OrganizationId == organizationId)
                     .Select(ur => new RoleDto
                     {
-                        Id = ur.SystemRoles.Id.ToString(),
+                        Id = ur.SystemRoles.Id,
                         Nombre = ur.SystemRoles.Nombre
                     })
                     .ToListAsync();
@@ -109,12 +109,13 @@ namespace Backend.Utils.Security
                 return new SessionDataDto
                 {
                     Nombre = user.Nombre,
-                    Id = user.Id.ToString(),
+                    Email = user.Email,
+                    Id = user.Id,
                     Roles = roles,
                     Permisos = permisos,
                     Organization = new OrganizationDto
                     {
-                        Id = organization.Id.ToString(),
+                        Id = organization.Id,
                         Nombre = organization.Nombre
                     }
                 };
@@ -146,7 +147,7 @@ namespace Backend.Utils.Security
                 if (sessionData == null) return null;
 
                 // Doble verificación: la organización del token debe coincidir con la de la sesión
-                if (tokenData.OrganizationId != sessionData.Organization.Id)
+                if (tokenData.OrganizationId != sessionData.Organization.Id.ToString())
                 {
                     _logger.LogWarning("Token organization mismatch. Token org: {TokenOrg}, Session org: {SessionOrg}", 
                         tokenData.OrganizationId, sessionData.Organization.Id);
@@ -154,8 +155,8 @@ namespace Backend.Utils.Security
                 }
 
                 // Si necesita refresh, actualizar datos
-                var userId = Guid.Parse(sessionData.Id);
-                var organizationId = Guid.Parse(sessionData.Organization.Id);
+                var userId = sessionData.Id;
+                var organizationId = sessionData.Organization.Id;
 
                 try
                 {

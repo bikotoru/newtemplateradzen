@@ -425,7 +425,7 @@ namespace Backend.Utils.Services
             if (entityType == null) return;
 
             var foreignKeys = entityType.GetForeignKeys();
-            var userOrganizationId = Guid.Parse(sessionData.Organization.Id);
+            var userOrganizationId = sessionData.Organization.Id;
             
             foreach (var foreignKey in foreignKeys)
             {
@@ -946,7 +946,7 @@ namespace Backend.Utils.Services
             
             if (organizationIdProperty != null)
             {
-                var userOrganizationId = Guid.Parse(sessionData.Organization.Id);
+                var userOrganizationId = sessionData.Organization.Id;
                 query = query.Where(e => EF.Property<Guid?>(e, "OrganizationId") == userOrganizationId);
                 
                 _logger.LogDebug("Aplicado filtro de organización {OrgId} para {EntityType}", userOrganizationId, typeof(T).Name);
@@ -961,8 +961,8 @@ namespace Backend.Utils.Services
         private void InjectCreationFields(T entity, SessionDataDto sessionData)
         {
             var now = DateTime.UtcNow;
-            var userId = Guid.Parse(sessionData.Id);
-            var organizationId = Guid.Parse(sessionData.Organization.Id);
+            var userId = sessionData.Id;
+            var organizationId = sessionData.Organization.Id;
 
             var entityType = typeof(T);
             
@@ -984,7 +984,7 @@ namespace Backend.Utils.Services
         private void InjectUpdateFields(T entity, SessionDataDto sessionData)
         {
             var now = DateTime.UtcNow;
-            var userId = Guid.Parse(sessionData.Id);
+            var userId = sessionData.Id;
 
             var entityType = typeof(T);
             
@@ -1006,7 +1006,7 @@ namespace Backend.Utils.Services
             if (organizationIdProperty != null)
             {
                 var entityOrgId = organizationIdProperty.GetValue(entity) as Guid?;
-                var userOrgId = Guid.Parse(sessionData.Organization.Id);
+                var userOrgId = sessionData.Organization.Id;
                 
                 var belongs = entityOrgId == userOrgId;
                 

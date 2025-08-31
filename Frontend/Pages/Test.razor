@@ -1,0 +1,28 @@
+@page "/test"
+<PageTitle>Test</PageTitle>
+
+<h1>Prueba de Funcionamiento</h1>
+
+<div>
+    <h3>✅ Blazor está funcionando correctamente</h3>
+    <p>Esta página se carga sin errores.</p>
+    
+    <h3>Enlaces de prueba:</h3>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/counter">Counter</a></li>
+        <li><a href="/weather">Weather</a></li>
+        <li><a href="/test">Test (esta página)</a></li>
+    </ul>
+    
+    <h3>Información del sistema:</h3>
+    <p>Hora actual: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</p>
+    <p>Navegador: @GetUserAgent()</p>
+</div>
+
+@code {
+    private string GetUserAgent()
+    {
+        return "Información del navegador no disponible";
+    }
+}

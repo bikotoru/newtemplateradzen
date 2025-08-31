@@ -63,7 +63,7 @@ namespace Backend.Modules.Auth.Login
             var userData = await ValidateTemporaryTokenAsync(request.TemporaryToken);
             
             var organizations = await GetUserOrganizationsAsync(Guid.Parse(userData.UserId));
-            var selectedOrganization = organizations.FirstOrDefault(o => o.Id == request.OrganizationId);
+            var selectedOrganization = organizations.FirstOrDefault(o => o.Id.ToString() == request.OrganizationId);
             
             if (selectedOrganization == null)
             {
@@ -102,19 +102,19 @@ namespace Backend.Modules.Auth.Login
             }
 
             // Doble verificación: la organización del token debe coincidir con la de la sesión
-            if (tokenData.OrganizationId != sessionData.Organization.Id)
+            if (tokenData.OrganizationId != sessionData.Organization.Id.ToString())
             {
                 throw new UnauthorizedAccessException("Token no válido para esta organización");
             }
 
             // Verificar si el usuario y organización siguen activos
-            var user = await _context.SystemUsers.FindAsync(Guid.Parse(sessionData.Id));
+            var user = await _context.SystemUsers.FindAsync(sessionData.Id);
             if (user == null || !user.Active)
             {
                 throw new UnauthorizedAccessException("Usuario no válido");
             }
 
-            var organization = await _context.SystemOrganization.FindAsync(Guid.Parse(sessionData.Organization.Id));
+            var organization = await _context.SystemOrganization.FindAsync(sessionData.Organization.Id);
             if (organization == null || !organization.Active)
             {
                 throw new UnauthorizedAccessException("Organización no válida");
@@ -122,7 +122,7 @@ namespace Backend.Modules.Auth.Login
 
             // Generar nuevo token encriptado para renovación
             var newExpirationDate = DateTime.UtcNow.AddHours(24);
-            var newEncryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, Guid.Parse(sessionData.Organization.Id), newExpirationDate);
+            var newEncryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, sessionData.Organization.Id, newExpirationDate);
 
             // Encriptar datos actuales para respuesta
             var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
@@ -147,7 +147,7 @@ namespace Backend.Modules.Auth.Login
             {
                 userOrganizations.Add(new OrganizationDto
                 {
-                    Id = user.Organization.Id.ToString(),
+                    Id = user.Organization.Id,
                     Nombre = user.Organization.Nombre
                 });
             }
@@ -178,14 +178,14 @@ namespace Backend.Modules.Auth.Login
         private async Task<LoginResponseDto> CreateFullSessionResponseAsync(SystemUsers user, OrganizationDto organization)
         {
             // Usar PermissionService para construir SessionData completo
-            var sessionData = await _permissionService.BuildSessionDataAsync(user.Id, Guid.Parse(organization.Id));
+            var sessionData = await _permissionService.BuildSessionDataAsync(user.Id, organization.Id);
             
             // Crear token en cache z_token
-            var tokenId = await _tokenCache.CreateOrUpdateTokenAsync(user.Id, Guid.Parse(organization.Id), sessionData);
+            var tokenId = await _tokenCache.CreateOrUpdateTokenAsync(user.Id, organization.Id, sessionData);
             
             // Generar token encriptado con doble verificación
             var expirationDate = DateTime.UtcNow.AddHours(24);
-            var encryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, Guid.Parse(organization.Id), expirationDate);
+            var encryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, organization.Id, expirationDate);
             
             // Encriptar datos de sesión con UnifiedEncryption
             var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
