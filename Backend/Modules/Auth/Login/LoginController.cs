@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Backend.Utils.Security;
 using Shared.Models.DTOs.Auth;
+using Shared.Models.Responses;
 
 namespace Backend.Modules.Auth.Login
 {
@@ -8,11 +10,15 @@ namespace Backend.Modules.Auth.Login
     public class LoginController : ControllerBase
     {
         private readonly LoginService _loginService;
+        private readonly PermissionService _permissionService;
+        private readonly TokenCacheService _tokenCache;
         private readonly ILogger<LoginController> _logger;
 
-        public LoginController(LoginService loginService, ILogger<LoginController> logger)
+        public LoginController(LoginService loginService, PermissionService permissionService, TokenCacheService tokenCache, ILogger<LoginController> logger)
         {
             _loginService = loginService;
+            _permissionService = permissionService;
+            _tokenCache = tokenCache;
             _logger = logger;
         }
 
@@ -77,31 +83,43 @@ namespace Backend.Modules.Auth.Login
         {
             try
             {
-                var authHeader = Request.Headers.Authorization.FirstOrDefault();
+                var sessionData = await _permissionService.ValidateUserFromHeadersAsync(Request.Headers);
                 
-                if (string.IsNullOrEmpty(authHeader))
+                if (sessionData == null)
                 {
-                    return Unauthorized(new { message = "Token de autorización requerido" });
+                    return Unauthorized(ApiResponse<object>.ErrorResponse("Token de autorización inválido"));
                 }
 
-                var token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
+                // Crear respuesta estándar como SessionResponseDto pero solo con datos actuales
+                var response = new SessionResponseDto
+                {
+                    Token = ExtractTokenFromHeaders(), // Devolver el mismo token
+                    Expired = DateTime.UtcNow.AddHours(24), // Renovar expiración
+                    Data = Shared.Models.Security.UnifiedEncryption.EncryptAesCbc(System.Text.Json.JsonSerializer.Serialize(sessionData))
+                };
                 
-                var response = await _loginService.ValidateAndRefreshTokenAsync(token);
-                
-                _logger.LogInformation("Token validado y refrescado exitosamente");
+                _logger.LogInformation("Token validado exitosamente para usuario {UserId}", sessionData.Id);
                 
                 return Ok(response);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (SessionExpiredException ex)
             {
-                _logger.LogWarning("Validación de token fallida: {Message}", ex.Message);
-                return Unauthorized(new { message = ex.Message });
+                _logger.LogWarning("Sesión expirada: {ErrorCode}", ex.ErrorCode);
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Sesión expirada"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error durante validación de token");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, ApiResponse<object>.ErrorResponse("Error interno del servidor"));
             }
+        }
+
+        private string ExtractTokenFromHeaders()
+        {
+            var authHeader = Request.Headers.Authorization.FirstOrDefault();
+            if (string.IsNullOrEmpty(authHeader)) return string.Empty;
+            
+            return authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
         }
 
         [HttpPost("logout")]
@@ -109,14 +127,33 @@ namespace Backend.Modules.Auth.Login
         {
             try
             {
-                _logger.LogInformation("Usuario cerró sesión");
+                var token = ExtractTokenFromHeaders();
                 
-                return Ok(new { message = "Sesión cerrada exitosamente" });
+                if (string.IsNullOrEmpty(token))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse("Token requerido para logout"));
+                }
+
+                if (!Guid.TryParse(token, out var tokenId))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse("Token inválido"));
+                }
+
+                // Obtener datos de sesión para logging
+                var sessionData = await _tokenCache.GetTokenDataAsync(tokenId);
+                var userId = sessionData?.Id ?? "desconocido";
+
+                // Marcar token para logout (esto invalidará inmediatamente el token)
+                await _tokenCache.MarkUserForLogoutAsync(Guid.Parse(userId));
+                
+                _logger.LogInformation("Usuario {UserId} cerró sesión exitosamente", userId);
+                
+                return Ok(ApiResponse<object>.SuccessResponse(new { }, "Sesión cerrada exitosamente"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error durante logout");
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                return StatusCode(500, ApiResponse<object>.ErrorResponse("Error interno del servidor"));
             }
         }
     }

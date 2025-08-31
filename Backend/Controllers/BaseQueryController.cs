@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Backend.Utils.Services;
+using Backend.Utils.Security;
+using Backend.Utils.Attributes;
 using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.QueryModels;
+using Shared.Models.DTOs.Auth;
 
 namespace Backend.Controllers
 {
@@ -14,12 +17,14 @@ namespace Backend.Controllers
         protected readonly BaseQueryService<T> _baseService;
         protected readonly ILogger<BaseQueryController<T>> _logger;
         protected readonly IServiceProvider _serviceProvider;
+        protected readonly PermissionService _permissionService;
 
         protected BaseQueryController(BaseQueryService<T> baseService, ILogger<BaseQueryController<T>> logger, IServiceProvider serviceProvider)
         {
             _baseService = baseService;
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _permissionService = serviceProvider.GetRequiredService<PermissionService>();
         }
 
         #region Individual Operations (SEALED - No Override)
@@ -30,6 +35,10 @@ namespace Backend.Controllers
         [HttpPost("create")]
         public virtual async Task<IActionResult> Create([FromBody] CreateRequest<T> request)
         {
+            // Validar permiso automáticamente: CATEGORIA.CREATE, USUARIO.CREATE, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Creating {typeof(T).Name}");
@@ -55,6 +64,10 @@ namespace Backend.Controllers
         [HttpPut("update")]
         public virtual async Task<IActionResult> Update([FromBody] UpdateRequest<T> request)
         {
+            // Validar permiso automáticamente: CATEGORIA.UPDATE, USUARIO.UPDATE, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("update");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Updating {typeof(T).Name}");
@@ -83,6 +96,10 @@ namespace Backend.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] bool all = false)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Getting {typeof(T).Name} - Page: {page}, PageSize: {pageSize}, All: {all}");
@@ -109,6 +126,10 @@ namespace Backend.Controllers
         [HttpGet("{id}")]
         public virtual async Task<IActionResult> GetById(Guid id)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Getting {typeof(T).Name} by ID: {id}");
@@ -135,6 +156,10 @@ namespace Backend.Controllers
         [HttpDelete("{id}")]
         public virtual async Task<IActionResult> Delete(Guid id)
         {
+            // Validar permiso automáticamente: CATEGORIA.DELETE, USUARIO.DELETE, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("delete");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Deleting {typeof(T).Name} with ID: {id}");
@@ -165,6 +190,10 @@ namespace Backend.Controllers
         [HttpPost("create-batch")]
         public virtual async Task<IActionResult> CreateBatch([FromBody] CreateBatchRequest<T> batchRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.CREATE, USUARIO.CREATE, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Creating batch of {batchRequest.Requests?.Count ?? 0} {typeof(T).Name}");
@@ -195,6 +224,10 @@ namespace Backend.Controllers
         [HttpPut("update-batch")]
         public virtual async Task<IActionResult> UpdateBatch([FromBody] UpdateBatchRequest<T> batchRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.UPDATE, USUARIO.UPDATE, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("update");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Updating batch of {batchRequest.Requests?.Count ?? 0} {typeof(T).Name}");
@@ -229,6 +262,10 @@ namespace Backend.Controllers
         [HttpGet("health")]
         public virtual async Task<IActionResult> HealthCheck()
         {
+            // Solo validar autenticación (no permisos específicos)
+            var user = await ValidarUsuario();
+            if (user == null) return Unauthorized();
+
             try
             {
                 // Simple health check - attempt to query the entity
@@ -238,7 +275,8 @@ namespace Backend.Controllers
                     Status = "Healthy",
                     EntityType = typeof(T).Name,
                     Timestamp = DateTime.UtcNow,
-                    TotalRecords = count.TotalCount
+                    TotalRecords = count.TotalCount,
+                    User = user.Id
                 });
             }
             catch (Exception ex)
@@ -264,6 +302,10 @@ namespace Backend.Controllers
         [HttpPost("query")]
         public virtual async Task<IActionResult> Query([FromBody] QueryRequest queryRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing query for {typeof(T).Name}");
@@ -284,6 +326,10 @@ namespace Backend.Controllers
         [HttpPost("paged")]
         public virtual async Task<IActionResult> QueryPaged([FromBody] QueryRequest queryRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing paged query for {typeof(T).Name}");
@@ -304,6 +350,10 @@ namespace Backend.Controllers
         [HttpPost("select")]
         public virtual async Task<IActionResult> QuerySelect([FromBody] QueryRequest queryRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing select query for {typeof(T).Name}");
@@ -324,6 +374,10 @@ namespace Backend.Controllers
         [HttpPost("select-paged")]
         public virtual async Task<IActionResult> QuerySelectPaged([FromBody] QueryRequest queryRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing paged select query for {typeof(T).Name}");
@@ -348,6 +402,10 @@ namespace Backend.Controllers
         [HttpPost("search")]
         public virtual async Task<IActionResult> Search([FromBody] SearchRequest searchRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
@@ -368,6 +426,10 @@ namespace Backend.Controllers
         [HttpPost("search-paged")]
         public virtual async Task<IActionResult> SearchPaged([FromBody] SearchRequest searchRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
@@ -392,6 +454,10 @@ namespace Backend.Controllers
         [HttpPost("export/excel")]
         public virtual async Task<IActionResult> ExportToExcel([FromBody] Shared.Models.Export.ExcelExportRequest exportRequest)
         {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
             try
             {
                 _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
@@ -420,6 +486,117 @@ namespace Backend.Controllers
                 _logger.LogError(ex, $"Error exporting to Excel for {typeof(T).Name}");
                 return StatusCode(500, ApiResponse<object>.ErrorResponse($"Error exporting to Excel: {ex.Message}"));
             }
+        }
+
+        #endregion
+
+        #region User Validation
+
+        /// <summary>
+        /// Función ValidarUsuario optimizada para uso en controladores
+        /// </summary>
+        protected async Task<SessionDataDto?> ValidarUsuario()
+        {
+            try
+            {
+                return await _permissionService.ValidateUserFromHeadersAsync(Request.Headers);
+            }
+            catch (SessionExpiredException ex)
+            {
+                _logger.LogWarning("Session expired: {ErrorCode}", ex.ErrorCode);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating user");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Valida usuario y verifica permiso específico
+        /// </summary>
+        protected async Task<(SessionDataDto? user, bool hasPermission)> ValidarUsuarioConPermiso(string permissionKey)
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+                return (null, false);
+
+            var hasPermission = user.Permisos.Contains(permissionKey);
+            return (user, hasPermission);
+        }
+
+        /// <summary>
+        /// Respuesta estándar para usuario no autenticado
+        /// </summary>
+        protected new IActionResult Unauthorized()
+        {
+            return StatusCode(401, ApiResponse<object>.ErrorResponse("Usuario no autenticado"));
+        }
+
+        /// <summary>
+        /// Respuesta estándar para acceso denegado por permisos
+        /// </summary>
+        protected IActionResult Forbidden(string message = "Acceso denegado")
+        {
+            return StatusCode(403, ApiResponse<object>.ErrorResponse(message));
+        }
+
+        /// <summary>
+        /// Obtiene el nombre de la entidad desde la URL del controller
+        /// </summary>
+        private string GetEntityNameFromController()
+        {
+            // Obtener el nombre del controller desde la URL
+            var controllerName = ControllerContext.ActionDescriptor.ControllerName;
+            
+            // Convertir de PascalCase a UPPER_CASE
+            // Ejemplo: "Categoria" -> "CATEGORIA", "SystemUser" -> "SYSTEM_USER"
+            return controllerName.ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// Construye la clave de permiso automáticamente: ENTIDAD.ACCION
+        /// </summary>
+        private string BuildPermissionKey(string action)
+        {
+            var entityName = GetEntityNameFromController();
+            return $"{entityName}.{action.ToUpperInvariant()}";
+        }
+
+        /// <summary>
+        /// Valida usuario y verifica permiso específico construido automáticamente
+        /// </summary>
+        protected async Task<(SessionDataDto? user, bool hasPermission)> CheckPermissionAsync(string action)
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+                return (null, false);
+
+            var permissionKey = BuildPermissionKey(action);
+            var hasPermission = user.Permisos.Contains(permissionKey);
+            
+            if (!hasPermission)
+                _logger.LogWarning("Usuario {UserId} no tiene permiso {Permission}", user.Id, permissionKey);
+            
+            return (user, hasPermission);
+        }
+
+        /// <summary>
+        /// Método helper para validar permisos rápidamente en endpoints
+        /// Devuelve (user, hasPermission, errorResult)
+        /// </summary>
+        protected async Task<(SessionDataDto? user, bool hasPermission, IActionResult? errorResult)> ValidatePermissionAsync(string action)
+        {
+            var (user, hasPermission) = await CheckPermissionAsync(action);
+            
+            if (user == null)
+                return (null, false, Unauthorized());
+                
+            if (!hasPermission)
+                return (user, false, Forbidden($"Requiere permiso: {BuildPermissionKey(action)}"));
+                
+            return (user, true, null); // null = continuar con la ejecución
         }
 
         #endregion

@@ -4,6 +4,7 @@ using Shared.Models.DTOs.Auth;
 using Shared.Models.Security;
 using Shared.Models.Entities;
 using Backend.Utils.Data;
+using Backend.Utils.Security;
 
 namespace Backend.Modules.Auth.Login
 {
@@ -11,13 +12,17 @@ namespace Backend.Modules.Auth.Login
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly TokenCacheService _tokenCache;
+        private readonly PermissionService _permissionService;
         private readonly string _secretKey;
         private readonly string _secondKey;
 
-        public LoginService(AppDbContext context, IConfiguration configuration)
+        public LoginService(AppDbContext context, IConfiguration configuration, TokenCacheService tokenCache, PermissionService permissionService)
         {
             _context = context;
             _configuration = configuration;
+            _tokenCache = tokenCache;
+            _permissionService = permissionService;
             _secretKey = Environment.GetEnvironmentVariable("SECRETKEY") ?? throw new InvalidOperationException("SECRETKEY no está configurada");
             _secondKey = Environment.GetEnvironmentVariable("SECONDKEY") ?? throw new InvalidOperationException("SECONDKEY no está configurada");
         }
@@ -80,37 +85,38 @@ namespace Backend.Modules.Auth.Login
 
         public async Task<SessionResponseDto> ValidateAndRefreshTokenAsync(string token)
         {
-            var tokenData = await DecryptTokenAsync(token);
-            
-            if (tokenData.Expired <= DateTime.UtcNow)
+            if (!Guid.TryParse(token, out var tokenId))
             {
-                throw new UnauthorizedAccessException("Token expirado");
+                throw new UnauthorizedAccessException("Token inválido");
             }
 
-            var user = await _context.SystemUsers.FindAsync(Guid.Parse(tokenData.Id));
+            var sessionData = await _tokenCache.GetTokenDataAsync(tokenId);
+            if (sessionData == null)
+            {
+                throw new UnauthorizedAccessException("Token no válido o expirado");
+            }
+
+            // Verificar si el usuario y organización siguen activos
+            var user = await _context.SystemUsers.FindAsync(Guid.Parse(sessionData.Id));
             if (user == null || !user.Active)
             {
                 throw new UnauthorizedAccessException("Usuario no válido");
             }
 
-            var organization = await _context.SystemOrganization.FindAsync(Guid.Parse(tokenData.OrganizationId));
+            var organization = await _context.SystemOrganization.FindAsync(Guid.Parse(sessionData.Organization.Id));
             if (organization == null || !organization.Active)
             {
                 throw new UnauthorizedAccessException("Organización no válida");
             }
 
-            var organizationDto = new OrganizationDto
-            {
-                Id = organization.Id.ToString(),
-                Nombre = organization.Nombre
-            };
+            // Encriptar datos actuales para respuesta
+            var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
 
-            var response = await CreateFullSessionResponseAsync(user, organizationDto);
             return new SessionResponseDto
             {
-                Token = response.Token!,
-                Expired = response.Expired!.Value,
-                Data = response.Data!
+                Token = token,
+                Expired = DateTime.UtcNow.AddHours(24),
+                Data = encryptedData
             };
         }
 
@@ -156,66 +162,24 @@ namespace Backend.Modules.Auth.Login
 
         private async Task<LoginResponseDto> CreateFullSessionResponseAsync(SystemUsers user, OrganizationDto organization)
         {
-            var sessionData = await BuildSessionDataAsync(user, organization);
-            var tokenData = new TokenDataDto
-            {
-                Id = user.Id.ToString(),
-                OrganizationId = organization.Id,
-                Expired = DateTime.UtcNow.AddHours(24)
-            };
-
-            var encryptedToken = await EncryptWithSecretKeyAsync(JsonSerializer.Serialize(tokenData));
+            // Usar PermissionService para construir SessionData completo
+            var sessionData = await _permissionService.BuildSessionDataAsync(user.Id, Guid.Parse(organization.Id));
+            
+            // Crear token en cache z_token
+            var tokenId = await _tokenCache.CreateOrUpdateTokenAsync(user.Id, Guid.Parse(organization.Id), sessionData);
+            
+            // Encriptar datos de sesión con UnifiedEncryption
             var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
 
             return new LoginResponseDto
             {
                 RequiresOrganizationSelection = null, // No mostrar cuando es false
-                Token = encryptedToken,
-                Expired = tokenData.Expired,
+                Token = tokenId.ToString(), // Ahora es solo el GUID del token
+                Expired = DateTime.UtcNow.AddHours(24),
                 Data = encryptedData
             };
         }
 
-        private async Task<SessionDataDto> BuildSessionDataAsync(SystemUsers user, OrganizationDto organization)
-        {
-            var roles = await _context.SystemUsersRoles
-                .Where(ur => ur.SystemUsersId == user.Id && ur.Active)
-                .Include(ur => ur.SystemRoles)
-                .Where(ur => ur.SystemRoles!.OrganizationId == Guid.Parse(organization.Id) && ur.SystemRoles.Active)
-                .Select(ur => new RoleDto
-                {
-                    Id = ur.SystemRoles!.Id.ToString(),
-                    Nombre = ur.SystemRoles.Nombre
-                })
-                .ToListAsync();
-
-            var roleIds = roles.Select(r => Guid.Parse(r.Id)).ToList();
-            
-            var rolePermissions = await _context.SystemRolesPermissions
-                .Where(rp => roleIds.Contains(rp.SystemRolesId) && rp.Active)
-                .Include(rp => rp.SystemPermissions)
-                .Where(rp => rp.SystemPermissions!.Active)
-                .Select(rp => rp.SystemPermissions!.ActionKey!)
-                .ToListAsync();
-
-            var userDirectPermissions = await _context.SystemUsersPermissions
-                .Where(up => up.SystemUsersId == user.Id && up.Active)
-                .Include(up => up.SystemPermissions)
-                .Where(up => up.SystemPermissions!.OrganizationId == Guid.Parse(organization.Id) && up.SystemPermissions.Active)
-                .Select(up => up.SystemPermissions!.ActionKey!)
-                .ToListAsync();
-
-            var allPermissions = rolePermissions.Concat(userDirectPermissions).Distinct().ToList();
-
-            return new SessionDataDto
-            {
-                Nombre = user.Nombre,
-                Id = user.Id.ToString(),
-                Roles = roles,
-                Permisos = allPermissions,
-                Organization = organization
-            };
-        }
 
         private async Task<TemporaryTokenDataDto> ValidateTemporaryTokenAsync(string temporaryToken)
         {
@@ -230,18 +194,6 @@ namespace Backend.Modules.Auth.Login
             return tokenData;
         }
 
-        private async Task<TokenDataDto> DecryptTokenAsync(string encryptedToken)
-        {
-            var decryptedToken = await DecryptWithSecretKeyAsync(encryptedToken);
-            var tokenData = JsonSerializer.Deserialize<TokenDataDto>(decryptedToken);
-            
-            if (tokenData == null)
-            {
-                throw new UnauthorizedAccessException("Token inválido");
-            }
-
-            return tokenData;
-        }
 
         private async Task<string> EncryptWithSecretKeyAsync(string data)
         {

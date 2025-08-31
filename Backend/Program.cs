@@ -1,5 +1,7 @@
 using Backend.Utils.EFInterceptors.Extensions;
 using Backend.Modules.Auth.Login;
+using Backend.Utils.Security;
+using Backend.Utils.Services;
 using Shared.Models.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +29,11 @@ builder.Services.AddHandlersFromAssemblies(typeof(Program));
 
 // Register Authentication Services
 builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<TokenCacheService>();
+builder.Services.AddScoped<PermissionService>();
+
+// Register Background Services
+builder.Services.AddHostedService<TokenRefreshBackgroundService>();
 
 // CORS para Blazor WebAssembly
 builder.Services.AddCors(options =>
