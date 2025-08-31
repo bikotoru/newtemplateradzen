@@ -1,0 +1,162 @@
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text;
+using Backend.Utils.Data;
+using Backend.Tests.Infrastructure;
+using Xunit;
+
+namespace Backend.Tests.Base
+{
+    public abstract class BaseControllerTest : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+    {
+        protected readonly WebApplicationFactory<Program> _factory;
+        protected readonly HttpClient _client;
+        protected readonly AppDbContext _context;
+        protected readonly JsonSerializerOptions _jsonOptions;
+
+        protected BaseControllerTest(WebApplicationFactory<Program> factory)
+        {
+            _factory = factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    // Remover el contexto real y reemplazar con InMemory
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                    if (descriptor != null)
+                    {
+                        services.Remove(descriptor);
+                    }
+
+                    // Agregar contexto InMemory
+                    services.AddDbContext<AppDbContext>(options =>
+                    {
+                        options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
+                    });
+                });
+            });
+
+            _client = _factory.CreateClient();
+            
+            // Obtener contexto del DI container
+            var scope = _factory.Services.CreateScope();
+            _context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+        }
+
+        #region HTTP Helpers que simulan las llamadas del Frontend
+
+        protected async Task<T?> GetAsync<T>(string endpoint)
+        {
+            var response = await _client.GetAsync(endpoint);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"GET {endpoint} failed: {response.StatusCode} - {error}");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<T>(json, _jsonOptions);
+        }
+
+        protected async Task<T?> PostAsync<T>(string endpoint, object? data = null)
+        {
+            var json = data != null ? JsonSerializer.Serialize(data, _jsonOptions) : "{}";
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await _client.PostAsync(endpoint, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"POST {endpoint} failed: {response.StatusCode} - {error}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<T>(responseJson, _jsonOptions);
+        }
+
+        protected async Task<T?> PutAsync<T>(string endpoint, object? data = null)
+        {
+            var json = data != null ? JsonSerializer.Serialize(data, _jsonOptions) : "{}";
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await _client.PutAsync(endpoint, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"PUT {endpoint} failed: {response.StatusCode} - {error}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<T>(responseJson, _jsonOptions);
+        }
+
+        protected async Task<bool> DeleteAsync(string endpoint)
+        {
+            var response = await _client.DeleteAsync(endpoint);
+            return response.IsSuccessStatusCode;
+        }
+
+        protected async Task<HttpResponseMessage> GetRawResponseAsync(string endpoint)
+        {
+            return await _client.GetAsync(endpoint);
+        }
+
+        protected async Task<HttpResponseMessage> PostRawResponseAsync(string endpoint, object? data = null)
+        {
+            var json = data != null ? JsonSerializer.Serialize(data, _jsonOptions) : "{}";
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            return await _client.PostAsync(endpoint, content);
+        }
+
+        #endregion
+
+        #region Database Helpers
+
+        protected void SeedTestData()
+        {
+            TestDbContextFactory.SeedTestData(_context);
+        }
+
+        protected async Task<Guid> CreateTestCategoriaAsync(string nombre = "Test Categoria", bool activo = true)
+        {
+            var categoria = new Shared.Models.Entities.Categoria
+            {
+                Id = Guid.NewGuid(),
+                Nombre = nombre,
+                Descripcion = $"Descripción para {nombre}",
+                Activo = activo,
+                FechaCreacion = DateTime.UtcNow,
+                UsuarioCreacion = "TestUser"
+            };
+
+            _context.Categorias.Add(categoria);
+            await _context.SaveChangesAsync();
+            
+            return categoria.Id;
+        }
+
+        protected async Task ClearDatabaseAsync()
+        {
+            _context.Categorias.RemoveRange(_context.Categorias);
+            await _context.SaveChangesAsync();
+        }
+
+        #endregion
+
+        public virtual void Dispose()
+        {
+            _context?.Dispose();
+            _client?.Dispose();
+        }
+    }
+}

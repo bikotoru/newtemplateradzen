@@ -97,12 +97,12 @@ namespace Backend.Utils.Services
             // Ejecutar query usando el servicio base
             var queryResult = await _queryService.QuerySelectAsync(request.Query);
             
-            if (!queryResult.Success || queryResult.Data == null)
+            if (queryResult == null)
             {
-                throw new InvalidOperationException($"Query failed: {queryResult.Message}");
+                throw new InvalidOperationException("Query failed: No data returned");
             }
 
-            return queryResult.Data.Cast<object>().ToList();
+            return queryResult;
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace Backend.Utils.Services
                 // Comentario si existe
                 if (!string.IsNullOrEmpty(column.Comment))
                 {
-                    cell.Comment.AddText(column.Comment);
+                    cell.CreateComment().AddText(column.Comment);
                 }
             }
             
@@ -227,7 +227,7 @@ namespace Backend.Utils.Services
                     {
                         // Formatear valor según el tipo
                         var formattedValue = FormatValue(value, column);
-                        cell.Value = formattedValue;
+                        cell.Value = XLCellValue.FromObject(formattedValue);
                     }
                     
                     // Aplicar formato de celda

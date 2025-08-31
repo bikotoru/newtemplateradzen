@@ -4,7 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Get connection string from environment variable (launchSettings.json)
 var connectionString = Environment.GetEnvironmentVariable("SQL") 
-    ?? throw new InvalidOperationException("SQL connection string not found in environment variables");
+    ?? "InMemoryTestConnection"; // Fallback para testing
 
 // Add services
 builder.Services.AddControllers();
@@ -45,3 +45,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Hacer Program accesible para tests
+public partial class Program { }

@@ -10,8 +10,8 @@ namespace Backend.Modules.Categoria
     {
         private readonly CategoriaService _categoriaService;
 
-        public CategoriaController(CategoriaService categoriaService, ILogger<CategoriaController> logger)
-            : base(categoriaService, logger)
+        public CategoriaController(CategoriaService categoriaService, ILogger<CategoriaController> logger, IServiceProvider serviceProvider)
+            : base(categoriaService, logger, serviceProvider)
         {
             _categoriaService = categoriaService;
         }

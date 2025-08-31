@@ -1,0 +1,73 @@
+using Microsoft.EntityFrameworkCore;
+using Backend.Utils.Data;
+
+namespace Backend.Tests.Infrastructure
+{
+    public static class TestDbContextFactory
+    {
+        public static AppDbContext CreateInMemoryContext(string? databaseName = null)
+        {
+            databaseName ??= Guid.NewGuid().ToString();
+
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(databaseName)
+                .EnableSensitiveDataLogging()
+                .Options;
+
+            var context = new AppDbContext(options);
+            
+            // Asegurar que la base de datos está creada
+            context.Database.EnsureCreated();
+
+            return context;
+        }
+
+        public static AppDbContext CreateInMemoryContextWithData(string? databaseName = null)
+        {
+            var context = CreateInMemoryContext(databaseName);
+            
+            // Seed data de prueba
+            SeedTestData(context);
+            
+            return context;
+        }
+
+        public static void SeedTestData(AppDbContext context)
+        {
+            // Categorías de prueba
+            var categorias = new[]
+            {
+                new Shared.Models.Entities.Categoria 
+                { 
+                    Id = Guid.NewGuid(), 
+                    Nombre = "Categoría Test 1", 
+                    Descripcion = "Descripción de prueba 1",
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow,
+                    UsuarioCreacion = "TestUser"
+                },
+                new Shared.Models.Entities.Categoria 
+                { 
+                    Id = Guid.NewGuid(), 
+                    Nombre = "Categoría Test 2", 
+                    Descripcion = "Descripción de prueba 2",
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow,
+                    UsuarioCreacion = "TestUser"
+                },
+                new Shared.Models.Entities.Categoria 
+                { 
+                    Id = Guid.NewGuid(), 
+                    Nombre = "Categoría Inactiva", 
+                    Descripcion = "Categoría para pruebas de filtrado",
+                    Activo = false,
+                    FechaCreacion = DateTime.UtcNow,
+                    UsuarioCreacion = "TestUser"
+                }
+            };
+
+            context.Categorias.AddRange(categorias);
+            context.SaveChanges();
+        }
+    }
+}

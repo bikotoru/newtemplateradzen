@@ -1,0 +1,310 @@
+using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
+using FluentAssertions;
+using Backend.Tests.Base;
+using Shared.Models.Requests;
+using Shared.Models.Responses;
+using Shared.Models.Entities;
+using Shared.Models.QueryModels;
+using Shared.Models.Builders;
+using System.Text.Json;
+
+namespace Backend.Tests.Controllers
+{
+    public class CategoriaIntegrationTests : BaseControllerTest
+    {
+        public CategoriaIntegrationTests(WebApplicationFactory<Program> factory) : base(factory)
+        {
+        }
+
+        #region Simulación de Requests Frontend -> Backend
+
+        [Fact]
+        public async Task Frontend_Create_Categoria_Should_Work()
+        {
+            // Arrange - Simular lo que envía el frontend
+            var categoria = new Categoria
+            {
+                Nombre = "Nueva Categoria Frontend",
+                Descripcion = "Creada desde el frontend de prueba",
+                Activo = true
+            };
+
+            var createRequest = new CreateRequestBuilder<Categoria>(categoria)
+                .Build();
+
+            // Act - Simular POST del frontend
+            var response = await PostAsync<ApiResponse<Categoria>>("/api/categoria/create", createRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Nombre.Should().Be("Nueva Categoria Frontend");
+            response.Data.Id.Should().NotBe(Guid.Empty);
+        }
+
+        [Fact]
+        public async Task Frontend_GetAll_Categorias_Should_Return_Paged_Data()
+        {
+            // Arrange - Crear datos de prueba
+            await CreateTestCategoriaAsync("Categoria 1");
+            await CreateTestCategoriaAsync("Categoria 2");
+            await CreateTestCategoriaAsync("Categoria 3");
+
+            // Act - Simular GET del frontend con parámetros de paginación
+            var response = await GetAsync<ApiResponse<PagedResponse<Categoria>>>("/api/categoria/all?page=1&pageSize=2");
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Data.Should().HaveCount(2); // Pagina de 2 elementos
+            response.Data.TotalCount.Should().Be(3);
+            response.Data.CurrentPage.Should().Be(1);
+            response.Data.PageSize.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task Frontend_GetById_Should_Return_Specific_Categoria()
+        {
+            // Arrange
+            var categoriaId = await CreateTestCategoriaAsync("Categoria Específica");
+
+            // Act - Simular GET by ID del frontend
+            var response = await GetAsync<ApiResponse<Categoria>>($"/api/categoria/{categoriaId}");
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Id.Should().Be(categoriaId);
+            response.Data.Nombre.Should().Be("Categoria Específica");
+        }
+
+        [Fact]
+        public async Task Frontend_Update_Categoria_Should_Work()
+        {
+            // Arrange
+            var categoriaId = await CreateTestCategoriaAsync("Categoria Original");
+            
+            var updatedCategoria = new Categoria
+            {
+                Id = categoriaId,
+                Nombre = "Categoria Actualizada Frontend",
+                Descripcion = "Actualizada desde el frontend",
+                Activo = true
+            };
+
+            var updateRequest = new UpdateRequestBuilder<Categoria>(updatedCategoria)
+                .Build();
+
+            // Act - Simular PUT del frontend
+            var response = await PutAsync<ApiResponse<Categoria>>("/api/categoria/update", updateRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Nombre.Should().Be("Categoria Actualizada Frontend");
+            response.Data.Id.Should().Be(categoriaId);
+        }
+
+        [Fact]
+        public async Task Frontend_Delete_Categoria_Should_Work()
+        {
+            // Arrange
+            var categoriaId = await CreateTestCategoriaAsync("Categoria Para Eliminar");
+
+            // Act - Simular DELETE del frontend
+            var success = await DeleteAsync($"/api/categoria/{categoriaId}");
+
+            // Assert
+            success.Should().BeTrue();
+
+            // Verificar que ya no existe
+            var getResponse = await GetRawResponseAsync($"/api/categoria/{categoriaId}");
+            getResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task Frontend_Batch_Create_Should_Work()
+        {
+            // Arrange - Simular múltiples categorías desde el frontend
+            var categorias = new[]
+            {
+                new Categoria { Nombre = "Batch Categoria 1", Descripcion = "Batch 1", Activo = true },
+                new Categoria { Nombre = "Batch Categoria 2", Descripcion = "Batch 2", Activo = true },
+                new Categoria { Nombre = "Batch Categoria 3", Descripcion = "Batch 3", Activo = false }
+            };
+
+            var createRequests = categorias.Select(c => 
+                new CreateRequestBuilder<Categoria>(c).Build()
+            ).ToList();
+
+            var batchRequest = new CreateBatchRequest<Categoria>
+            {
+                Requests = createRequests,
+                ContinueOnError = true
+            };
+
+            // Act - Simular POST batch del frontend
+            var response = await PostAsync<ApiResponse<BatchResponse<Categoria>>>("/api/categoria/create-batch", batchRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.SuccessCount.Should().Be(3);
+            response.Data.AllSuccessful.Should().BeTrue();
+            response.Data.SuccessfulItems.Should().HaveCount(3);
+        }
+
+        [Fact]
+        public async Task Frontend_Query_With_Filters_Should_Work()
+        {
+            // Arrange - Crear datos variados
+            await CreateTestCategoriaAsync("Activa 1", true);
+            await CreateTestCategoriaAsync("Activa 2", true);
+            await CreateTestCategoriaAsync("Inactiva 1", false);
+
+            // Act - Simular query con filtros del frontend
+            var queryRequest = new QueryRequest
+            {
+                Filters = new List<FilterCriteria>
+                {
+                    new FilterCriteria
+                    {
+                        PropertyName = "Activo",
+                        Operator = "Equals",
+                        Value = "true"
+                    }
+                },
+                OrderBy = new List<OrderCriteria>
+                {
+                    new OrderCriteria
+                    {
+                        PropertyName = "Nombre",
+                        Ascending = true
+                    }
+                }
+            };
+
+            var response = await PostAsync<ApiResponse<List<Categoria>>>("/api/categoria/query", queryRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Should().HaveCount(2); // Solo las activas
+            response.Data.All(c => c.Activo).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Frontend_Search_Should_Work()
+        {
+            // Arrange
+            await CreateTestCategoriaAsync("Electrónicos");
+            await CreateTestCategoriaAsync("Electrodomésticos");
+            await CreateTestCategoriaAsync("Ropa");
+
+            // Act - Simular búsqueda del frontend
+            var searchRequest = new SearchRequest
+            {
+                SearchTerm = "electr",
+                SearchFields = new[] { "Nombre", "Descripcion" }
+            };
+
+            var response = await PostAsync<ApiResponse<List<Categoria>>>("/api/categoria/search", searchRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.Success.Should().BeTrue();
+            response.Data.Should().NotBeNull();
+            response.Data!.Should().HaveCount(2); // Encuentra "Electrónicos" y "Electrodomésticos"
+        }
+
+        [Fact]
+        public async Task Frontend_Export_Excel_Should_Work()
+        {
+            // Arrange
+            await CreateTestCategoriaAsync("Para Excel 1");
+            await CreateTestCategoriaAsync("Para Excel 2");
+
+            var exportRequest = new Shared.Models.Export.ExcelExportRequest
+            {
+                FileName = "categorias_test",
+                IncludeHeaders = true,
+                Columns = new[]
+                {
+                    new Shared.Models.Export.ExcelColumnConfig { PropertyName = "Nombre", HeaderName = "Nombre" },
+                    new Shared.Models.Export.ExcelColumnConfig { PropertyName = "Descripcion", HeaderName = "Descripción" },
+                    new Shared.Models.Export.ExcelColumnConfig { PropertyName = "Activo", HeaderName = "Activo" }
+                }
+            };
+
+            // Act - Simular export del frontend
+            var response = await PostRawResponseAsync("/api/categoria/export/excel", exportRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response.IsSuccessStatusCode.Should().BeTrue();
+            response.Content.Headers.ContentType!.MediaType.Should().Be("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            
+            var content = await response.Content.ReadAsByteArrayAsync();
+            content.Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public async Task Frontend_Health_Check_Should_Work()
+        {
+            // Act - Simular health check del frontend
+            var response = await GetAsync<object>("/api/categoria/health");
+
+            // Assert
+            response.Should().NotBeNull();
+        }
+
+        #endregion
+
+        #region Error Scenarios (Como los manejaría el Frontend)
+
+        [Fact]
+        public async Task Frontend_Create_Invalid_Categoria_Should_Return_Error()
+        {
+            // Arrange - Categoria inválida (sin nombre)
+            var categoria = new Categoria
+            {
+                Nombre = "", // Nombre vacío
+                Descripcion = "Sin nombre",
+                Activo = true
+            };
+
+            var createRequest = new CreateRequestBuilder<Categoria>(categoria).Build();
+
+            // Act & Assert - El frontend debe manejar errores HTTP
+            var response = await PostRawResponseAsync("/api/categoria/create", createRequest);
+            
+            // Dependiendo de las validaciones, podría ser BadRequest
+            response.StatusCode.Should().BeOneOf(
+                System.Net.HttpStatusCode.BadRequest,
+                System.Net.HttpStatusCode.InternalServerError
+            );
+        }
+
+        [Fact]
+        public async Task Frontend_Get_NonExistent_Categoria_Should_Return_NotFound()
+        {
+            // Arrange
+            var nonExistentId = Guid.NewGuid();
+
+            // Act
+            var response = await GetRawResponseAsync($"/api/categoria/{nonExistentId}");
+
+            // Assert
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        }
+
+        #endregion
+    }
+}
