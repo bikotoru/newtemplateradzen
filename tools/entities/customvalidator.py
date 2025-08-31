@@ -154,7 +154,8 @@ namespace Shared.Models.Entities
         [{attribute}]
         public string {field_name};
     }}
-}}"""
+}}
+"""
         
         # Crear el archivo
         metadata_file.write_text(content, encoding='utf-8')
@@ -208,7 +209,7 @@ namespace Shared.Models.Entities
             new_class_content = class_content.replace(existing_field_line, new_field_line)
         else:
             # Campo no existe, agregarlo
-            new_field = f"\n        [{attribute}]\n        public string {field_name};"
+            new_field = f"\n        [{attribute}]\n        public string {field_name};\n"
             new_class_content = class_content + new_field
         
         # Reconstruir contenido completo
@@ -399,7 +400,8 @@ namespace Shared.Models.Entities
         [{attribute}]
         public string {field_name};
     }}
-}}"""
+}}
+"""
         
         metadata_file.write_text(content, encoding='utf-8')
         return True
@@ -441,7 +443,7 @@ namespace Shared.Models.Entities
             new_class_content = class_content.replace(existing_field_line, new_field_line)
         else:
             # Campo no existe, agregarlo
-            new_field = f"\n        [{attribute}]\n        public string {field_name};"
+            new_field = f"\n        [{attribute}]\n        public string {field_name};\n"
             new_class_content = class_content + new_field
         
         # Reconstruir contenido completo
