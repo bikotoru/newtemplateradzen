@@ -922,5 +922,66 @@ namespace Frontend.Services
         }
 
         #endregion
+
+        #region Excel Export Operations
+
+        /// <summary>
+        /// Exporta datos a Excel usando ExcelExportRequest
+        /// </summary>
+        public virtual async Task<byte[]> ExportToExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
+
+                var json = JsonSerializer.Serialize(exportRequest, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{_baseUrl}/export/excel", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var excelBytes = await response.Content.ReadAsByteArrayAsync();
+                    _logger.LogInformation($"Excel export completed for {typeof(T).Name}. Downloaded {excelBytes.Length} bytes");
+                    return excelBytes;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Error exporting to Excel for {typeof(T).Name}: {response.StatusCode} - {errorContent}");
+                throw new HttpRequestException($"Error exporting to Excel: {response.StatusCode} - {response.ReasonPhrase}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception exporting to Excel for {typeof(T).Name}");
+                throw new InvalidOperationException($"Exception exporting to Excel: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Exporta datos a Excel y descarga automáticamente usando JavaScript (requiere FileDownloadService)
+        /// </summary>
+        public virtual async Task DownloadExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest, FileDownloadService fileDownloadService, string? fileName = null)
+        {
+            try
+            {
+                _logger.LogInformation($"Starting Excel download for {typeof(T).Name}");
+
+                // Obtener bytes del Excel
+                var excelBytes = await ExportToExcelAsync(exportRequest);
+                var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                // Usar FileDownloadService para descargar
+                await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);
+                
+                _logger.LogInformation($"Excel file downloaded successfully: {finalFileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception downloading Excel for {typeof(T).Name}");
+                throw new InvalidOperationException($"Error descargando Excel: {ex.Message}", ex);
+            }
+        }
+
+        #endregion
     }
 }

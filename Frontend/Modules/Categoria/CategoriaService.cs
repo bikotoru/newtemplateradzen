@@ -74,7 +74,96 @@ namespace Frontend.Modules.Categoria
             }
         }
 
-       
+        /// <summary>
+        /// Ejemplo de exportación a Excel con configuración completa
+        /// </summary>
+        public async Task<byte[]> ExportarCategoriasExcelAsync(bool soloActivas = true)
+        {
+            try
+            {
+                var exportRequest = new Shared.Models.Builders.ExcelExportBuilder<Shared.Models.Entities.Categoria>()
+                    .WithQuery(
+                        Query()
+                            .Where(c => soloActivas ? c.Active == true : true)
+                            .Include(c => c.Creador)
+                            .ToQueryRequest()
+                    )
+                    .WithColumn(c => c.Codigo, "Código", Shared.Models.Export.ExcelFormat.Code)
+                    .WithColumn(c => c.Nombre, "Categoría")
+                    .WithColumn(c => c.Descripcion, "Descripción", wrapText: true, width: 30)
+                    .WithColumn(c => c.Creador.Nombre, "Usuario Creador")
+                    .WithColumn(c => c.FechaCreacion, "Fecha Creación", Shared.Models.Export.ExcelFormat.DateTime)
+                    .WithColumn(c => c.Active, "Estado", Shared.Models.Export.ExcelFormat.ActiveInactive)
+                    .WithTitle("Reporte de Categorías", soloActivas ? "Solo categorías activas" : "Todas las categorías")
+                    .WithSheetName("Categorias")
+                    .WithFormatting(autoFilter: true, formatAsTable: true, freezeHeaders: true)
+                    .WithDocumentProperties(
+                        title: "Reporte de Categorías",
+                        author: "Sistema de Gestión",
+                        company: "Mi Empresa",
+                        subject: "Exportación de datos de categorías"
+                    )
+                    .Build();
+
+                return await ExportToExcelAsync(exportRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exportando categorías a Excel");
+                throw new InvalidOperationException($"Error al exportar categorías: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Exportación simple con detección automática de formatos (retorna bytes)
+        /// </summary>
+        public async Task<byte[]> ExportarCategoriasSimpleAsync()
+        {
+            var exportRequest = new Shared.Models.Builders.ExcelExportBuilder<Shared.Models.Entities.Categoria>()
+                .WithQuery(Query().Where(c => c.Active == true).ToQueryRequest())
+                .WithColumn(c => c.Nombre, "Categoría")              // Auto: Text
+                .WithColumn(c => c.Descripcion, "Descripción")       // Auto: Text  
+                .WithColumn(c => c.FechaCreacion, "Fecha Creación")  // Auto: DateTime
+                .WithColumn(c => c.Active, "Activa")                 // Auto: YesNo
+                .Build();
+
+            return await ExportToExcelAsync(exportRequest);
+        }
+
+        /// <summary>
+        /// Descarga automática de Excel usando JavaScript
+        /// </summary>
+        public async Task DescargarCategoriasExcelAsync(Frontend.Services.FileDownloadService fileDownloadService, bool soloActivas = true)
+        {
+            try
+            {
+                var exportRequest = new Shared.Models.Builders.ExcelExportBuilder<Shared.Models.Entities.Categoria>()
+                    .WithQuery(
+                        Query()
+                            .Where(c => soloActivas ? c.Active == true : true)
+                            .Include(c => c.Creador)
+                            .ToQueryRequest()
+                    )
+                    .WithColumn(c => c.Codigo, "Código", Shared.Models.Export.ExcelFormat.Code)
+                    .WithColumn(c => c.Nombre, "Categoría")
+                    .WithColumn(c => c.Descripcion, "Descripción", wrapText: true, width: 30)
+                    .WithColumn(c => c.Creador.Nombre, "Usuario Creador")
+                    .WithColumn(c => c.FechaCreacion, "Fecha Creación", Shared.Models.Export.ExcelFormat.DateTime)
+                    .WithColumn(c => c.Active, "Estado", Shared.Models.Export.ExcelFormat.ActiveInactive)
+                    .WithTitle("Reporte de Categorías", soloActivas ? "Solo categorías activas" : "Todas las categorías")
+                    .WithSheetName("Categorias")
+                    .WithFormatting(autoFilter: true, formatAsTable: true, freezeHeaders: true)
+                    .Build();
+
+                await DownloadExcelAsync(exportRequest, fileDownloadService, "Categorias_Reporte.xlsx");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error descargando categorías Excel");
+                throw new InvalidOperationException($"Error al descargar categorías: {ex.Message}", ex);
+            }
+        }
+
         #endregion
     }
 

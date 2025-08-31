@@ -136,6 +136,40 @@ namespace Shared.Models.Services
             return result ?? new List<T>();
         }
 
+        /// <summary>
+        /// Convierte el QueryBuilder a un QueryRequest para uso con exportaciones u otros servicios
+        /// </summary>
+        public QueryRequest ToQueryRequest(bool autoInclude = false)
+        {
+            // Si hay búsqueda, crear un SearchRequest en lugar de QueryRequest
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                // Para búsquedas, crear un QueryRequest con los filtros base
+                var baseQuery = new QueryRequest
+                {
+                    Filter = BuildFilterString(),
+                    OrderBy = BuildOrderByString(),
+                    Include = autoInclude ? null : _includeExpressions.ToArray(),
+                    Skip = _skip,
+                    Take = _take
+                };
+
+                // TODO: Para exportaciones con búsqueda, se podría crear un SearchRequest
+                // Por ahora retornamos el QueryRequest base
+                return baseQuery;
+            }
+
+            // Query normal sin búsqueda
+            return new QueryRequest
+            {
+                Filter = BuildFilterString(),
+                OrderBy = BuildOrderByString(),
+                Include = autoInclude ? null : _includeExpressions.ToArray(),
+                Skip = _skip,
+                Take = _take
+            };
+        }
+
         public async Task<PagedResult<T>> ToPagedResultAsync(bool autoInclude = false)
         {
             // Si hay búsqueda, usar endpoint de Search paginado
@@ -145,14 +179,7 @@ namespace Shared.Models.Services
             }
 
             // Usar endpoint de Query paginado normal
-            var request = new QueryRequest
-            {
-                Filter = BuildFilterString(),
-                OrderBy = BuildOrderByString(),
-                Include = autoInclude ? null : new string[0],
-                Skip = _skip,
-                Take = _take
-            };
+            var request = ToQueryRequest(autoInclude);
 
             var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/paged", request);
             response.EnsureSuccessStatusCode();

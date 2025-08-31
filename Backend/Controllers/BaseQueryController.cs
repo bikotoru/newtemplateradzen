@@ -13,11 +13,13 @@ namespace Backend.Controllers
     {
         protected readonly BaseQueryService<T> _baseService;
         protected readonly ILogger<BaseQueryController<T>> _logger;
+        protected readonly IServiceProvider _serviceProvider;
 
-        protected BaseQueryController(BaseQueryService<T> baseService, ILogger<BaseQueryController<T>> logger)
+        protected BaseQueryController(BaseQueryService<T> baseService, ILogger<BaseQueryController<T>> logger, IServiceProvider serviceProvider)
         {
             _baseService = baseService;
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         #region Individual Operations (SEALED - No Override)
@@ -377,6 +379,46 @@ namespace Backend.Controllers
             {
                 _logger.LogError(ex, $"Error executing paged search for {typeof(T).Name}");
                 return StatusCode(500, ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.ErrorResponse($"Error executing paged search: {ex.Message}"));
+            }
+        }
+
+        #endregion
+
+        #region Excel Export Operations
+
+        /// <summary>
+        /// Exporta datos a Excel basado en ExcelExportRequest
+        /// </summary>
+        [HttpPost("export/excel")]
+        public virtual async Task<IActionResult> ExportToExcel([FromBody] Shared.Models.Export.ExcelExportRequest exportRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
+
+                // Crear servicio de exportación
+                var exportService = new Backend.Utils.Services.ExcelExportService<T>(_baseService, 
+                    _serviceProvider.GetRequiredService<ILogger<Backend.Utils.Services.ExcelExportService<T>>>());
+
+                // Generar Excel
+                var excelBytes = await exportService.ExportToExcelAsync(exportRequest);
+
+                // Generar nombre de archivo
+                var fileName = $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                _logger.LogInformation($"Excel export completed for {typeof(T).Name}. File size: {excelBytes.Length} bytes");
+
+                // Devolver archivo
+                return File(
+                    excelBytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileName
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error exporting to Excel for {typeof(T).Name}");
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Error exporting to Excel: {ex.Message}"));
             }
         }
 
