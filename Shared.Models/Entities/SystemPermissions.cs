@@ -10,7 +10,6 @@ public partial class SystemPermissions
     public string Nombre { get; set; } = null!;
 
     public string? Descripcion { get; set; }
-    public string? ActionKey { get; set; }
 
     public DateTime FechaCreacion { get; set; }
 
@@ -23,6 +22,12 @@ public partial class SystemPermissions
     public Guid? ModificadorId { get; set; }
 
     public bool Active { get; set; }
+
+    public string? ActionKey { get; set; }
+
+    public string? GroupKey { get; set; }
+
+    public string? GrupoNombre { get; set; }
 
     public virtual SystemUsers? Creador { get; set; }
 

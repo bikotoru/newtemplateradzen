@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace Shared.Models.Entities;
 
-public partial class SystemRolesPermissions
+public partial class SystemConfig
 {
     public Guid Id { get; set; }
 
-    public Guid SystemRolesId { get; set; }
+    public string Field { get; set; } = null!;
 
-    public Guid SystemPermissionsId { get; set; }
+    public string TypeField { get; set; } = null!;
 
     public DateTime FechaCreacion { get; set; }
 
@@ -29,7 +29,5 @@ public partial class SystemRolesPermissions
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual SystemPermissions SystemPermissions { get; set; } = null!;
-
-    public virtual SystemRoles SystemRoles { get; set; } = null!;
+    public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();
 }

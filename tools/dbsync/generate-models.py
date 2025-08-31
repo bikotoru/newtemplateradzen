@@ -72,29 +72,19 @@ class DatabaseModelGenerator:
             print(f"❌ ERROR leyendo launchSettings.json: {e}")
             return None
     
-    def clean_previous_files(self):
-        """Limpia archivos anteriores"""
-        print("\n🧹 LIMPIANDO ARCHIVOS ANTERIORES")
+    def prepare_directories(self):
+        """Prepara directorios necesarios sin eliminar archivos existentes"""
+        print("\n📁 PREPARANDO DIRECTORIOS")
         print("-" * 40)
         
-        # Limpiar entidades anteriores
-        if self.entities_path.exists():
-            print(f"   🗑️  Eliminando entidades anteriores: {self.entities_path}")
-            shutil.rmtree(self.entities_path)
-            
-        # Limpiar DbContext anterior en Backend.Utils
-        if self.data_path.exists():
-            print(f"   🗑️  Eliminando DbContext anterior: {self.data_path}")
-            shutil.rmtree(self.data_path)
-            
-        # Crear directorios
+        # Crear directorios si no existen (sin eliminar contenido)
         self.entities_path.mkdir(parents=True, exist_ok=True)
         self.data_path.mkdir(parents=True, exist_ok=True)
         
-        print("   ✅ Limpieza completada")
+        print("   ✅ Directorios preparados (archivos existentes se sobrescribirán con --force)")
     
     def generate_from_database(self, connection_string):
-        """Genera modelos usando EF Core CLI"""
+        """Genera modelos usando EF Core CLI con parámetros correctos"""
         print("\n🏗️  GENERANDO DESDE BASE DE DATOS")
         print("-" * 40)
         
@@ -103,16 +93,18 @@ class DatabaseModelGenerator:
         os.chdir(self.backend_utils_path)
         
         try:
-            # Comando para generar modelos
+            # Comando con parámetros correctos para generar directamente en ubicaciones finales
             cmd = [
                 "dotnet", "ef", "dbcontext", "scaffold",
                 connection_string,
                 "Microsoft.EntityFrameworkCore.SqlServer",
-                "-o", "TempEntities",
-                "-c", "AppDbContext",
-                "--context-dir", "TempData",
+                "--output-dir", "../Shared.Models/Entities",
+                "--context-dir", "Data", 
+                "--namespace", "Shared.Models.Entities",
+                "--context-namespace", "Backend.Utils.Data",
+                "--context", "AppDbContext",
                 "--force",
-                "--no-onconfiguring",
+                "--no-onconfiguring", 
                 "--no-pluralize"
             ]
             
@@ -144,71 +136,6 @@ class DatabaseModelGenerator:
         finally:
             os.chdir(original_cwd)
     
-    def organize_files(self):
-        """Organiza los archivos generados en la estructura correcta"""
-        print("\n📁 ORGANIZANDO ARCHIVOS")
-        print("-" * 40)
-        
-        temp_entities_path = self.backend_utils_path / "TempEntities"
-        temp_data_path = self.backend_utils_path / "TempData"
-        
-        # Mover entidades a Shared.Models
-        if temp_entities_path.exists():
-            entity_files = list(temp_entities_path.glob("*.cs"))
-            print(f"   📦 Moviendo {len(entity_files)} entidades a Shared.Models/Entities/")
-            for file in entity_files:
-                destination = self.entities_path / file.name
-                shutil.move(str(file), str(destination))
-                print(f"      ✅ {file.name}")
-                
-        # Mover DbContext a Backend.Utils/Data
-        if temp_data_path.exists():
-            context_files = list(temp_data_path.glob("*.cs"))
-            print(f"   🗄️  Moviendo {len(context_files)} archivo(s) DbContext a Backend.Utils/Data/")
-            for file in context_files:
-                destination = self.data_path / file.name
-                shutil.move(str(file), str(destination))
-                print(f"      ✅ {file.name}")
-        
-        # Limpiar directorios temporales
-        if temp_entities_path.exists():
-            shutil.rmtree(temp_entities_path)
-        if temp_data_path.exists():
-            shutil.rmtree(temp_data_path)
-            
-        print("   ✅ Organización completada")
-    
-    def fix_namespaces(self):
-        """Ajusta los namespaces de los archivos generados"""
-        print("\n🔧 AJUSTANDO NAMESPACES")
-        print("-" * 40)
-        
-        # Ajustar namespaces en entidades
-        entity_files = list(self.entities_path.glob("*.cs"))
-        print(f"   📝 Ajustando namespaces en {len(entity_files)} entidades...")
-        
-        for file in entity_files:
-            content = file.read_text(encoding='utf-8')
-            # Cambiar namespace
-            content = re.sub(r'namespace Backend\.Utils\.TempEntities', 'namespace Shared.Models.Entities', content)
-            content = re.sub(r'namespace Backend\.Utils\.TempEntities;', 'namespace Shared.Models.Entities;', content)
-            file.write_text(content, encoding='utf-8')
-        
-        # Ajustar namespaces en DbContext
-        context_files = list(self.data_path.glob("*.cs"))
-        print(f"   🗄️  Ajustando namespaces en {len(context_files)} archivo(s) DbContext...")
-        
-        for file in context_files:
-            content = file.read_text(encoding='utf-8')
-            # Cambiar namespace
-            content = re.sub(r'namespace Backend\.Utils\.TempData', 'namespace Backend.Utils.Data', content)
-            content = re.sub(r'namespace Backend\.Utils\.TempData;', 'namespace Backend.Utils.Data;', content)
-            # Cambiar using statements
-            content = re.sub(r'using Backend\.Utils\.TempEntities;', 'using Shared.Models.Entities;', content)
-            content = re.sub(r'using Backend\.Utils\.TempEntities', 'using Shared.Models.Entities', content)
-            file.write_text(content, encoding='utf-8')
-            
-        print("   ✅ Namespaces ajustados correctamente")
     
     def compile_solution(self):
         """Compila la solución para verificar que todo funciona"""
@@ -254,8 +181,8 @@ class DatabaseModelGenerator:
         
         print(f"\n🎯 PRÓXIMOS PASOS:")
         print(f"   1. Verifica los modelos generados en: {self.entities_path}")
-        print(f"   2. Configura tu Backend para usar: Backend.Utils.Data.AppDbContext")
-        print(f"   3. Registra el DbContext en Program.cs del Backend")
+        print(f"   2. DbContext generado automáticamente con namespaces correctos")
+        print(f"   3. ¡Las entidades están listas para usar!")
         print(f"   4. ¡Disfruta tus queries type-safe!")
         
     def run(self):
@@ -271,23 +198,17 @@ class DatabaseModelGenerator:
         if not connection_string:
             return False
             
-        # 2. Limpiar archivos anteriores
-        self.clean_previous_files()
+        # 2. Preparar directorios (sin limpiar)
+        self.prepare_directories()
         
         # 3. Generar desde BD
         if not self.generate_from_database(connection_string):
             return False
             
-        # 4. Organizar archivos
-        self.organize_files()
-        
-        # 5. Ajustar namespaces
-        self.fix_namespaces()
-        
-        # 6. Compilar para verificar
+        # 4. Compilar para verificar
         self.compile_solution()
         
-        # 7. Mostrar resumen
+        # 5. Mostrar resumen
         self.show_summary()
         
         print("\n🎉 GENERACIÓN COMPLETADA EXITOSAMENTE")

@@ -41,6 +41,14 @@ public partial class SystemUsers
 
     public virtual SystemOrganization? Organization { get; set; }
 
+    public virtual ICollection<SystemConfig> SystemConfigCreador { get; set; } = new List<SystemConfig>();
+
+    public virtual ICollection<SystemConfig> SystemConfigModificador { get; set; } = new List<SystemConfig>();
+
+    public virtual ICollection<SystemConfigValues> SystemConfigValuesCreador { get; set; } = new List<SystemConfigValues>();
+
+    public virtual ICollection<SystemConfigValues> SystemConfigValuesModificador { get; set; } = new List<SystemConfigValues>();
+
     public virtual ICollection<SystemPermissions> SystemPermissionsCreador { get; set; } = new List<SystemPermissions>();
 
     public virtual ICollection<SystemPermissions> SystemPermissionsModificador { get; set; } = new List<SystemPermissions>();

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Shared.Models.Entities;
 
 namespace Backend.Utils.Data;
 
@@ -13,6 +13,10 @@ public partial class AppDbContext : DbContext
     }
 
     public virtual DbSet<Categoria> Categoria { get; set; }
+
+    public virtual DbSet<SystemConfig> SystemConfig { get; set; }
+
+    public virtual DbSet<SystemConfigValues> SystemConfigValues { get; set; }
 
     public virtual DbSet<SystemOrganization> SystemOrganization { get; set; }
 
@@ -27,6 +31,8 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<SystemUsersPermissions> SystemUsersPermissions { get; set; }
 
     public virtual DbSet<SystemUsersRoles> SystemUsersRoles { get; set; }
+
+    public virtual DbSet<ZToken> ZToken { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +62,78 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Organization).WithMany(p => p.Categoria)
                 .HasForeignKey(d => d.OrganizationId)
                 .HasConstraintName("FK_categoria_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC079F2EF73E");
+
+            entity.ToTable("system_config");
+
+            entity.HasIndex(e => e.Active, "IX_system_config_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_config_FechaCreacion");
+
+            entity.HasIndex(e => e.Field, "IX_system_config_Field");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_config_OrganizationId");
+
+            entity.HasIndex(e => e.TypeField, "IX_system_config_TypeField");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Field).HasMaxLength(255);
+            entity.Property(e => e.TypeField).HasMaxLength(255);
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemConfigCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_config_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemConfigModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_config_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemConfig)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_config_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemConfigValues>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC074D09BA28");
+
+            entity.ToTable("system_config_values");
+
+            entity.HasIndex(e => e.Active, "IX_system_config_values_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_config_values_FechaCreacion");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_config_values_OrganizationId");
+
+            entity.HasIndex(e => e.SystemConfigId, "IX_system_config_values_SystemConfigId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemConfigValuesCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_config_values_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemConfigValuesModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_config_values_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemConfigValues)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_config_values_OrganizationId");
+
+            entity.HasOne(d => d.SystemConfig).WithMany(p => p.SystemConfigValues)
+                .HasForeignKey(d => d.SystemConfigId)
+                .HasConstraintName("FK_system_config_values_SystemConfigId");
         });
 
         modelBuilder.Entity<SystemOrganization>(entity =>
@@ -95,10 +173,19 @@ public partial class AppDbContext : DbContext
             entity.HasIndex(e => e.OrganizationId, "IX_system_permissions_OrganizationId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.ActionKey)
+                .HasMaxLength(255)
+                .IsUnicode(false);
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Descripcion).HasMaxLength(500);
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.GroupKey)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.GrupoNombre)
+                .HasMaxLength(255)
+                .IsUnicode(false);
             entity.Property(e => e.Nombre).HasMaxLength(255);
 
             entity.HasOne(d => d.Creador).WithMany(p => p.SystemPermissionsCreador)
@@ -322,6 +409,23 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersRolesSystemUsers)
                 .HasForeignKey(d => d.SystemUsersId)
                 .HasConstraintName("FK_system_users_roles_UserId");
+        });
+
+        modelBuilder.Entity<ZToken>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__z_token__3213E83F3E7F66CC");
+
+            entity.ToTable("z_token");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever()
+                .HasColumnName("id");
+            entity.Property(e => e.Data)
+                .IsUnicode(false)
+                .HasColumnName("data");
+            entity.Property(e => e.Logout).HasColumnName("logout");
+            entity.Property(e => e.Organizationid).HasColumnName("organizationid");
+            entity.Property(e => e.Refresh).HasColumnName("refresh");
         });
 
         OnModelCreatingPartial(modelBuilder);
