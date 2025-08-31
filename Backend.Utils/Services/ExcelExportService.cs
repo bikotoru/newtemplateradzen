@@ -2,6 +2,7 @@ using System.Reflection;
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using Shared.Models.Export;
+using Shared.Models.DTOs.Auth;
 using System.Linq.Dynamic.Core;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,14 +25,14 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Exporta datos a Excel basado en ExcelExportRequest
         /// </summary>
-        public async Task<byte[]> ExportToExcelAsync(ExcelExportRequest request)
+        public async Task<byte[]> ExportToExcelAsync(ExcelExportRequest request, SessionDataDto sessionData)
         {
             try
             {
                 _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
 
                 // Ejecutar query para obtener datos
-                var data = await ExecuteQueryAsync(request);
+                var data = await ExecuteQueryAsync(request, sessionData);
                 
                 // Crear libro de Excel
                 using var workbook = new XLWorkbook();
@@ -86,7 +87,7 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Ejecuta la query para obtener los datos
         /// </summary>
-        private async Task<List<object>> ExecuteQueryAsync(ExcelExportRequest request)
+        private async Task<List<object>> ExecuteQueryAsync(ExcelExportRequest request, SessionDataDto sessionData)
         {
             // Si hay límite máximo, aplicarlo
             if (request.MaxRows > 0)
@@ -95,7 +96,7 @@ namespace Backend.Utils.Services
             }
 
             // Ejecutar query usando el servicio base
-            var queryResult = await _queryService.QuerySelectAsync(request.Query);
+            var queryResult = await _queryService.QuerySelectAsync(request.Query, sessionData);
             
             if (queryResult == null)
             {

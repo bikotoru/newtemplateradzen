@@ -4,6 +4,7 @@ using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.Extensions;
 using Shared.Models.QueryModels;
+using Shared.Models.DTOs.Auth;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
@@ -28,14 +29,17 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Crear una entidad individual
         /// </summary>
-        public virtual async Task<T> CreateAsync(CreateRequest<T> request)
+        public virtual async Task<T> CreateAsync(CreateRequest<T> request, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Creating {typeof(T).Name}");
 
             try
             {
+                // Inyectar automáticamente campos de auditoría y organización
+                InjectCreationFields(request.Entity, sessionData);
+
                 // Validar FK automáticamente
-                await ValidateForeignKeysAsync(request.Entity);
+                await ValidateForeignKeysAsync(request.Entity, sessionData);
 
                 // Procesar campos específicos si están definidos
                 var entityToCreate = ProcessCreateFields(request);
@@ -49,7 +53,7 @@ namespace Backend.Utils.Services
                 // Guardar cambios
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation($"Created {typeof(T).Name} with ID: {GetEntityId(entry.Entity)}");
+                _logger.LogInformation($"Created {typeof(T).Name} with ID: {GetEntityId(entry.Entity)} by user {sessionData.Id}");
                 
                 return entry.Entity;
             }
@@ -63,14 +67,23 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Actualizar una entidad individual
         /// </summary>
-        public virtual async Task<T> UpdateAsync(UpdateRequest<T> request)
+        public virtual async Task<T> UpdateAsync(UpdateRequest<T> request, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Updating {typeof(T).Name}");
 
             try
             {
+                // VALIDACIÓN CRÍTICA: Verificar que la entidad pertenece a la organización del usuario
+                if (!ValidateEntityBelongsToOrganization(request.Entity, sessionData))
+                {
+                    throw new UnauthorizedAccessException($"No tiene permisos para modificar esta entidad de otra organización");
+                }
+
+                // Inyectar automáticamente campos de modificación
+                InjectUpdateFields(request.Entity, sessionData);
+
                 // Validar FK automáticamente
-                await ValidateForeignKeysAsync(request.Entity);
+                await ValidateForeignKeysAsync(request.Entity, sessionData);
 
                 // Procesar campos específicos si están definidos
                 var entityToUpdate = ProcessUpdateFields(request);
@@ -92,7 +105,7 @@ namespace Backend.Utils.Services
                 // Guardar cambios
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation($"Updated {typeof(T).Name} with ID: {GetEntityId(entityToUpdate)}");
+                _logger.LogInformation($"Updated {typeof(T).Name} with ID: {GetEntityId(entityToUpdate)} by user {sessionData.Id}");
                 
                 return entityToUpdate;
             }
@@ -106,13 +119,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Obtener todos los registros con paginación
         /// </summary>
-        public virtual async Task<PagedResponse<T>> GetAllPagedAsync(int page = 1, int pageSize = 10)
+        public virtual async Task<PagedResponse<T>> GetAllPagedAsync(int page, int pageSize, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Getting paged {typeof(T).Name} - Page: {page}, PageSize: {pageSize}");
 
             try
             {
-                var query = _dbSet.AsQueryable();
+                var query = ApplyOrganizationFilter(_dbSet.AsQueryable(), sessionData);
                 
                 var totalCount = await query.CountAsync();
                 var data = await query
@@ -132,13 +145,14 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Obtener todos los registros sin paginación (solo si se requiere explícitamente)
         /// </summary>
-        public virtual async Task<List<T>> GetAllUnpagedAsync()
+        public virtual async Task<List<T>> GetAllUnpagedAsync(SessionDataDto sessionData)
         {
             _logger.LogInformation($"Getting all {typeof(T).Name} (unpaged)");
 
             try
             {
-                return await _dbSet.ToListAsync();
+                var query = ApplyOrganizationFilter(_dbSet.AsQueryable(), sessionData);
+                return await query.ToListAsync();
             }
             catch (Exception ex)
             {
@@ -150,13 +164,14 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Obtener por ID
         /// </summary>
-        public virtual async Task<T?> GetByIdAsync(Guid id)
+        public virtual async Task<T?> GetByIdAsync(Guid id, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Getting {typeof(T).Name} by ID: {id}");
 
             try
             {
-                return await _dbSet.FindAsync(id);
+                var query = ApplyOrganizationFilter(_dbSet.AsQueryable(), sessionData);
+                return await query.FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
             }
             catch (Exception ex)
             {
@@ -168,23 +183,24 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Eliminar por ID
         /// </summary>
-        public virtual async Task<bool> DeleteAsync(Guid id)
+        public virtual async Task<bool> DeleteAsync(Guid id, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Deleting {typeof(T).Name} with ID: {id}");
 
             try
             {
-                var entity = await _dbSet.FindAsync(id);
+                // CRÍTICO: Solo permitir eliminar entidades de su organización
+                var entity = await GetByIdAsync(id, sessionData);
                 if (entity == null)
                 {
-                    _logger.LogWarning($"{typeof(T).Name} with ID {id} not found for deletion");
+                    _logger.LogWarning($"{typeof(T).Name} with ID {id} not found for deletion (or not belongs to user organization)");
                     return false;
                 }
 
                 _dbSet.Remove(entity);
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation($"Deleted {typeof(T).Name} with ID: {id}");
+                _logger.LogInformation($"Deleted {typeof(T).Name} with ID: {id} by user {sessionData.Id}");
                 return true;
             }
             catch (Exception ex)
@@ -201,7 +217,7 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Crear múltiples entidades
         /// </summary>
-        public virtual async Task<BatchResponse<T>> CreateBatchAsync(CreateBatchRequest<T> batchRequest)
+        public virtual async Task<BatchResponse<T>> CreateBatchAsync(CreateBatchRequest<T> batchRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Creating batch of {batchRequest.Requests.Count} {typeof(T).Name}");
 
@@ -213,7 +229,7 @@ namespace Backend.Utils.Services
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
-                    await ProcessBatchCreate(batchRequest, successfulItems, failedItems);
+                    await ProcessBatchCreate(batchRequest, successfulItems, failedItems, sessionData);
                     await transaction.CommitAsync();
                 }
                 catch (Exception ex)
@@ -225,7 +241,7 @@ namespace Backend.Utils.Services
             }
             else
             {
-                await ProcessBatchCreate(batchRequest, successfulItems, failedItems);
+                await ProcessBatchCreate(batchRequest, successfulItems, failedItems, sessionData);
             }
 
             return BatchResponse<T>.Create(successfulItems, failedItems);
@@ -234,7 +250,7 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Actualizar múltiples entidades
         /// </summary>
-        public virtual async Task<BatchResponse<T>> UpdateBatchAsync(UpdateBatchRequest<T> batchRequest)
+        public virtual async Task<BatchResponse<T>> UpdateBatchAsync(UpdateBatchRequest<T> batchRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Updating batch of {batchRequest.Requests.Count} {typeof(T).Name}");
 
@@ -246,7 +262,7 @@ namespace Backend.Utils.Services
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
-                    await ProcessBatchUpdate(batchRequest, successfulItems, failedItems);
+                    await ProcessBatchUpdate(batchRequest, successfulItems, failedItems, sessionData);
                     await transaction.CommitAsync();
                 }
                 catch (Exception ex)
@@ -258,7 +274,7 @@ namespace Backend.Utils.Services
             }
             else
             {
-                await ProcessBatchUpdate(batchRequest, successfulItems, failedItems);
+                await ProcessBatchUpdate(batchRequest, successfulItems, failedItems, sessionData);
             }
 
             return BatchResponse<T>.Create(successfulItems, failedItems);
@@ -269,14 +285,14 @@ namespace Backend.Utils.Services
         #region Private Helper Methods
 
         private async Task ProcessBatchCreate(CreateBatchRequest<T> batchRequest, 
-            List<T> successfulItems, List<BatchError> failedItems)
+            List<T> successfulItems, List<BatchError> failedItems, SessionDataDto sessionData)
         {
             for (int i = 0; i < batchRequest.Requests.Count; i++)
             {
                 try
                 {
                     var request = ApplyGlobalConfigToCreate(batchRequest.Requests[i], batchRequest.GlobalConfiguration);
-                    var result = await CreateAsync(request);
+                    var result = await CreateAsync(request, sessionData);
                     successfulItems.Add(result);
                 }
                 catch (Exception ex)
@@ -297,14 +313,14 @@ namespace Backend.Utils.Services
         }
 
         private async Task ProcessBatchUpdate(UpdateBatchRequest<T> batchRequest,
-            List<T> successfulItems, List<BatchError> failedItems)
+            List<T> successfulItems, List<BatchError> failedItems, SessionDataDto sessionData)
         {
             for (int i = 0; i < batchRequest.Requests.Count; i++)
             {
                 try
                 {
                     var request = ApplyGlobalConfigToUpdate(batchRequest.Requests[i], batchRequest.GlobalConfiguration);
-                    var result = await UpdateAsync(request);
+                    var result = await UpdateAsync(request, sessionData);
                     successfulItems.Add(result);
                 }
                 catch (Exception ex)
@@ -402,13 +418,14 @@ namespace Backend.Utils.Services
             return existingEntity;
         }
 
-        private async Task ValidateForeignKeysAsync(T entity)
+        private async Task ValidateForeignKeysAsync(T entity, SessionDataDto sessionData)
         {
             // Obtener todas las propiedades de navegación
             var entityType = _context.Model.FindEntityType(typeof(T));
             if (entityType == null) return;
 
             var foreignKeys = entityType.GetForeignKeys();
+            var userOrganizationId = Guid.Parse(sessionData.Organization.Id);
             
             foreach (var foreignKey in foreignKeys)
             {
@@ -421,21 +438,40 @@ namespace Backend.Utils.Services
                 var fkValue = propertyInfo.GetValue(entity);
                 if (fkValue == null || fkValue.Equals(Guid.Empty)) continue;
 
-                // Verificar que existe la entidad referenciada
+                // Verificar que existe la entidad referenciada Y que pertenece a la misma organización
                 var principalEntityType = foreignKey.PrincipalEntityType;
                 var principalDbSet = (IQueryable<object>)typeof(DbContext)
                     .GetMethod("Set", Type.EmptyTypes)!
                     .MakeGenericMethod(principalEntityType.ClrType)
                     .Invoke(_context, null)!;
+
+                // Verificar si la entidad referenciada tiene OrganizationId
+                var hasOrganizationId = principalEntityType.FindProperty("OrganizationId") != null;
                 
-                var exists = await principalDbSet
-                    .Cast<object>()
-                    .AnyAsync(e => EF.Property<Guid>(e, "Id") == (Guid)fkValue);
+                bool exists;
+                if (hasOrganizationId)
+                {
+                    // Verificar que existe Y pertenece a la misma organización
+                    exists = await principalDbSet
+                        .Cast<object>()
+                        .AnyAsync(e => EF.Property<Guid>(e, "Id") == (Guid)fkValue && 
+                                      EF.Property<Guid?>(e, "OrganizationId") == userOrganizationId);
+                }
+                else
+                {
+                    // Si no tiene OrganizationId, solo verificar que existe (entidades globales como SystemUsers)
+                    exists = await principalDbSet
+                        .Cast<object>()
+                        .AnyAsync(e => EF.Property<Guid>(e, "Id") == (Guid)fkValue);
+                }
 
                 if (!exists)
                 {
-                    throw new InvalidOperationException(
-                        $"Referenced entity {principalEntityType.ClrType.Name} with ID {fkValue} does not exist");
+                    var message = hasOrganizationId 
+                        ? $"Referenced entity {principalEntityType.ClrType.Name} with ID {fkValue} does not exist in your organization"
+                        : $"Referenced entity {principalEntityType.ClrType.Name} with ID {fkValue} does not exist";
+                    
+                    throw new InvalidOperationException(message);
                 }
             }
         }
@@ -463,13 +499,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Ejecutar query dinámica
         /// </summary>
-        public virtual async Task<List<T>> QueryAsync(QueryRequest queryRequest)
+        public virtual async Task<List<T>> QueryAsync(QueryRequest queryRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing query for {typeof(T).Name}");
 
             try
             {
-                var query = BuildQuery(queryRequest);
+                var query = BuildQuery(queryRequest, sessionData);
                 return await query.ToListAsync();
             }
             catch (Exception ex)
@@ -482,13 +518,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Ejecutar query dinámica con paginación
         /// </summary>
-        public virtual async Task<Shared.Models.QueryModels.PagedResult<T>> QueryPagedAsync(QueryRequest queryRequest)
+        public virtual async Task<Shared.Models.QueryModels.PagedResult<T>> QueryPagedAsync(QueryRequest queryRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing paged query for {typeof(T).Name}");
 
             try
             {
-                var baseQuery = BuildQuery(queryRequest, skipPagination: true);
+                var baseQuery = BuildQuery(queryRequest, sessionData, skipPagination: true);
                 
                 // Contar total sin paginación
                 var totalCount = await baseQuery.CountAsync();
@@ -525,13 +561,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Ejecutar query con select personalizado
         /// </summary>
-        public virtual async Task<List<object>> QuerySelectAsync(QueryRequest queryRequest)
+        public virtual async Task<List<object>> QuerySelectAsync(QueryRequest queryRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing select query for {typeof(T).Name}");
 
             try
             {
-                var query = BuildQuery(queryRequest);
+                var query = BuildQuery(queryRequest, sessionData);
                 
                 if (!string.IsNullOrEmpty(queryRequest.Select))
                 {
@@ -552,13 +588,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Ejecutar query con select personalizado y paginación
         /// </summary>
-        public virtual async Task<Shared.Models.QueryModels.PagedResult<object>> QuerySelectPagedAsync(QueryRequest queryRequest)
+        public virtual async Task<Shared.Models.QueryModels.PagedResult<object>> QuerySelectPagedAsync(QueryRequest queryRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing paged select query for {typeof(T).Name}");
 
             try
             {
-                var baseQuery = BuildQuery(queryRequest, skipPagination: true);
+                var baseQuery = BuildQuery(queryRequest, sessionData, skipPagination: true);
                 
                 // Contar total sin paginación ni select
                 var totalCount = await baseQuery.CountAsync();
@@ -608,13 +644,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Búsqueda inteligente por texto en campos específicos
         /// </summary>
-        public virtual async Task<List<T>> SearchAsync(SearchRequest searchRequest)
+        public virtual async Task<List<T>> SearchAsync(SearchRequest searchRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
 
             try
             {
-                var query = BuildSearchQuery(searchRequest);
+                var query = BuildSearchQuery(searchRequest, sessionData);
                 return await query.ToListAsync();
             }
             catch (Exception ex)
@@ -627,13 +663,13 @@ namespace Backend.Utils.Services
         /// <summary>
         /// Búsqueda inteligente con paginación
         /// </summary>
-        public virtual async Task<Shared.Models.QueryModels.PagedResult<T>> SearchPagedAsync(SearchRequest searchRequest)
+        public virtual async Task<Shared.Models.QueryModels.PagedResult<T>> SearchPagedAsync(SearchRequest searchRequest, SessionDataDto sessionData)
         {
             _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
 
             try
             {
-                var baseQuery = BuildSearchQuery(searchRequest, skipPagination: true);
+                var baseQuery = BuildSearchQuery(searchRequest, sessionData, skipPagination: true);
                 
                 // Contar total sin paginación
                 var totalCount = await baseQuery.CountAsync();
@@ -671,9 +707,12 @@ namespace Backend.Utils.Services
 
         #region Private Query Building Methods
 
-        private IQueryable<T> BuildQuery(QueryRequest queryRequest, bool skipPagination = false)
+        private IQueryable<T> BuildQuery(QueryRequest queryRequest, SessionDataDto sessionData, bool skipPagination = false)
         {
             IQueryable<T> query = _dbSet;
+
+            // CRÍTICO: Aplicar filtro de organización PRIMERO (antes de cualquier otra cosa)
+            query = ApplyOrganizationFilter(query, sessionData);
 
             // Aplicar includes
             if (queryRequest.Include != null && queryRequest.Include.Any())
@@ -711,9 +750,12 @@ namespace Backend.Utils.Services
             return query;
         }
 
-        private IQueryable<T> BuildSearchQuery(SearchRequest searchRequest, bool skipPagination = false)
+        private IQueryable<T> BuildSearchQuery(SearchRequest searchRequest, SessionDataDto sessionData, bool skipPagination = false)
         {
             IQueryable<T> query = _dbSet;
+
+            // CRÍTICO: Aplicar filtro de organización PRIMERO (antes de cualquier otra cosa)
+            query = ApplyOrganizationFilter(query, sessionData);
 
             // 1. Aplicar el BaseQuery completo si existe (filtros, includes, ordenamiento base)
             if (searchRequest.BaseQuery != null)
@@ -888,6 +930,120 @@ namespace Backend.Utils.Services
                    underlyingType == typeof(float) ||
                    underlyingType == typeof(short) ||
                    underlyingType == typeof(byte);
+        }
+
+        #endregion
+
+        #region Multi-Tenancy and Audit Methods
+
+        /// <summary>
+        /// Aplica filtro automático de OrganizationId a todas las consultas
+        /// </summary>
+        private IQueryable<T> ApplyOrganizationFilter(IQueryable<T> query, SessionDataDto sessionData)
+        {
+            var entityType = typeof(T);
+            var organizationIdProperty = entityType.GetProperty("OrganizationId");
+            
+            if (organizationIdProperty != null)
+            {
+                var userOrganizationId = Guid.Parse(sessionData.Organization.Id);
+                query = query.Where(e => EF.Property<Guid?>(e, "OrganizationId") == userOrganizationId);
+                
+                _logger.LogDebug("Aplicado filtro de organización {OrgId} para {EntityType}", userOrganizationId, typeof(T).Name);
+            }
+            
+            return query;
+        }
+
+        /// <summary>
+        /// Inyecta automáticamente campos de creación y organización
+        /// </summary>
+        private void InjectCreationFields(T entity, SessionDataDto sessionData)
+        {
+            var now = DateTime.UtcNow;
+            var userId = Guid.Parse(sessionData.Id);
+            var organizationId = Guid.Parse(sessionData.Organization.Id);
+
+            var entityType = typeof(T);
+            
+            SetPropertyIfExists(entityType, entity, "Id", Guid.NewGuid());
+            SetPropertyIfExists(entityType, entity, "OrganizationId", organizationId);
+            SetPropertyIfExists(entityType, entity, "CreadorId", userId);
+            SetPropertyIfExists(entityType, entity, "ModificadorId", userId);
+            SetPropertyIfExists(entityType, entity, "FechaCreacion", now);
+            SetPropertyIfExists(entityType, entity, "FechaModificacion", now);
+            SetPropertyIfExists(entityType, entity, "Active", true);
+
+            _logger.LogDebug("Inyectados campos de creación para {EntityType} - Usuario: {UserId}, Organización: {OrgId}", 
+                typeof(T).Name, userId, organizationId);
+        }
+
+        /// <summary>
+        /// Inyecta automáticamente campos de modificación
+        /// </summary>
+        private void InjectUpdateFields(T entity, SessionDataDto sessionData)
+        {
+            var now = DateTime.UtcNow;
+            var userId = Guid.Parse(sessionData.Id);
+
+            var entityType = typeof(T);
+            
+            SetPropertyIfExists(entityType, entity, "ModificadorId", userId);
+            SetPropertyIfExists(entityType, entity, "FechaModificacion", now);
+
+            _logger.LogDebug("Inyectados campos de modificación para {EntityType} - Usuario: {UserId}", 
+                typeof(T).Name, userId);
+        }
+
+        /// <summary>
+        /// Valida que la entidad pertenezca a la organización del usuario
+        /// </summary>
+        private bool ValidateEntityBelongsToOrganization(T entity, SessionDataDto sessionData)
+        {
+            var entityType = typeof(T);
+            var organizationIdProperty = entityType.GetProperty("OrganizationId");
+            
+            if (organizationIdProperty != null)
+            {
+                var entityOrgId = organizationIdProperty.GetValue(entity) as Guid?;
+                var userOrgId = Guid.Parse(sessionData.Organization.Id);
+                
+                var belongs = entityOrgId == userOrgId;
+                
+                if (!belongs)
+                {
+                    _logger.LogWarning("Intento de acceso cruzado de organización detectado - Usuario {UserId} (Org: {UserOrgId}) intentando acceder a entidad con OrganizationId: {EntityOrgId}", 
+                        sessionData.Id, userOrgId, entityOrgId);
+                }
+                
+                return belongs;
+            }
+            
+            return true; // Si no tiene OrganizationId, permitir (para compatibilidad)
+        }
+
+        /// <summary>
+        /// Establece una propiedad si existe en la entidad usando reflexión
+        /// </summary>
+        private void SetPropertyIfExists(Type entityType, T entity, string propertyName, object value)
+        {
+            var property = entityType.GetProperty(propertyName);
+            if (property != null && property.CanWrite)
+            {
+                // Manejar tipos nullable
+                if (property.PropertyType.IsGenericType && 
+                    property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                {
+                    if (value != null)
+                    {
+                        property.SetValue(entity, value);
+                    }
+                }
+                else
+                {
+                    property.SetValue(entity, value);
+                }
+            }
         }
 
         #endregion

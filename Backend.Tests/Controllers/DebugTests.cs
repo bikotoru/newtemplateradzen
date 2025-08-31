@@ -7,6 +7,8 @@ using FluentAssertions;
 using System.Text.Json;
 using System.Text;
 using Backend.Utils.Data;
+using Backend.Utils.Security;
+using Backend.Tests.Mocks;
 using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.Entities;
@@ -47,6 +49,21 @@ namespace Backend.Tests.Controllers
                         var logger = provider.GetRequiredService<ILogger<Backend.Modules.Categoria.CategoriaService>>();
                         return new Backend.Modules.Categoria.CategoriaService(context, logger);
                     });
+
+                    // Reemplazar servicios de autenticación con Mocks para tests
+                    var permissionDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(PermissionService));
+                    if (permissionDescriptor != null)
+                    {
+                        services.Remove(permissionDescriptor);
+                    }
+                    services.AddScoped<PermissionService, MockPermissionService>();
+                    
+                    var tokenDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(TokenCacheService));
+                    if (tokenDescriptor != null)
+                    {
+                        services.Remove(tokenDescriptor);
+                    }
+                    services.AddScoped<TokenCacheService, MockTokenCacheService>();
                 });
             });
 

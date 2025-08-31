@@ -48,7 +48,7 @@ namespace Backend.Controllers
                     return BadRequest("Request entity cannot be null");
                 }
 
-                var result = await _baseService.CreateAsync(request);
+                var result = await _baseService.CreateAsync(request, user);
                 return Ok(ApiResponse<T>.SuccessResponse(result, $"{typeof(T).Name} created successfully"));
             }
             catch (Exception ex)
@@ -77,7 +77,7 @@ namespace Backend.Controllers
                     return BadRequest("Request entity cannot be null");
                 }
 
-                var result = await _baseService.UpdateAsync(request);
+                var result = await _baseService.UpdateAsync(request, user);
                 return Ok(ApiResponse<T>.SuccessResponse(result, $"{typeof(T).Name} updated successfully"));
             }
             catch (Exception ex)
@@ -106,11 +106,11 @@ namespace Backend.Controllers
 
                 if (all)
                 {
-                    var allData = await _baseService.GetAllUnpagedAsync();
+                    var allData = await _baseService.GetAllUnpagedAsync(user);
                     return Ok(ApiResponse<List<T>>.SuccessResponse(allData, $"Retrieved all {typeof(T).Name}"));
                 }
 
-                var pagedData = await _baseService.GetAllPagedAsync(page, pageSize);
+                var pagedData = await _baseService.GetAllPagedAsync(page, pageSize, user);
                 return Ok(ApiResponse<PagedResponse<T>>.SuccessResponse(pagedData, $"Retrieved paged {typeof(T).Name}"));
             }
             catch (Exception ex)
@@ -134,7 +134,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Getting {typeof(T).Name} by ID: {id}");
 
-                var result = await _baseService.GetByIdAsync(id);
+                var result = await _baseService.GetByIdAsync(id, user);
 
                 if (result == null)
                 {
@@ -164,7 +164,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Deleting {typeof(T).Name} with ID: {id}");
 
-                var result = await _baseService.DeleteAsync(id);
+                var result = await _baseService.DeleteAsync(id, user);
 
                 if (!result)
                 {
@@ -203,7 +203,7 @@ namespace Backend.Controllers
                     return BadRequest("Batch request must contain at least one item");
                 }
 
-                var result = await _baseService.CreateBatchAsync(batchRequest);
+                var result = await _baseService.CreateBatchAsync(batchRequest, user);
 
                 var message = result.AllSuccessful
                     ? $"Successfully created {result.SuccessCount} {typeof(T).Name}"
@@ -237,7 +237,7 @@ namespace Backend.Controllers
                     return BadRequest("Batch request must contain at least one item");
                 }
 
-                var result = await _baseService.UpdateBatchAsync(batchRequest);
+                var result = await _baseService.UpdateBatchAsync(batchRequest, user);
 
                 var message = result.AllSuccessful
                     ? $"Successfully updated {result.SuccessCount} {typeof(T).Name}"
@@ -269,7 +269,7 @@ namespace Backend.Controllers
             try
             {
                 // Simple health check - attempt to query the entity
-                var count = await _baseService.GetAllPagedAsync(1, 1);
+                var count = await _baseService.GetAllPagedAsync(1, 1, user);
                 return Ok(new
                 {
                     Status = "Healthy",
@@ -310,7 +310,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing query for {typeof(T).Name}");
 
-                var result = await _baseService.QueryAsync(queryRequest);
+                var result = await _baseService.QueryAsync(queryRequest, user);
                 return Ok(ApiResponse<List<T>>.SuccessResponse(result, $"Query executed successfully"));
             }
             catch (Exception ex)
@@ -334,7 +334,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing paged query for {typeof(T).Name}");
 
-                var result = await _baseService.QueryPagedAsync(queryRequest);
+                var result = await _baseService.QueryPagedAsync(queryRequest, user);
                 return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.SuccessResponse(result, $"Paged query executed successfully"));
             }
             catch (Exception ex)
@@ -358,7 +358,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing select query for {typeof(T).Name}");
 
-                var result = await _baseService.QuerySelectAsync(queryRequest);
+                var result = await _baseService.QuerySelectAsync(queryRequest, user);
                 return Ok(ApiResponse<List<object>>.SuccessResponse(result, $"Select query executed successfully"));
             }
             catch (Exception ex)
@@ -382,7 +382,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing paged select query for {typeof(T).Name}");
 
-                var result = await _baseService.QuerySelectPagedAsync(queryRequest);
+                var result = await _baseService.QuerySelectPagedAsync(queryRequest, user);
                 return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<object>>.SuccessResponse(result, $"Paged select query executed successfully"));
             }
             catch (Exception ex)
@@ -410,7 +410,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
 
-                var result = await _baseService.SearchAsync(searchRequest);
+                var result = await _baseService.SearchAsync(searchRequest, user);
                 return Ok(ApiResponse<List<T>>.SuccessResponse(result, $"Search executed successfully"));
             }
             catch (Exception ex)
@@ -434,7 +434,7 @@ namespace Backend.Controllers
             {
                 _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
 
-                var result = await _baseService.SearchPagedAsync(searchRequest);
+                var result = await _baseService.SearchPagedAsync(searchRequest, user);
                 return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.SuccessResponse(result, $"Paged search executed successfully"));
             }
             catch (Exception ex)
@@ -467,7 +467,7 @@ namespace Backend.Controllers
                     _serviceProvider.GetRequiredService<ILogger<Backend.Utils.Services.ExcelExportService<T>>>());
 
                 // Generar Excel
-                var excelBytes = await exportService.ExportToExcelAsync(exportRequest);
+                var excelBytes = await exportService.ExportToExcelAsync(exportRequest, user);
 
                 // Generar nombre de archivo
                 var fileName = $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
@@ -600,5 +600,6 @@ namespace Backend.Controllers
         }
 
         #endregion
+
     }
 }
