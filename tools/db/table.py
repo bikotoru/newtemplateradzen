@@ -70,6 +70,41 @@ class DatabaseTableGenerator:
             print(f"❌ ERROR leyendo launchSettings.json: {e}")
             return None
     
+    def table_exists(self, table_name):
+        """Verifica si una tabla existe en la base de datos"""
+        try:
+            connection_string = self.read_connection_string()
+            if not connection_string:
+                return False
+            
+            # Query para verificar existencia de tabla
+            check_query = f"""
+SELECT COUNT(*) as table_count 
+FROM INFORMATION_SCHEMA.TABLES 
+WHERE TABLE_NAME = '{table_name}' AND TABLE_TYPE = 'BASE TABLE'
+"""
+            
+            result = subprocess.run([
+                'sqlcmd', '-S', 'localhost', '-U', 'sa', '-P', 'Soporte.2019', '-C',
+                '-Q', check_query
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                # Buscar el número en la salida
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.isdigit():
+                        return int(line) > 0
+                return False
+            else:
+                print(f"❌ Error verificando tabla: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ ERROR verificando existencia de tabla: {e}")
+            return False
+    
     def _handle_string_type(self, size):
         """Maneja tipos string con tamaño"""
         if size and size.isdigit():
@@ -223,6 +258,88 @@ END
 GO"""
         
         return sql
+    
+    def generate_alter_sql(self, table_name, fields=None, foreign_keys=None, unique_fields=None):
+        """Genera SQL para agregar campos a tabla existente"""
+        fields = fields or []
+        foreign_keys = foreign_keys or []
+        unique_fields = unique_fields or []
+        
+        alter_statements = []
+        
+        # ALTER TABLE para agregar campos personalizados
+        if fields:
+            add_columns = []
+            for field in fields:
+                add_columns.append(f"ADD {field['name']} {field['sql_type']} NOT NULL")
+            
+            alter_table_sql = f"""-- ========================================
+-- ➕ AGREGAR CAMPOS A TABLA: {table_name}
+-- ========================================
+
+ALTER TABLE {table_name}
+{', '.join(add_columns)};"""
+            alter_statements.append(alter_table_sql)
+        
+        # ALTER TABLE para agregar campos FK
+        if foreign_keys:
+            fk_columns = []
+            for fk in foreign_keys:
+                fk_columns.append(f"ADD {fk['field']} {fk['sql_type']} NULL")
+            
+            if fk_columns:
+                fk_alter_sql = f"""
+-- Agregar campos Foreign Key
+ALTER TABLE {table_name}
+{', '.join(fk_columns)};"""
+                alter_statements.append(fk_alter_sql)
+        
+        # ALTER TABLE para agregar constraints FK
+        if foreign_keys:
+            fk_constraints = []
+            for fk in foreign_keys:
+                constraint_sql = f"""
+-- Foreign Key constraint para {fk['field']}
+ALTER TABLE {table_name}
+ADD CONSTRAINT FK_{table_name}_{fk['field']} 
+    FOREIGN KEY ({fk['field']}) REFERENCES {fk['ref_table']}(Id);"""
+                fk_constraints.append(constraint_sql)
+            
+            alter_statements.extend(fk_constraints)
+        
+        # ALTER TABLE para agregar constraints UNIQUE
+        if unique_fields:
+            unique_constraints = []
+            for unique_field in unique_fields:
+                constraint_sql = f"""
+-- Unique constraint para {unique_field}
+ALTER TABLE {table_name}
+ADD CONSTRAINT UK_{table_name}_{unique_field} UNIQUE ({unique_field});"""
+                unique_constraints.append(constraint_sql)
+            
+            alter_statements.extend(unique_constraints)
+        
+        # Índices para campos agregados
+        index_statements = []
+        all_new_fields = fields + foreign_keys
+        
+        for field in all_new_fields:
+            field_name = field['name'] if 'name' in field else field['field']
+            index_sql = f"""
+-- Índice para {field_name}
+CREATE NONCLUSTERED INDEX IX_{table_name}_{field_name} ON {table_name}({field_name});"""
+            index_statements.append(index_sql)
+        
+        # Combinar todo
+        final_sql = "\n".join(alter_statements + index_statements)
+        
+        # Agregar mensaje de éxito
+        final_sql += f"""
+
+PRINT '✅ Campos agregados exitosamente a tabla {table_name}';
+"""
+        
+        return final_sql
     
     def execute_sql(self, sql, connection_string):
         """Ejecuta el SQL en la base de datos"""
@@ -410,19 +527,33 @@ VALUES
             print(f"   ❌ ERROR agregando metadata: {e}")
             return False
     
-    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False):
+    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False, add_fields_mode=False):
         """Ejecuta el proceso completo"""
         self.print_header()
         
         try:
             # Validar nombre de tabla
             table_name = self.validate_table_name(table_name)
-            print(f"📊 Tabla: {table_name}")
+            
+            # Modo addfield: verificar que la tabla existe
+            if add_fields_mode:
+                print(f"➕ AGREGAR CAMPOS A TABLA: {table_name}")
+                print(f"🔍 Verificando existencia de tabla...")
+                
+                if not self.table_exists(table_name):
+                    print(f"❌ ERROR: La tabla '{table_name}' no existe en la base de datos")
+                    print(f"💡 Use --name para crear una nueva tabla")
+                    return False
+                
+                print(f"✅ Tabla '{table_name}' encontrada")
+                
+            else:
+                print(f"📊 CREAR NUEVA TABLA: {table_name}")
             
             # Parsear campos
             parsed_fields = []
             if fields:
-                print(f"📝 Campos personalizados: {len(fields)}")
+                print(f"📝 Campos {'a agregar' if add_fields_mode else 'personalizados'}: {len(fields)}")
                 for field_str in fields:
                     field = self.parse_field(field_str)
                     parsed_fields.append(field)
@@ -443,8 +574,11 @@ VALUES
             
             print()
             
-            # Generar SQL
-            sql = self.generate_sql(table_name, parsed_fields, parsed_fks, unique_fields)
+            # Generar SQL según el modo
+            if add_fields_mode:
+                sql = self.generate_alter_sql(table_name, parsed_fields, parsed_fks, unique_fields)
+            else:
+                sql = self.generate_sql(table_name, parsed_fields, parsed_fks, unique_fields)
             
             if preview:
                 print("📋 SQL GENERADO:")
@@ -472,7 +606,11 @@ VALUES
                             self.regenerate_models()
                     
                     print("\n🎉 PROCESO COMPLETADO EXITOSAMENTE")
-                    print(f"✅ Tabla '{table_name}' creada en base de datos")
+                    if add_fields_mode:
+                        print(f"✅ Campos agregados exitosamente a tabla '{table_name}'")
+                    else:
+                        print(f"✅ Tabla '{table_name}' creada en base de datos")
+                    
                     if self.autoincremental_fields:
                         print(f"✅ Campos autoincrementales configurados: {', '.join(self.autoincremental_fields)}")
                         print(f"✅ Metadata [AutoIncremental] agregada automáticamente")
@@ -485,12 +623,15 @@ VALUES
                 else:
                     return False
             else:
-                print("📋 SQL GENERADO (usar --execute para crear en BD):")
+                print(f"📋 SQL GENERADO (usar --execute para {'agregar campos' if add_fields_mode else 'crear en BD'}):")
                 print("=" * 70)
                 print(sql)
                 print("=" * 70)
                 print("\n💡 Para ejecutar en base de datos:")
-                print(f"   python tools/db/table.py --name \"{table_name}\" --execute")
+                if add_fields_mode:
+                    print(f"   python tools/db/table.py --addfield \"{table_name}\" --fields [...] --execute")
+                else:
+                    print(f"   python tools/db/table.py --name \"{table_name}\" --execute")
                 return True
                 
         except Exception as e:
@@ -499,8 +640,14 @@ VALUES
 
 def main():
     parser = argparse.ArgumentParser(description='🛠️ Database Table Generator')
-    parser.add_argument('--name', required=True, 
-                       help='Nombre de la tabla (requerido)')
+    
+    # Grupos mutuamente exclusivos para --name y --addfield
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--name', 
+                       help='Nombre de la tabla a CREAR')
+    group.add_argument('--addfield',
+                       help='Nombre de la tabla existente para AGREGAR campos')
+    
     parser.add_argument('--fields', nargs='*', default=[],
                        help='Campos adicionales: "nombre:tipo:tamaño"')
     parser.add_argument('--fk', nargs='*', default=[],
@@ -521,14 +668,19 @@ def main():
     generator = DatabaseTableGenerator(args.project)
     
     try:
+        # Determinar el modo y nombre de tabla
+        table_name = args.name if args.name else args.addfield
+        add_fields_mode = bool(args.addfield)
+        
         success = generator.run(
-            table_name=args.name,
+            table_name=table_name,
             fields=args.fields,
             foreign_keys=args.fk,
             unique_fields=args.unique,
             execute=args.execute,
             preview=args.preview,
-            autosync=args.autosync
+            autosync=args.autosync,
+            add_fields_mode=add_fields_mode
         )
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:

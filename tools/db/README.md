@@ -11,7 +11,7 @@ Herramienta para crear tablas de base de datos automáticamente con los campos b
 
 ## 📋 Uso Básico
 
-### **Tabla Simple (Solo BaseEntity)**
+### **1. Crear Nueva Tabla (Solo BaseEntity)**
 ```bash
 python tools/db/table.py --name "categories"
 ```
@@ -23,6 +23,15 @@ python tools/db/table.py --name "categories"
 - CreadorId (UNIQUEIDENTIFIER, FK a system_users)
 - ModificadorId (UNIQUEIDENTIFIER, FK a system_users)
 - Active (BIT, default 1)
+
+### **2. Agregar Campos a Tabla Existente**
+```bash
+python tools/db/table.py --addfield "categories" \
+    --fields "descripcion:text" "imagen_url:string:500"
+```
+**Agrega solo los campos especificados:**
+- descripcion (NVARCHAR(MAX))
+- imagen_url (NVARCHAR(500))
 
 ---
 
