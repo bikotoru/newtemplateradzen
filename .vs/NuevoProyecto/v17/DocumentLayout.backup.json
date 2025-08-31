@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\handlers\\savehandlers\\globalsavehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\handlers\\savehandlers\\globalsavehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\extensions\\dbcontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\extensions\\dbcontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -21,10 +29,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\core\\efinterceptorservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\core\\efinterceptorservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -34,7 +38,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -46,7 +50,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "GlobalSaveHandler.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Handlers\\SaveHandlers\\GlobalSaveHandler.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Handlers\\SaveHandlers\\GlobalSaveHandler.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Handlers\\SaveHandlers\\GlobalSaveHandler.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Handlers\\SaveHandlers\\GlobalSaveHandler.cs",
+              "ViewState": "AgIAALgAAAAAAAAAAAAYwMAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T01:24:44.817Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Program.cs",
               "RelativeDocumentMoniker": "Backend\\Program.cs",
@@ -59,7 +76,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "DbContextExtensions.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
@@ -72,7 +89,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "InterceptedAppDbContext.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
@@ -85,7 +102,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "EFInterceptorService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
@@ -98,7 +115,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "BaseHandler.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
@@ -111,7 +128,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 1,
               "Title": "GlobalUpdateHandler.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",

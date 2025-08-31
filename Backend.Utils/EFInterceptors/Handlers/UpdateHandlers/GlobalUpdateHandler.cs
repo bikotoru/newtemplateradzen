@@ -28,6 +28,17 @@ namespace Backend.Utils.EFInterceptors.Handlers.UpdateHandlers
                 throw new InvalidOperationException(validationResult.ErrorMessage);
             }
             
+            // Verificar campos críticos de BaseEntity que NUNCA pueden cambiar
+            var baseEntityValidationResult = await ValidateBaseEntityCriticalFields(entity, originalEntity);
+            if (!baseEntityValidationResult.IsValid)
+            {
+                _logger.LogWarning($"[GlobalUpdateHandler] Update blocked: {baseEntityValidationResult.ErrorMessage}");
+                throw new InvalidOperationException(baseEntityValidationResult.ErrorMessage);
+            }
+            
+            // Actualizar automáticamente FechaModificacion
+            UpdateModificationDate(entity);
+            
             return await Task.FromResult(true);
         }
         
@@ -94,6 +105,67 @@ namespace Backend.Utils.EFInterceptors.Handlers.UpdateHandlers
             return new ValidationResult { IsValid = true };
         }
         
+        private async Task<ValidationResult> ValidateBaseEntityCriticalFields<T>(T entity, T originalEntity)
+        {
+            var entityType = typeof(T);
+            
+            // Campos críticos de BaseEntity que NUNCA pueden cambiar
+            var criticalFields = new[]
+            {
+                "Id",
+                "OrganizationId", 
+                "FechaCreacion",
+                "CreadorId"
+            };
+            
+            foreach (var fieldName in criticalFields)
+            {
+                var property = entityType.GetProperty(fieldName);
+                if (property == null) continue; // La entidad no tiene este campo
+                
+                var currentValue = property.GetValue(entity);
+                var originalValue = property.GetValue(originalEntity);
+                
+                // Comparar valores
+                var valuesAreEqual = (currentValue == null && originalValue == null) ||
+                                    (currentValue != null && currentValue.Equals(originalValue));
+                
+                if (!valuesAreEqual)
+                {
+                    return new ValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = $"El campo '{fieldName}' es un campo crítico de BaseEntity y NUNCA puede ser modificado. " +
+                                     $"Valor original: '{originalValue}', Valor nuevo: '{currentValue}'"
+                    };
+                }
+                
+                _logger.LogDebug($"[GlobalUpdateHandler] Campo crítico '{fieldName}' verificado - Sin cambios");
+            }
+            
+            return new ValidationResult { IsValid = true };
+        }
+
+        private void UpdateModificationDate<T>(T entity)
+        {
+            var entityType = typeof(T);
+            
+            // Buscar la propiedad FechaModificacion
+            var fechaModificacionProperty = entityType.GetProperty("FechaModificacion");
+            
+            if (fechaModificacionProperty != null && fechaModificacionProperty.PropertyType == typeof(DateTime))
+            {
+                var currentDateTime = DateTime.UtcNow;
+                fechaModificacionProperty.SetValue(entity, currentDateTime);
+                
+                _logger.LogDebug($"[GlobalUpdateHandler] FechaModificacion actualizada automáticamente a: {currentDateTime}");
+            }
+            else
+            {
+                _logger.LogDebug($"[GlobalUpdateHandler] No se encontró propiedad FechaModificacion en {entityType.Name}");
+            }
+        }
+
         private class ValidationResult
         {
             public bool IsValid { get; set; }
