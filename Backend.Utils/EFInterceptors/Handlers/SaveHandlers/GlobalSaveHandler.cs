@@ -184,15 +184,18 @@ namespace Backend.Utils.EFInterceptors.Handlers.SaveHandlers
         {
             Guid suffixConfigId = Guid.Empty;
             Guid numberConfigId = Guid.Empty;
+            bool needsDbQuery = false;
 
             lock (_cacheLock)
             {
                 _configCache.TryGetValue(suffixKey, out suffixConfigId);
                 _configCache.TryGetValue(numberKey, out numberConfigId);
+                
+                needsDbQuery = suffixConfigId == Guid.Empty || numberConfigId == Guid.Empty;
             }
 
             // Si no están en cache, consultar base de datos
-            if (suffixConfigId == Guid.Empty || numberConfigId == Guid.Empty)
+            if (needsDbQuery)
             {
                 var connectionString = context.Database.GetConnectionString();
                 using var connection = new SqlConnection(connectionString);
@@ -208,14 +211,20 @@ namespace Backend.Utils.EFInterceptors.Handlers.SaveHandlers
                 command.Parameters.AddWithValue("@numberKey", numberKey);
 
                 using var reader = await command.ExecuteReaderAsync();
+                var configResults = new List<(Guid id, string field)>();
                 
+                while (await reader.ReadAsync())
+                {
+                    var id = reader.GetGuid("Id");
+                    var field = reader.GetString("Field");
+                    configResults.Add((id, field));
+                }
+                
+                // Actualizar cache después de obtener todos los resultados
                 lock (_cacheLock)
                 {
-                    while (await reader.ReadAsync())
+                    foreach (var (id, field) in configResults)
                     {
-                        var id = reader.GetGuid("Id");
-                        var field = reader.GetString("Field");
-
                         _configCache[field] = id;
 
                         if (field == suffixKey) suffixConfigId = id;
