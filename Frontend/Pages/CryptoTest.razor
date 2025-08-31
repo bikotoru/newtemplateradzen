@@ -1,0 +1,324 @@
+@page "/crypto-test"
+@using Frontend.Services
+@using Shared.Models.Security
+@inject CryptoService CryptoService
+
+<PageTitle>Crypto Test</PageTitle>
+
+<h1>Prueba de Encriptación</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <h3>Frontend (JavaScript AES-CBC + HMAC)</h3>
+        <div class="mb-3">
+            <label class="form-label">Texto a encriptar:</label>
+            <input @bind="frontendPlainText" class="form-control" placeholder="Ingresa el texto..." />
+        </div>
+        <button class="btn btn-primary" @onclick="EncryptFrontend">Encriptar</button>
+        <button class="btn btn-secondary" @onclick="DecryptFrontend">Desencriptar</button>
+        <button class="btn btn-success" @onclick="TestFrontend">Test Auto</button>
+        
+        <div class="mt-3">
+            <label class="form-label">Texto encriptado:</label>
+            <textarea @bind="frontendEncrypted" class="form-control" rows="3" readonly></textarea>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">Texto desencriptado:</label>
+            <input @bind="frontendDecrypted" class="form-control" readonly />
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <h3>Backend (.NET AES-CBC + HMAC)</h3>
+        <div class="mb-3">
+            <label class="form-label">Texto a encriptar:</label>
+            <input @bind="backendPlainText" class="form-control" placeholder="Ingresa el texto..." />
+        </div>
+        <button class="btn btn-primary" @onclick="EncryptBackend">Encriptar</button>
+        <button class="btn btn-secondary" @onclick="DecryptBackend">Desencriptar</button>
+        <button class="btn btn-success" @onclick="TestBackend">Test Auto</button>
+        
+        <div class="mt-3">
+            <label class="form-label">Texto encriptado:</label>
+            <textarea @bind="backendEncrypted" class="form-control" rows="3" readonly></textarea>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">Texto desencriptado:</label>
+            <input @bind="backendDecrypted" class="form-control" readonly />
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="row mt-4">
+    <div class="col-12">
+        <h3>Prueba de Compatibilidad Cruzada</h3>
+        <p>Encripta con el frontend y desencripta con el backend (y viceversa)</p>
+        
+        <div class="mb-3">
+            <label class="form-label">Texto de prueba:</label>
+            <input @bind="crossTestText" class="form-control" placeholder="Texto para compatibilidad cruzada..." />
+        </div>
+        
+        <div class="btn-group mb-3">
+            <button class="btn btn-info" @onclick="CrossTestFrontendToBackend">Frontend → Backend</button>
+            <button class="btn btn-info" @onclick="CrossTestBackendToFrontend">Backend → Frontend</button>
+        </div>
+        
+        <div class="alert alert-info">
+            <strong>Resultado:</strong> @crossTestResult
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="row mt-4">
+    <div class="col-12">
+        <h3>Test Automatizado con Valor Fijo</h3>
+        <p>Prueba con un valor encriptado conocido para verificar que ambos lados pueden desencriptarlo correctamente</p>
+        
+        <div class="mb-3">
+            <strong>Datos de prueba:</strong><br/>
+            <small><strong>Texto original:</strong> @fixedTestText</small><br/>
+            <small><strong>Valor encriptado:</strong> @fixedEncryptedValue</small>
+        </div>
+        
+        <button class="btn btn-success" @onclick="RunFixedValueTest">🧪 Ejecutar Test Automatizado</button>
+        
+        <div class="mt-3">
+            <div class="alert @(fixedTestResult.Contains("✅") ? "alert-success" : fixedTestResult.Contains("❌") ? "alert-danger" : "alert-info")">
+                <strong>Resultado del Test:</strong><br/>
+                @fixedTestResult
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">
+        <strong>Error:</strong> @errorMessage
+    </div>
+}
+
+@code {
+    private string frontendPlainText = "Hola desde el Frontend!";
+    private string frontendEncrypted = "";
+    private string frontendDecrypted = "";
+    
+    private string backendPlainText = "Hola desde el Backend!";
+    private string backendEncrypted = "";
+    private string backendDecrypted = "";
+    
+    private string crossTestText = "Compatibilidad cruzada Frontend ↔ Backend";
+    private string crossTestResult = "";
+    
+    // Test automatizado con valor fijo
+    private string fixedTestText = "Hola desde el Frontend!";
+    private string fixedEncryptedValue = "4PlIK33ouFrs8MXw6ZB0XZa776cJ0o6ylYAKSoonpPe7V21d7HDGNMnj0saKS9bPFJjDOqhBJrL/zP/NzeBcmbiWiQmgSADW2kkPIIhLR48=";
+    private string fixedTestResult = "Presiona el botón para ejecutar el test";
+    
+    private string errorMessage = "";
+
+    private async Task EncryptFrontend()
+    {
+        try
+        {
+            errorMessage = "";
+            frontendEncrypted = await CryptoService.EncryptAsync(frontendPlainText);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en encriptación frontend: {ex.Message}";
+        }
+    }
+
+    private async Task DecryptFrontend()
+    {
+        try
+        {
+            errorMessage = "";
+            frontendDecrypted = await CryptoService.DecryptAsync(frontendEncrypted);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en desencriptación frontend: {ex.Message}";
+        }
+    }
+
+    private async Task TestFrontend()
+    {
+        try
+        {
+            errorMessage = "";
+            var success = await CryptoService.TestAsync("Test Frontend");
+            frontendDecrypted = success ? "✅ Test exitoso" : "❌ Test falló";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en test frontend: {ex.Message}";
+        }
+    }
+
+    private void EncryptBackend()
+    {
+        try
+        {
+            errorMessage = "";
+            backendEncrypted = UnifiedEncryption.EncryptAesCbc(backendPlainText);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en encriptación backend: {ex.Message}";
+        }
+    }
+
+    private void DecryptBackend()
+    {
+        try
+        {
+            errorMessage = "";
+            backendDecrypted = UnifiedEncryption.DecryptAesCbc(backendEncrypted);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en desencriptación backend: {ex.Message}";
+        }
+    }
+
+    private void TestBackend()
+    {
+        try
+        {
+            errorMessage = "";
+            var testText = "Test Backend";
+            var encrypted = UnifiedEncryption.EncryptAesCbc(testText);
+            var decrypted = UnifiedEncryption.DecryptAesCbc(encrypted);
+            backendDecrypted = decrypted == testText ? "✅ Test exitoso" : "❌ Test falló";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en test backend: {ex.Message}";
+        }
+    }
+
+    private async Task CrossTestFrontendToBackend()
+    {
+        try
+        {
+            errorMessage = "";
+            // Encriptar con frontend
+            var encrypted = await CryptoService.EncryptAsync(crossTestText);
+            // Desencriptar con backend
+            var decrypted = UnifiedEncryption.DecryptAesCbc(encrypted);
+            
+            crossTestResult = decrypted == crossTestText 
+                ? "✅ Compatibilidad Frontend→Backend exitosa" 
+                : "❌ Compatibilidad Frontend→Backend falló";
+        }
+        catch (Exception ex)
+        {
+            crossTestResult = $"❌ Error: {ex.Message}";
+        }
+    }
+
+    private async Task CrossTestBackendToFrontend()
+    {
+        try
+        {
+            errorMessage = "";
+            // Encriptar con backend
+            var encrypted = UnifiedEncryption.EncryptAesCbc(crossTestText);
+            // Desencriptar con frontend
+            var decrypted = await CryptoService.DecryptAsync(encrypted);
+            
+            crossTestResult = decrypted == crossTestText 
+                ? "✅ Compatibilidad Backend→Frontend exitosa" 
+                : "❌ Compatibilidad Backend→Frontend falló";
+        }
+        catch (Exception ex)
+        {
+            crossTestResult = $"❌ Error: {ex.Message}";
+        }
+    }
+
+    private async Task RunFixedValueTest()
+    {
+        var testResults = new List<string>();
+        
+        try
+        {
+            errorMessage = "";
+            
+            // Test 1: Backend puede desencriptar el valor fijo
+            try
+            {
+                var backendDecryptedFixed = UnifiedEncryption.DecryptAesCbc(fixedEncryptedValue);
+                if (backendDecryptedFixed == fixedTestText)
+                {
+                    testResults.Add("✅ Backend desencriptó correctamente el valor fijo");
+                }
+                else
+                {
+                    testResults.Add($"❌ Backend falló - Esperado: '{fixedTestText}', Obtenido: '{backendDecryptedFixed}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                testResults.Add($"❌ Backend error: {ex.Message}");
+            }
+            
+            // Test 2: Frontend puede desencriptar el valor fijo
+            try
+            {
+                var frontendDecryptedFixed = await CryptoService.DecryptAsync(fixedEncryptedValue);
+                if (frontendDecryptedFixed == fixedTestText)
+                {
+                    testResults.Add("✅ Frontend desencriptó correctamente el valor fijo");
+                }
+                else
+                {
+                    testResults.Add($"❌ Frontend falló - Esperado: '{fixedTestText}', Obtenido: '{frontendDecryptedFixed}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                testResults.Add($"❌ Frontend error: {ex.Message}");
+            }
+            
+            // Test 3: Verificar que ambos obtienen el mismo resultado
+            try
+            {
+                var backendResult = UnifiedEncryption.DecryptAesCbc(fixedEncryptedValue);
+                var frontendResult = await CryptoService.DecryptAsync(fixedEncryptedValue);
+                
+                if (backendResult == frontendResult && backendResult == fixedTestText)
+                {
+                    testResults.Add("✅ Compatibilidad perfecta: ambos lados obtienen el mismo resultado");
+                }
+                else
+                {
+                    testResults.Add("❌ Incompatibilidad detectada entre backend y frontend");
+                }
+            }
+            catch (Exception ex)
+            {
+                testResults.Add($"❌ Test de compatibilidad error: {ex.Message}");
+            }
+            
+            // Compilar resultado final
+            var successCount = testResults.Count(r => r.StartsWith("✅"));
+            var totalTests = 3;
+            
+            fixedTestResult = $"Test completado ({successCount}/{totalTests} exitosos):\n\n" + 
+                             string.Join("\n", testResults);
+            
+        }
+        catch (Exception ex)
+        {
+            fixedTestResult = $"❌ Error general en el test: {ex.Message}";
+        }
+    }
+}

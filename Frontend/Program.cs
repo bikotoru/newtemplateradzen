@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Frontend;
+using Frontend.Services;
 using Radzen;
 using Shared.Models.Services;
 
@@ -17,5 +18,6 @@ builder.Services.AddScoped(sp => new HttpClient
 // Servicios
 builder.Services.AddRadzenComponents();
 builder.Services.AddScoped<QueryService>();
+builder.Services.AddScoped<CryptoService>();
 
 await builder.Build().RunAsync();
