@@ -11,8 +11,8 @@ namespace Backend.Tests.Mocks
     /// </summary>
     public class MockPermissionService : PermissionService
     {
-        public MockPermissionService(AppDbContext context, ILogger<PermissionService> logger, TokenCacheService tokenCache) 
-            : base(context, logger, tokenCache)
+        public MockPermissionService(AppDbContext context, ILogger<PermissionService> logger, TokenCacheService tokenCache, TokenEncryptionService tokenEncryption) 
+            : base(context, logger, tokenCache, tokenEncryption)
         {
         }
 

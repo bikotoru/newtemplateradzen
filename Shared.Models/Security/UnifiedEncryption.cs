@@ -161,11 +161,152 @@ public static class UnifiedEncryption
     }
 
     /// <summary>
+    /// Encrypts data using AES-CBC + HMAC-SHA256 with custom key
+    /// </summary>
+    /// <param name="plainText">Text to encrypt</param>
+    /// <param name="customKey">Custom encryption key (will be used instead of SharedKey)</param>
+    /// <returns>Encrypted data in format: IV + HMAC + Ciphertext (Base64 encoded)</returns>
+    public static string EncryptAesCbcWithKey(string plainText, string customKey)
+    {
+        if (string.IsNullOrEmpty(plainText))
+            return plainText;
+
+        try
+        {
+            var keyBytes = GetKeyBytes(customKey);
+            var encryptionKey = new byte[32];
+            var hmacKey = new byte[32];
+            
+            // Derive encryption and HMAC keys from custom key
+            Array.Copy(keyBytes, 0, encryptionKey, 0, 32);
+            using var sha = SHA256.Create();
+            hmacKey = sha.ComputeHash(keyBytes);
+
+            var plainBytes = Encoding.UTF8.GetBytes(plainText);
+            var iv = new byte[IvSize];
+            RandomNumberGenerator.Fill(iv);
+
+            byte[] cipherBytes;
+            using (var aes = Aes.Create())
+            {
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Key = encryptionKey;
+                aes.IV = iv;
+
+                using var encryptor = aes.CreateEncryptor();
+                cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+            }
+
+            // Calculate HMAC over IV + Ciphertext
+            byte[] hmac;
+            using (var hmacSha = new HMACSHA256(hmacKey))
+            {
+                var dataToAuth = new byte[iv.Length + cipherBytes.Length];
+                Buffer.BlockCopy(iv, 0, dataToAuth, 0, iv.Length);
+                Buffer.BlockCopy(cipherBytes, 0, dataToAuth, iv.Length, cipherBytes.Length);
+                hmac = hmacSha.ComputeHash(dataToAuth);
+            }
+
+            // Combine IV + HMAC + Ciphertext
+            var result = new byte[IvSize + HmacSize + cipherBytes.Length];
+            Buffer.BlockCopy(iv, 0, result, 0, IvSize);
+            Buffer.BlockCopy(hmac, 0, result, IvSize, HmacSize);
+            Buffer.BlockCopy(cipherBytes, 0, result, IvSize + HmacSize, cipherBytes.Length);
+
+            return Convert.ToBase64String(result);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Encryption failed: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Decrypts data using AES-CBC + HMAC-SHA256 with custom key
+    /// </summary>
+    /// <param name="encryptedData">Encrypted data in format: IV + HMAC + Ciphertext (Base64 encoded)</param>
+    /// <param name="customKey">Custom encryption key (must match the one used for encryption)</param>
+    /// <returns>Decrypted plain text</returns>
+    public static string DecryptAesCbcWithKey(string encryptedData, string customKey)
+    {
+        if (string.IsNullOrEmpty(encryptedData))
+            return encryptedData;
+
+        try
+        {
+            var keyBytes = GetKeyBytes(customKey);
+            var encryptionKey = new byte[32];
+            var hmacKey = new byte[32];
+            
+            // Derive encryption and HMAC keys from custom key
+            Array.Copy(keyBytes, 0, encryptionKey, 0, 32);
+            using var sha = SHA256.Create();
+            hmacKey = sha.ComputeHash(keyBytes);
+
+            var data = Convert.FromBase64String(encryptedData);
+
+            if (data.Length < IvSize + HmacSize)
+                throw new ArgumentException("Invalid encrypted data format");
+
+            // Extract components
+            var iv = new byte[IvSize];
+            var receivedHmac = new byte[HmacSize];
+            var cipherBytes = new byte[data.Length - IvSize - HmacSize];
+
+            Buffer.BlockCopy(data, 0, iv, 0, IvSize);
+            Buffer.BlockCopy(data, IvSize, receivedHmac, 0, HmacSize);
+            Buffer.BlockCopy(data, IvSize + HmacSize, cipherBytes, 0, cipherBytes.Length);
+
+            // Verify HMAC
+            byte[] computedHmac;
+            using (var hmacSha = new HMACSHA256(hmacKey))
+            {
+                var dataToAuth = new byte[iv.Length + cipherBytes.Length];
+                Buffer.BlockCopy(iv, 0, dataToAuth, 0, iv.Length);
+                Buffer.BlockCopy(cipherBytes, 0, dataToAuth, iv.Length, cipherBytes.Length);
+                computedHmac = hmacSha.ComputeHash(dataToAuth);
+            }
+
+            // Constant-time comparison to prevent timing attacks
+            if (!CryptographicOperations.FixedTimeEquals(receivedHmac, computedHmac))
+                throw new CryptographicException("HMAC verification failed");
+
+            // Decrypt
+            byte[] plainBytes;
+            using (var aes = Aes.Create())
+            {
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Key = encryptionKey;
+                aes.IV = iv;
+
+                using var decryptor = aes.CreateDecryptor();
+                plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+            }
+
+            return Encoding.UTF8.GetString(plainBytes);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Decryption failed: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// Gets the encryption key as byte array (32 bytes for AES-256)
     /// </summary>
     private static byte[] GetKeyBytes()
     {
-        var keyBytes = Encoding.UTF8.GetBytes(SharedKey);
+        return GetKeyBytes(SharedKey);
+    }
+
+    /// <summary>
+    /// Gets the encryption key as byte array from custom key (32 bytes for AES-256)
+    /// </summary>
+    private static byte[] GetKeyBytes(string key)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(key);
         
         // Ensure exactly 32 bytes for AES-256
         if (keyBytes.Length > KeySize)

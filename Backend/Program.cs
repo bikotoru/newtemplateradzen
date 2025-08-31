@@ -31,6 +31,7 @@ builder.Services.AddHandlersFromAssemblies(typeof(Program));
 builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<TokenCacheService>();
 builder.Services.AddScoped<PermissionService>();
+builder.Services.AddScoped<TokenEncryptionService>();
 
 // Register Background Services
 builder.Services.AddHostedService<TokenRefreshBackgroundService>();

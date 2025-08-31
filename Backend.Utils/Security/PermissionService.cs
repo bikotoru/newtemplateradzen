@@ -11,12 +11,14 @@ namespace Backend.Utils.Security
         private readonly AppDbContext _context;
         private readonly ILogger<PermissionService> _logger;
         private readonly TokenCacheService _tokenCache;
+        private readonly TokenEncryptionService _tokenEncryption;
 
-        public PermissionService(AppDbContext context, ILogger<PermissionService> logger, TokenCacheService tokenCache)
+        public PermissionService(AppDbContext context, ILogger<PermissionService> logger, TokenCacheService tokenCache, TokenEncryptionService tokenEncryption)
         {
             _context = context;
             _logger = logger;
             _tokenCache = tokenCache;
+            _tokenEncryption = tokenEncryption;
         }
 
         /// <summary>
@@ -132,11 +134,24 @@ namespace Backend.Utils.Security
         {
             try
             {
-                var tokenId = ExtractTokenFromHeaders(headers);
-                if (tokenId == null) return null;
+                var encryptedToken = ExtractTokenFromHeaders(headers);
+                if (string.IsNullOrEmpty(encryptedToken)) return null;
 
-                var sessionData = await _tokenCache.GetTokenDataAsync(tokenId.Value);
+                // Desencriptar y validar el token con doble verificación
+                var tokenData = _tokenEncryption.DecryptAndValidateToken(encryptedToken);
+                if (tokenData == null) return null;
+
+                var tokenId = Guid.Parse(tokenData.Id);
+                var sessionData = await _tokenCache.GetTokenDataAsync(tokenId);
                 if (sessionData == null) return null;
+
+                // Doble verificación: la organización del token debe coincidir con la de la sesión
+                if (tokenData.OrganizationId != sessionData.Organization.Id)
+                {
+                    _logger.LogWarning("Token organization mismatch. Token org: {TokenOrg}, Session org: {SessionOrg}", 
+                        tokenData.OrganizationId, sessionData.Organization.Id);
+                    return null;
+                }
 
                 // Si necesita refresh, actualizar datos
                 var userId = Guid.Parse(sessionData.Id);
@@ -145,7 +160,7 @@ namespace Backend.Utils.Security
                 try
                 {
                     // Intentar refrescar si es necesario (esto lanzará excepción si el token necesita refresh)
-                    await _tokenCache.GetTokenDataAsync(tokenId.Value);
+                    await _tokenCache.GetTokenDataAsync(tokenId);
                 }
                 catch (SessionExpiredException)
                 {
@@ -166,9 +181,9 @@ namespace Backend.Utils.Security
         }
 
         /// <summary>
-        /// Extrae el token ID desde los headers
+        /// Extrae el token encriptado desde los headers
         /// </summary>
-        private Guid? ExtractTokenFromHeaders(Microsoft.AspNetCore.Http.IHeaderDictionary headers)
+        private string? ExtractTokenFromHeaders(Microsoft.AspNetCore.Http.IHeaderDictionary headers)
         {
             try
             {
@@ -180,7 +195,7 @@ namespace Backend.Utils.Security
                     ? authHeader.Substring(7) 
                     : authHeader;
 
-                return Guid.TryParse(token, out var tokenId) ? tokenId : null;
+                return string.IsNullOrWhiteSpace(token) ? null : token;
             }
             catch (Exception ex)
             {

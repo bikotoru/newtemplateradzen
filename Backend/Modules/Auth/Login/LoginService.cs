@@ -14,15 +14,17 @@ namespace Backend.Modules.Auth.Login
         private readonly IConfiguration _configuration;
         private readonly TokenCacheService _tokenCache;
         private readonly PermissionService _permissionService;
+        private readonly TokenEncryptionService _tokenEncryption;
         private readonly string _secretKey;
         private readonly string _secondKey;
 
-        public LoginService(AppDbContext context, IConfiguration configuration, TokenCacheService tokenCache, PermissionService permissionService)
+        public LoginService(AppDbContext context, IConfiguration configuration, TokenCacheService tokenCache, PermissionService permissionService, TokenEncryptionService tokenEncryption)
         {
             _context = context;
             _configuration = configuration;
             _tokenCache = tokenCache;
             _permissionService = permissionService;
+            _tokenEncryption = tokenEncryption;
             _secretKey = Environment.GetEnvironmentVariable("SECRETKEY") ?? throw new InvalidOperationException("SECRETKEY no está configurada");
             _secondKey = Environment.GetEnvironmentVariable("SECONDKEY") ?? throw new InvalidOperationException("SECONDKEY no está configurada");
         }
@@ -85,15 +87,24 @@ namespace Backend.Modules.Auth.Login
 
         public async Task<SessionResponseDto> ValidateAndRefreshTokenAsync(string token)
         {
-            if (!Guid.TryParse(token, out var tokenId))
+            // Desencriptar y validar el token
+            var tokenData = _tokenEncryption.DecryptAndValidateToken(token);
+            if (tokenData == null)
             {
-                throw new UnauthorizedAccessException("Token inválido");
+                throw new UnauthorizedAccessException("Token inválido o expirado");
             }
 
+            var tokenId = Guid.Parse(tokenData.Id);
             var sessionData = await _tokenCache.GetTokenDataAsync(tokenId);
             if (sessionData == null)
             {
-                throw new UnauthorizedAccessException("Token no válido o expirado");
+                throw new UnauthorizedAccessException("Sesión no válida o expirada");
+            }
+
+            // Doble verificación: la organización del token debe coincidir con la de la sesión
+            if (tokenData.OrganizationId != sessionData.Organization.Id)
+            {
+                throw new UnauthorizedAccessException("Token no válido para esta organización");
             }
 
             // Verificar si el usuario y organización siguen activos
@@ -109,13 +120,17 @@ namespace Backend.Modules.Auth.Login
                 throw new UnauthorizedAccessException("Organización no válida");
             }
 
+            // Generar nuevo token encriptado para renovación
+            var newExpirationDate = DateTime.UtcNow.AddHours(24);
+            var newEncryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, Guid.Parse(sessionData.Organization.Id), newExpirationDate);
+
             // Encriptar datos actuales para respuesta
             var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
 
             return new SessionResponseDto
             {
-                Token = token,
-                Expired = DateTime.UtcNow.AddHours(24),
+                Token = newEncryptedToken, // Token renovado con nueva fecha de expiración
+                Expired = newExpirationDate,
                 Data = encryptedData
             };
         }
@@ -168,14 +183,18 @@ namespace Backend.Modules.Auth.Login
             // Crear token en cache z_token
             var tokenId = await _tokenCache.CreateOrUpdateTokenAsync(user.Id, Guid.Parse(organization.Id), sessionData);
             
+            // Generar token encriptado con doble verificación
+            var expirationDate = DateTime.UtcNow.AddHours(24);
+            var encryptedToken = _tokenEncryption.GenerateEncryptedToken(tokenId, Guid.Parse(organization.Id), expirationDate);
+            
             // Encriptar datos de sesión con UnifiedEncryption
             var encryptedData = UnifiedEncryption.EncryptAesCbc(JsonSerializer.Serialize(sessionData));
 
             return new LoginResponseDto
             {
                 RequiresOrganizationSelection = null, // No mostrar cuando es false
-                Token = tokenId.ToString(), // Ahora es solo el GUID del token
-                Expired = DateTime.UtcNow.AddHours(24),
+                Token = encryptedToken, // Ahora es el token JSON encriptado con doble verificación
+                Expired = expirationDate,
                 Data = encryptedData
             };
         }

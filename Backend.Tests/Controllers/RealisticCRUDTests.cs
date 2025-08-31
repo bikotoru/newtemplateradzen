@@ -66,6 +66,13 @@ namespace Backend.Tests.Controllers
                         services.Remove(tokenDescriptor);
                     }
                     services.AddScoped<TokenCacheService, MockTokenCacheService>();
+                    
+                    var tokenEncryptionDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(TokenEncryptionService));
+                    if (tokenEncryptionDescriptor != null)
+                    {
+                        services.Remove(tokenEncryptionDescriptor);
+                    }
+                    services.AddScoped<TokenEncryptionService, MockTokenEncryptionService>();
                 });
             });
 
