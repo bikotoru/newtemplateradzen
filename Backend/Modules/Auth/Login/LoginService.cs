@@ -29,7 +29,7 @@ namespace Backend.Modules.Auth.Login
             var user = await _context.SystemUsers
                 .Include(u => u.Organization)
                 .FirstOrDefaultAsync(u => u.Email == request.Email && u.Password == encryptedPassword && u.Active);
-
+            
             if (user == null)
             {
                 throw new UnauthorizedAccessException("Credenciales inválidas");

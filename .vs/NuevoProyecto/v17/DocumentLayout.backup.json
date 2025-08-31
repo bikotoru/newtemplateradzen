@@ -3,52 +3,36 @@
   "WorkspaceRootPath": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\modules\\categoria\\categoriacontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\modules\\categoria\\categoriacontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\core\\interceptedappdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\core\\interceptedappdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\modules\\auth\\login\\logincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\modules\\auth\\login\\logincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\modules\\auth\\login\\loginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\modules\\auth\\login\\loginservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\controllers\\basequerycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\controllers\\basequerycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\dtos\\auth\\sessiondatadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\dtos\\auth\\sessiondatadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\security\\unifiedencryption.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\security\\unifiedencryption.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\entities\\systempermissions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\entities\\systempermissions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\shared.models.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\shared.models.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A564968D-7A41-4BC2-9094-5665ED4C868A}|Frontend.Tests\\Frontend.Tests.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend.tests\\security\\cryptoservicetests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A564968D-7A41-4BC2-9094-5665ED4C868A}|Frontend.Tests\\Frontend.Tests.csproj|solutionrelative:frontend.tests\\security\\cryptoservicetests.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3607045E-F57C-4772-AE6D-91ABB5615FD9}|Backend.Tests\\Backend.Tests.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.tests\\infrastructure\\testdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3607045E-F57C-4772-AE6D-91ABB5615FD9}|Backend.Tests\\Backend.Tests.csproj|solutionrelative:backend.tests\\infrastructure\\testdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\services\\apiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\services\\apiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -58,7 +42,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Bookmark",
@@ -70,155 +54,107 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "LoginController.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginController.cs",
-              "RelativeDocumentMoniker": "Backend\\Modules\\Auth\\Login\\LoginController.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginController.cs",
-              "RelativeToolTip": "Backend\\Modules\\Auth\\Login\\LoginController.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAABMAAABJAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "CategoriaService.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaService.cs",
+              "RelativeDocumentMoniker": "Backend\\Modules\\Categoria\\CategoriaService.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaService.cs",
+              "RelativeToolTip": "Backend\\Modules\\Categoria\\CategoriaService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T05:09:35.034Z",
+              "WhenOpened": "2025-08-31T05:40:44.333Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "SystemPermissions.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Entities\\SystemPermissions.cs",
-              "RelativeDocumentMoniker": "Shared.Models\\Entities\\SystemPermissions.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Entities\\SystemPermissions.cs",
-              "RelativeToolTip": "Shared.Models\\Entities\\SystemPermissions.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAATAAAAAAAAAA==",
+              "DocumentIndex": 2,
+              "Title": "InterceptedAppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T04:59:23.65Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "Shared.Models",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Shared.Models.csproj",
-              "RelativeDocumentMoniker": "Shared.Models\\Shared.Models.csproj",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Shared.Models.csproj",
-              "RelativeToolTip": "Shared.Models\\Shared.Models.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-08-31T04:53:01.572Z",
+              "WhenOpened": "2025-08-31T05:40:31.786Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 6,
-              "Title": "CryptoServiceTests.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend.Tests\\Security\\CryptoServiceTests.cs",
-              "RelativeDocumentMoniker": "Frontend.Tests\\Security\\CryptoServiceTests.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend.Tests\\Security\\CryptoServiceTests.cs",
-              "RelativeToolTip": "Frontend.Tests\\Security\\CryptoServiceTests.cs",
-              "ViewState": "AgIAAEUAAAAAAAAAAAAjwFsAAABOAAAAAAAAAA==",
+              "Title": "SessionDataDto.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\DTOs\\Auth\\SessionDataDto.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\DTOs\\Auth\\SessionDataDto.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\DTOs\\Auth\\SessionDataDto.cs",
+              "RelativeToolTip": "Shared.Models\\DTOs\\Auth\\SessionDataDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T04:40:20.112Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "UnifiedEncryption.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Security\\UnifiedEncryption.cs",
-              "RelativeDocumentMoniker": "Shared.Models\\Security\\UnifiedEncryption.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Security\\UnifiedEncryption.cs",
-              "RelativeToolTip": "Shared.Models\\Security\\UnifiedEncryption.cs",
-              "ViewState": "AgIAALkAAAAAAAAAAAAwwA8AAAAEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T04:29:08.311Z",
+              "WhenOpened": "2025-08-31T05:26:25.039Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 7,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Program.cs",
-              "RelativeDocumentMoniker": "Frontend\\Program.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Program.cs",
-              "RelativeToolTip": "Frontend\\Program.cs",
+              "Title": "UnifiedEncryption.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Security\\UnifiedEncryption.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\Security\\UnifiedEncryption.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Security\\UnifiedEncryption.cs",
+              "RelativeToolTip": "Shared.Models\\Security\\UnifiedEncryption.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T04:28:45.271Z",
+              "WhenOpened": "2025-08-31T05:26:17.377Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Program.cs",
-              "RelativeDocumentMoniker": "Backend\\Program.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Program.cs",
-              "RelativeToolTip": "Backend\\Program.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAwwCQAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 4,
+              "Title": "LoginService.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginService.cs",
+              "RelativeDocumentMoniker": "Backend\\Modules\\Auth\\Login\\LoginService.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginService.cs",
+              "RelativeToolTip": "Backend\\Modules\\Auth\\Login\\LoginService.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAIAwwB8AAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:47:11.674Z",
+              "WhenOpened": "2025-08-31T05:26:12.061Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "TestDbContext.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Tests\\Infrastructure\\TestDbContext.cs",
-              "RelativeDocumentMoniker": "Backend.Tests\\Infrastructure\\TestDbContext.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Tests\\Infrastructure\\TestDbContext.cs",
-              "RelativeToolTip": "Backend.Tests\\Infrastructure\\TestDbContext.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "CategoriaController.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaController.cs",
+              "RelativeDocumentMoniker": "Backend\\Modules\\Categoria\\CategoriaController.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaController.cs",
+              "RelativeToolTip": "Backend\\Modules\\Categoria\\CategoriaController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:43:41.2Z"
+              "WhenOpened": "2025-08-31T05:25:01.369Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "BaseQueryController.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Controllers\\BaseQueryController.cs",
               "RelativeDocumentMoniker": "Backend\\Controllers\\BaseQueryController.cs",
               "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Controllers\\BaseQueryController.cs",
               "RelativeToolTip": "Backend\\Controllers\\BaseQueryController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAJsBAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:21:37.611Z",
+              "WhenOpened": "2025-08-31T05:24:04.006Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "BaseApiService.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\BaseApiService.cs",
-              "RelativeDocumentMoniker": "Frontend\\Services\\BaseApiService.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\BaseApiService.cs",
-              "RelativeToolTip": "Frontend\\Services\\BaseApiService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAANoDAAABAAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "LoginController.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginController.cs",
+              "RelativeDocumentMoniker": "Backend\\Modules\\Auth\\Login\\LoginController.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Auth\\Login\\LoginController.cs",
+              "RelativeToolTip": "Backend\\Modules\\Auth\\Login\\LoginController.cs",
+              "ViewState": "AgIAADsAAAAAAAAAAAAwwE8AAAAwAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:17:58.326Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "APIService.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\APIService.cs",
-              "RelativeDocumentMoniker": "Frontend\\Services\\APIService.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\APIService.cs",
-              "RelativeToolTip": "Frontend\\Services\\APIService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:17:57.662Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "CategoriaService.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "RelativeDocumentMoniker": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "RelativeToolTip": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "ViewState": "AgIAABYAAAAAAAAAAIAwwCgAAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T03:12:29.899Z"
+              "WhenOpened": "2025-08-31T05:21:19.028Z",
+              "EditorCaption": ""
             }
           ]
         }
