@@ -18,7 +18,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "SQL": "Server=localhost;Database=NewPOC;User Id=sa;Password=Soporte.2019;TrustServerCertificate=true;",
-        "SECRETKEY": "R&DmSYuL3A#75tw4iBk@NqRU#jW!#Zm38NBza4JkweptY7fVh4EV@ZG7LNxm8K6Tf4uHrS$zQcXCXvTr@8Md$4x#&$9&ZJktBN&c98T^V4q7RzW6KUWr$sVy"
+        "SECRETKEY": "R&DmSYuL3A#75tw4iBk@NqRU#jW!#Zm38NBza4JkweptY7fVh4EV@ZG7LNxm8K6Tf4uHrS$zQcXCXvTr@8Md$4x#&$9&ZJktBN&c98T^V4q7RzW6KUWr$sVy",
+        "SECONDKEY": "R&DmSYuL3A#75tw4iBk@NqRU#jW!#Zm38NBza4JkweptY7fVh4EV@ZG7LNxm8K6Tf4uHrS$zQcXCXvTr@8Md$4x#&$9&ZJktBN&c98T^V4q7RzW6KUWr$sVy",
       }
     }
   }
