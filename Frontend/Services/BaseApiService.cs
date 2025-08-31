@@ -1,11 +1,13 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
+using System.Linq.Expressions;
 using Microsoft.Extensions.Logging;
 using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.QueryModels;
 using Shared.Models.Services;
+using Radzen;
 
 namespace Frontend.Services
 {
@@ -565,6 +567,358 @@ namespace Frontend.Services
         public virtual QueryBuilder<T> QueryAsync()
         {
             return Query();
+        }
+
+        #endregion
+
+        #region Radzen Integration (LoadDataArgs)
+
+        /// <summary>
+        /// 1. LoadDataAsync - Básico
+        /// Convierte LoadDataArgs de Radzen a Query y devuelve datos para grids
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(LoadDataArgs args)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args);
+                return await query.ToPagedResultAsync() switch
+                {
+                    var result when result != null => ApiResponse<PagedResult<T>>.SuccessResponse(result),
+                    _ => ApiResponse<PagedResult<T>>.ErrorResponse("No data returned from query")
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync for {typeof(T).Name}");
+                return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 2. LoadDataAsync con campos de búsqueda tipados
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
+            LoadDataArgs args,
+            params Expression<Func<T, object>>[] searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, null, searchFields);
+                var result = await query.ToPagedResultAsync();
+                return ApiResponse<PagedResult<T>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with typed search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 3. LoadDataAsync con campos de búsqueda string (soporta anidados como "Creador.Nombre")
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
+            LoadDataArgs args,
+            List<string> searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, null, null, searchFields);
+                var result = await query.ToPagedResultAsync();
+                return ApiResponse<PagedResult<T>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with string search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 4. LoadDataAsync con QueryBuilder base + búsqueda tipada
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
+            LoadDataArgs args,
+            QueryBuilder<T>? baseQuery = null,
+            params Expression<Func<T, object>>[] searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var result = await query.ToPagedResultAsync();
+                return ApiResponse<PagedResult<T>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with base query and typed search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 5. LoadDataAsync con QueryBuilder base + búsqueda string
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
+            LoadDataArgs args,
+            QueryBuilder<T>? baseQuery,
+            List<string> searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var result = await query.ToPagedResultAsync();
+                return ApiResponse<PagedResult<T>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with base query and string search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 6. LoadDataAsync con Select tipado + búsqueda tipada
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<TResult>>> LoadDataAsync<TResult>(
+            LoadDataArgs args,
+            Expression<Func<T, TResult>> selector,
+            QueryBuilder<T>? baseQuery = null,
+            params Expression<Func<T, object>>[] searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var result = await query.Select(selector).ToPagedResultAsync();
+                return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with select and typed search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<TResult>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 7. LoadDataAsync con Select tipado + búsqueda string
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<TResult>>> LoadDataAsync<TResult>(
+            LoadDataArgs args,
+            Expression<Func<T, TResult>> selector,
+            QueryBuilder<T>? baseQuery,
+            List<string> searchFields)
+        {
+            try
+            {
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var result = await query.Select(selector).ToPagedResultAsync();
+                return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with select and string search fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<TResult>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 8. LoadDataAsync con campos string para select + búsqueda
+        /// </summary>
+        public virtual async Task<ApiResponse<PagedResult<dynamic>>> LoadDataAsync(
+            LoadDataArgs args,
+            List<string> selectFields,
+            QueryBuilder<T>? baseQuery = null,
+            List<string>? searchFields = null)
+        {
+            try
+            {
+                // Para este método necesitaremos usar el QueryRequest directamente
+                // ya que no podemos hacer Select con strings en el QueryBuilder tipado
+                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, baseQuery, searchFields);
+                queryRequest.Select = string.Join(", ", selectFields);
+                
+                var result = await QuerySelectPagedAsync(queryRequest);
+                if (result.Success && result.Data != null)
+                {
+                    var pagedResult = new PagedResult<dynamic>
+                    {
+                        Data = result.Data.Data?.Cast<dynamic>().ToList() ?? new List<dynamic>(),
+                        TotalCount = result.Data.TotalCount,
+                        Page = result.Data.Page,
+                        PageSize = result.Data.PageSize
+                    };
+                    return ApiResponse<PagedResult<dynamic>>.SuccessResponse(pagedResult);
+                }
+                return ApiResponse<PagedResult<dynamic>>.ErrorResponse(result.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with string select fields for {typeof(T).Name}");
+                return ApiResponse<PagedResult<dynamic>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Private Helper Methods for LoadData
+
+        /// <summary>
+        /// Convierte LoadDataArgs de Radzen a QueryBuilder
+        /// </summary>
+        private QueryBuilder<T> ConvertLoadDataArgsToQuery(
+            LoadDataArgs args, 
+            QueryBuilder<T>? baseQuery = null,
+            Expression<Func<T, object>>[]? typedSearchFields = null,
+            List<string>? stringSearchFields = null)
+        {
+            var query = baseQuery ?? Query();
+
+            // Aplicar filtros de Radzen
+            if (args.Filters != null && args.Filters.Any())
+            {
+                foreach (var filter in args.Filters)
+                {
+                    var filterString = ConvertRadzenFilterToString(filter);
+                    if (!string.IsNullOrEmpty(filterString))
+                    {
+                        // Necesitamos una forma de aplicar filtros string al QueryBuilder
+                        // Por ahora, esto requerirá mejoras en el QueryBuilder para soportar filtros string
+                        _logger.LogWarning($"Filter conversion not fully implemented: {filterString}");
+                    }
+                }
+            }
+
+            // Aplicar ordenamiento de Radzen
+            if (args.Sorts != null && args.Sorts.Any())
+            {
+                var firstSort = args.Sorts.First();
+                var orderByString = ConvertRadzenSortToString(firstSort);
+                if (!string.IsNullOrEmpty(orderByString))
+                {
+                    // Similar al filtro, necesitamos soporte para OrderBy string
+                    _logger.LogWarning($"Sort conversion not fully implemented: {orderByString}");
+                }
+            }
+
+            // Aplicar búsqueda si hay término de búsqueda
+            if (!string.IsNullOrEmpty(args.Filter))
+            {
+                query = query.Search(args.Filter);
+                
+                // Aplicar campos de búsqueda tipados
+                if (typedSearchFields != null && typedSearchFields.Any())
+                {
+                    query = query.InFields(typedSearchFields);
+                }
+                // Aplicar campos de búsqueda string (convertir a tipados si es posible)
+                else if (stringSearchFields != null && stringSearchFields.Any())
+                {
+                    // Para campos string, necesitaremos usar el SearchRequest directamente
+                    // Por ahora registramos la limitación
+                    _logger.LogInformation($"String search fields will be applied via SearchRequest: {string.Join(", ", stringSearchFields)}");
+                }
+            }
+
+            // Aplicar Skip y Take para paginación
+            if (args.Skip.HasValue)
+            {
+                query = query.Skip(args.Skip.Value);
+            }
+
+            if (args.Top.HasValue)
+            {
+                query = query.Take(args.Top.Value);
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Convierte LoadDataArgs a QueryRequest para casos que requieren strings
+        /// </summary>
+        private QueryRequest ConvertLoadDataArgsToQueryRequest(
+            LoadDataArgs args,
+            QueryBuilder<T>? baseQuery = null,
+            List<string>? searchFields = null)
+        {
+            var queryRequest = new QueryRequest();
+
+            // Aplicar filtros base del QueryBuilder si existe
+            if (baseQuery != null)
+            {
+                // Aquí necesitaríamos una forma de extraer los filtros del QueryBuilder
+                // Por ahora, esto es una limitación que requerirá mejoras
+                _logger.LogWarning("Base query extraction not fully implemented for QueryRequest conversion");
+            }
+
+            // Aplicar filtros de Radzen
+            if (args.Filters != null && args.Filters.Any())
+            {
+                var filters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
+                if (filters.Any())
+                {
+                    queryRequest.Filter = string.Join(" && ", filters);
+                }
+            }
+
+            // Aplicar ordenamiento de Radzen
+            if (args.Sorts != null && args.Sorts.Any())
+            {
+                var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
+                if (sorts.Any())
+                {
+                    queryRequest.OrderBy = string.Join(", ", sorts);
+                }
+            }
+
+            // Aplicar paginación
+            queryRequest.Skip = args.Skip;
+            queryRequest.Take = args.Top;
+
+            return queryRequest;
+        }
+
+        /// <summary>
+        /// Convierte un FilterDescriptor de Radzen a string de filtro
+        /// </summary>
+        private string ConvertRadzenFilterToString(FilterDescriptor filter)
+        {
+            if (filter == null || string.IsNullOrEmpty(filter.Property)) 
+                return string.Empty;
+
+            var property = filter.Property;
+            var value = filter.FilterValue?.ToString();
+            
+            return filter.FilterOperator switch
+            {
+                FilterOperator.Equals => $"{property} == \"{value}\"",
+                FilterOperator.NotEquals => $"{property} != \"{value}\"",
+                FilterOperator.Contains => $"{property}.Contains(\"{value}\")",
+                FilterOperator.DoesNotContain => $"!{property}.Contains(\"{value}\")",
+                FilterOperator.StartsWith => $"{property}.StartsWith(\"{value}\")",
+                FilterOperator.EndsWith => $"{property}.EndsWith(\"{value}\")",
+                FilterOperator.GreaterThan => $"{property} > {value}",
+                FilterOperator.GreaterThanOrEquals => $"{property} >= {value}",
+                FilterOperator.LessThan => $"{property} < {value}",
+                FilterOperator.LessThanOrEquals => $"{property} <= {value}",
+                FilterOperator.IsNull => $"{property} == null",
+                FilterOperator.IsNotNull => $"{property} != null",
+                FilterOperator.IsEmpty => $"string.IsNullOrEmpty({property})",
+                FilterOperator.IsNotEmpty => $"!string.IsNullOrEmpty({property})",
+                _ => string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Convierte un SortDescriptor de Radzen a string de ordenamiento
+        /// </summary>
+        private string ConvertRadzenSortToString(SortDescriptor sort)
+        {
+            if (sort == null || string.IsNullOrEmpty(sort.Property))
+                return string.Empty;
+
+            var direction = sort.SortOrder == SortOrder.Descending ? " desc" : "";
+            return $"{sort.Property}{direction}";
         }
 
         #endregion

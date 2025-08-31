@@ -3,6 +3,38 @@
   "WorkspaceRootPath": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\querymodels\\queryrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\querymodels\\queryrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\base\\baseentity.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\base\\baseentity.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\entities\\categoria.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\entities\\categoria.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\services\\queryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\services\\queryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\extensions\\expressionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\extensions\\expressionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\querymodels\\searchrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\querymodels\\searchrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\frontend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\frontend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
@@ -15,16 +47,8 @@
       "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\services\\basequeryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\services\\queryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\services\\queryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\services\\selectquerybuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\services\\selectquerybuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\querymodels\\queryrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|solutionrelative:shared.models\\querymodels\\queryrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -35,16 +59,8 @@
       "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\modules\\categoria\\categoriacontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\services\\baseapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\services\\apiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\services\\apiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\modules\\categoria\\categoriaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{6448E6D7-E453-4A09-86EE-ECA2E9BBC916}|Shared.Models\\Shared.Models.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\shared.models\\builders\\createrequestbuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -65,16 +81,81 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 10,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
+              "Title": "CategoriaService.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
+              "RelativeDocumentMoniker": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
+              "RelativeToolTip": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
+              "ViewState": "AgIAADYAAAAAAAAAAAAowAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T03:08:55.66Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "BaseEntity.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Base\\BaseEntity.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\Base\\BaseEntity.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Base\\BaseEntity.cs",
+              "RelativeToolTip": "Shared.Models\\Base\\BaseEntity.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T02:59:51.295Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Categoria.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Entities\\Categoria.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\Entities\\Categoria.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Entities\\Categoria.cs",
+              "RelativeToolTip": "Shared.Models\\Entities\\Categoria.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T02:52:26.505Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ExpressionExtensions.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Extensions\\ExpressionExtensions.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\Extensions\\ExpressionExtensions.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Extensions\\ExpressionExtensions.cs",
+              "RelativeToolTip": "Shared.Models\\Extensions\\ExpressionExtensions.cs",
+              "ViewState": "AgIAADEAAAAAAAAAAAAcwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T02:37:25.827Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "SearchRequest.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\QueryModels\\SearchRequest.cs",
+              "RelativeDocumentMoniker": "Shared.Models\\QueryModels\\SearchRequest.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\QueryModels\\SearchRequest.cs",
+              "RelativeToolTip": "Shared.Models\\QueryModels\\SearchRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T02:36:36.738Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "Frontend",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Frontend.csproj",
               "RelativeDocumentMoniker": "Frontend\\Frontend.csproj",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Frontend.csproj*",
-              "RelativeToolTip": "Frontend\\Frontend.csproj*",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Frontend.csproj",
+              "RelativeToolTip": "Frontend\\Frontend.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-08-31T02:23:44.753Z",
@@ -82,46 +163,46 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 11,
               "Title": "SelectQueryBuilder.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Services\\SelectQueryBuilder.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Services\\SelectQueryBuilder.cs",
               "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Services\\SelectQueryBuilder.cs",
               "RelativeToolTip": "Shared.Models\\Services\\SelectQueryBuilder.cs",
-              "ViewState": "AgIAAC4AAAAAAAAAAAASwFQAAAArAAAAAAAAAA==",
+              "ViewState": "AgIAADcAAAAAAAAAAAASwHcAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-31T02:16:28.256Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "QueryService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Services\\QueryService.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Services\\QueryService.cs",
               "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Services\\QueryService.cs",
               "RelativeToolTip": "Shared.Models\\Services\\QueryService.cs",
-              "ViewState": "AgIAAB0AAAAAAAAAAAAwwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAFkAAAAAAAAAAAAswAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-31T02:16:27.319Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 2,
               "Title": "QueryRequest.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\QueryModels\\QueryRequest.cs",
               "RelativeDocumentMoniker": "Shared.Models\\QueryModels\\QueryRequest.cs",
               "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\QueryModels\\QueryRequest.cs",
               "RelativeToolTip": "Shared.Models\\QueryModels\\QueryRequest.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAdAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwBMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-31T02:15:36.824Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 9,
               "Title": "BaseQueryController.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Controllers\\BaseQueryController.cs",
               "RelativeDocumentMoniker": "Backend\\Controllers\\BaseQueryController.cs",
@@ -134,20 +215,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 0,
               "Title": "BaseApiService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\BaseApiService.cs",
               "RelativeDocumentMoniker": "Frontend\\Services\\BaseApiService.cs",
               "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\BaseApiService.cs",
               "RelativeToolTip": "Frontend\\Services\\BaseApiService.cs",
-              "ViewState": "AgIAAAcBAAAAAAAAAAAYwDkBAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAANACAAAAAAAAAAAowOICAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-31T02:14:10.656Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 14,
               "Title": "APIService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Services\\APIService.cs",
               "RelativeDocumentMoniker": "Frontend\\Services\\APIService.cs",
@@ -160,7 +241,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 16,
               "Title": "UpdateRequest.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Requests\\UpdateRequest.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Requests\\UpdateRequest.cs",
@@ -173,7 +254,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 17,
               "Title": "Microsoft.PackageDependencyResolution.targets",
               "DocumentMoniker": "C:\\Program Files\\dotnet\\sdk\\9.0.304\\Sdks\\Microsoft.NET.Sdk\\targets\\Microsoft.PackageDependencyResolution.targets",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\9.0.304\\Sdks\\Microsoft.NET.Sdk\\targets\\Microsoft.PackageDependencyResolution.targets",
@@ -186,7 +267,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 12,
               "Title": "CategoriaService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaService.cs",
               "RelativeDocumentMoniker": "Backend\\Modules\\Categoria\\CategoriaService.cs",
@@ -199,7 +280,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 13,
               "Title": "CategoriaController.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend\\Modules\\Categoria\\CategoriaController.cs",
               "RelativeDocumentMoniker": "Backend\\Modules\\Categoria\\CategoriaController.cs",
@@ -212,7 +293,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 15,
               "Title": "CreateRequestBuilder.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Shared.Models\\Builders\\CreateRequestBuilder.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Builders\\CreateRequestBuilder.cs",
@@ -225,7 +306,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 10,
               "Title": "BaseQueryService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\Services\\BaseQueryService.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\Services\\BaseQueryService.cs",
@@ -234,19 +315,6 @@
               "ViewState": "AgIAADUCAAAAAAAAAAAMwFACAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-31T02:05:19.152Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "CategoriaService.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "RelativeDocumentMoniker": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "RelativeToolTip": "Frontend\\Modules\\Categoria\\CategoriaService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-31T02:05:04.523Z",
               "EditorCaption": ""
             },
             {
