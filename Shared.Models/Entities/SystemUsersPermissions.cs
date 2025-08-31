@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shared.Models.Entities;
 
-public partial class SystemUsersPermission
+public partial class SystemUsersPermissions
 {
     public Guid Id { get; set; }
 
@@ -23,13 +23,13 @@ public partial class SystemUsersPermission
 
     public bool Active { get; set; }
 
-    public virtual SystemUser? Creador { get; set; }
+    public virtual SystemUsers? Creador { get; set; }
 
-    public virtual SystemUser? Modificador { get; set; }
+    public virtual SystemUsers? Modificador { get; set; }
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual SystemPermission SystemPermissions { get; set; } = null!;
+    public virtual SystemPermissions SystemPermissions { get; set; } = null!;
 
-    public virtual SystemUser SystemUsers { get; set; } = null!;
+    public virtual SystemUsers SystemUsers { get; set; } = null!;
 }

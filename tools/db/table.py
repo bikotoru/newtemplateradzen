@@ -305,7 +305,7 @@ GO"""
             print(f"   ❌ ERROR regenerando modelos: {e}")
             return False
     
-    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False):
+    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False):
         """Ejecuta el proceso completo"""
         self.print_header()
         
@@ -356,12 +356,16 @@ GO"""
                 
                 # Ejecutar SQL
                 if self.execute_sql(sql, connection_string):
-                    # Regenerar modelos
-                    self.regenerate_models()
+                    # Regenerar modelos automáticamente si se especifica autosync o si no se especifica nada
+                    if autosync or not (execute or preview):
+                        self.regenerate_models()
                     
                     print("\n🎉 PROCESO COMPLETADO EXITOSAMENTE")
                     print(f"✅ Tabla '{table_name}' creada en base de datos")
-                    print(f"✅ Modelos .NET actualizados")
+                    if autosync or not (execute or preview):
+                        print(f"✅ Modelos .NET actualizados automáticamente")
+                    else:
+                        print(f"💡 Para actualizar modelos: python tools/dbsync/generate-models.py")
                     print(f"✅ Listo para usar: QueryService.For<{table_name.title()}>()...")
                     return True
                 else:
@@ -393,6 +397,8 @@ def main():
                        help='Ejecutar en base de datos')
     parser.add_argument('--preview', action='store_true',
                        help='Solo mostrar SQL generado')
+    parser.add_argument('--autosync', action='store_true',
+                       help='Auto-ejecutar dbsync después de crear tabla')
     parser.add_argument('--project', default='Backend',
                        help='Ruta al proyecto Backend (default: Backend)')
     
@@ -407,7 +413,8 @@ def main():
             foreign_keys=args.fk,
             unique_fields=args.unique,
             execute=args.execute,
-            preview=args.preview
+            preview=args.preview,
+            autosync=args.autosync
         )
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:

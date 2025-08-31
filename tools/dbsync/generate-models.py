@@ -112,7 +112,8 @@ class DatabaseModelGenerator:
                 "-c", "AppDbContext",
                 "--context-dir", "TempData",
                 "--force",
-                "--no-onconfiguring"
+                "--no-onconfiguring",
+                "--no-pluralize"
             ]
             
             print(f"   🔧 Ejecutando: dotnet ef dbcontext scaffold...")

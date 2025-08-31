@@ -3,13 +3,15 @@ using System.Collections.Generic;
 
 namespace Shared.Models.Entities;
 
-public partial class SystemPermission
+public partial class SystemRoles
 {
     public Guid Id { get; set; }
 
     public string Nombre { get; set; } = null!;
 
     public string? Descripcion { get; set; }
+
+    public string TypeRole { get; set; } = null!;
 
     public DateTime FechaCreacion { get; set; }
 
@@ -23,13 +25,13 @@ public partial class SystemPermission
 
     public bool Active { get; set; }
 
-    public virtual SystemUser? Creador { get; set; }
+    public virtual SystemUsers? Creador { get; set; }
 
-    public virtual SystemUser? Modificador { get; set; }
+    public virtual SystemUsers? Modificador { get; set; }
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual ICollection<SystemRolesPermission> SystemRolesPermissions { get; set; } = new List<SystemRolesPermission>();
+    public virtual ICollection<SystemRolesPermissions> SystemRolesPermissions { get; set; } = new List<SystemRolesPermissions>();
 
-    public virtual ICollection<SystemUsersPermission> SystemUsersPermissions { get; set; } = new List<SystemUsersPermission>();
+    public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
 }

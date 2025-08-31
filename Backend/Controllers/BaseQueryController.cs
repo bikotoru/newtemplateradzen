@@ -7,12 +7,11 @@ using Shared.Models.QueryModels;
 namespace Backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class QueryController : ControllerBase
+    public abstract class BaseQueryController : ControllerBase
     {
-        private readonly ILogger<QueryController> _logger;
+        protected readonly ILogger _logger;
 
-        public QueryController(ILogger<QueryController> logger)
+        protected BaseQueryController(ILogger logger)
         {
             _logger = logger;
         }

@@ -12,22 +12,52 @@ public partial class AppDbContext : DbContext
     {
     }
 
-    public virtual DbSet<SystemOrganization> SystemOrganizations { get; set; }
+    public virtual DbSet<Categoria> Categoria { get; set; }
 
-    public virtual DbSet<SystemPermission> SystemPermissions { get; set; }
+    public virtual DbSet<SystemOrganization> SystemOrganization { get; set; }
 
-    public virtual DbSet<SystemRole> SystemRoles { get; set; }
+    public virtual DbSet<SystemPermissions> SystemPermissions { get; set; }
 
-    public virtual DbSet<SystemRolesPermission> SystemRolesPermissions { get; set; }
+    public virtual DbSet<SystemRoles> SystemRoles { get; set; }
 
-    public virtual DbSet<SystemUser> SystemUsers { get; set; }
+    public virtual DbSet<SystemRolesPermissions> SystemRolesPermissions { get; set; }
 
-    public virtual DbSet<SystemUsersPermission> SystemUsersPermissions { get; set; }
+    public virtual DbSet<SystemUsers> SystemUsers { get; set; }
 
-    public virtual DbSet<SystemUsersRole> SystemUsersRoles { get; set; }
+    public virtual DbSet<SystemUsersPermissions> SystemUsersPermissions { get; set; }
+
+    public virtual DbSet<SystemUsersRoles> SystemUsersRoles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Categoria>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__categori__3214EC074EB48FFE");
+
+            entity.ToTable("categoria");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Descripcion).HasColumnName("descripcion");
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(255)
+                .HasColumnName("nombre");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.CategoriaCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_categoria_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.CategoriaModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_categoria_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.Categoria)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_categoria_OrganizationId");
+        });
+
         modelBuilder.Entity<SystemOrganization>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_o__3214EC07309563DA");
@@ -50,7 +80,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Rut).HasMaxLength(50);
         });
 
-        modelBuilder.Entity<SystemPermission>(entity =>
+        modelBuilder.Entity<SystemPermissions>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_p__3214EC07F5E16A5C");
 
@@ -71,11 +101,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Nombre).HasMaxLength(255);
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemPermissionCreadors)
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemPermissionsCreador)
                 .HasForeignKey(d => d.CreadorId)
                 .HasConstraintName("FK_system_permissions_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemPermissionModificadors)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemPermissionsModificador)
                 .HasForeignKey(d => d.ModificadorId)
                 .HasConstraintName("FK_system_permissions_ModificadorId");
 
@@ -84,7 +114,7 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_permissions_OrganizationId");
         });
 
-        modelBuilder.Entity<SystemRole>(entity =>
+        modelBuilder.Entity<SystemRoles>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC0797BFD949");
 
@@ -110,11 +140,11 @@ public partial class AppDbContext : DbContext
                 .HasMaxLength(100)
                 .HasDefaultValue("Access");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRoleCreadors)
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRolesCreador)
                 .HasForeignKey(d => d.CreadorId)
                 .HasConstraintName("FK_system_roles_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRoleModificadors)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRolesModificador)
                 .HasForeignKey(d => d.ModificadorId)
                 .HasConstraintName("FK_system_roles_ModificadorId");
 
@@ -123,7 +153,7 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_roles_OrganizationId");
         });
 
-        modelBuilder.Entity<SystemRolesPermission>(entity =>
+        modelBuilder.Entity<SystemRolesPermissions>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC07194EC8EF");
 
@@ -146,11 +176,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.SystemPermissionsId).HasColumnName("system_permissions_id");
             entity.Property(e => e.SystemRolesId).HasColumnName("system_roles_id");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRolesPermissionCreadors)
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemRolesPermissionsCreador)
                 .HasForeignKey(d => d.CreadorId)
                 .HasConstraintName("FK_system_roles_permissions_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRolesPermissionModificadors)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemRolesPermissionsModificador)
                 .HasForeignKey(d => d.ModificadorId)
                 .HasConstraintName("FK_system_roles_permissions_ModificadorId");
 
@@ -167,7 +197,7 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_roles_permissions_RoleId");
         });
 
-        modelBuilder.Entity<SystemUser>(entity =>
+        modelBuilder.Entity<SystemUsers>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07791C48C0");
 
@@ -206,7 +236,7 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_users_OrganizationId");
         });
 
-        modelBuilder.Entity<SystemUsersPermission>(entity =>
+        modelBuilder.Entity<SystemUsersPermissions>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07F445A514");
 
@@ -229,11 +259,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.SystemPermissionsId).HasColumnName("system_permissions_id");
             entity.Property(e => e.SystemUsersId).HasColumnName("system_users_id");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersPermissionCreadors)
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersPermissionsCreador)
                 .HasForeignKey(d => d.CreadorId)
                 .HasConstraintName("FK_system_users_permissions_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersPermissionModificadors)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersPermissionsModificador)
                 .HasForeignKey(d => d.ModificadorId)
                 .HasConstraintName("FK_system_users_permissions_ModificadorId");
 
@@ -245,12 +275,12 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.SystemPermissionsId)
                 .HasConstraintName("FK_system_users_permissions_PermissionId");
 
-            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersPermissionSystemUsers)
+            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersPermissionsSystemUsers)
                 .HasForeignKey(d => d.SystemUsersId)
                 .HasConstraintName("FK_system_users_permissions_UserId");
         });
 
-        modelBuilder.Entity<SystemUsersRole>(entity =>
+        modelBuilder.Entity<SystemUsersRoles>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07EA0FD9CD");
 
@@ -273,11 +303,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.SystemRolesId).HasColumnName("system_roles_id");
             entity.Property(e => e.SystemUsersId).HasColumnName("system_users_id");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersRoleCreadors)
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemUsersRolesCreador)
                 .HasForeignKey(d => d.CreadorId)
                 .HasConstraintName("FK_system_users_roles_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersRoleModificadors)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemUsersRolesModificador)
                 .HasForeignKey(d => d.ModificadorId)
                 .HasConstraintName("FK_system_users_roles_ModificadorId");
 
@@ -289,7 +319,7 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.SystemRolesId)
                 .HasConstraintName("FK_system_users_roles_RoleId");
 
-            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersRoleSystemUsers)
+            entity.HasOne(d => d.SystemUsers).WithMany(p => p.SystemUsersRolesSystemUsers)
                 .HasForeignKey(d => d.SystemUsersId)
                 .HasConstraintName("FK_system_users_roles_UserId");
         });
