@@ -25,13 +25,23 @@ namespace Backend.Utils.EFInterceptors.Extensions
             // Register the interceptor service
             services.AddScoped<EFInterceptorService>();
 
-            // Register the intercepted DbContext
-            services.AddDbContext<AppDbContext, InterceptedAppDbContext>(options =>
+            // Register DbContext options first
+            services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseSqlServer(connectionString);
+                if (connectionString == "InMemoryTestConnection")
+                {
+                    options.UseInMemoryDatabase("TestDb");
+                }
+                else
+                {
+                    options.UseSqlServer(connectionString);
+                }
                 options.EnableSensitiveDataLogging(false);
                 options.EnableDetailedErrors(true);
             });
+
+            // Replace with intercepted version
+            services.AddScoped<AppDbContext, InterceptedAppDbContext>();
 
             return services;
         }

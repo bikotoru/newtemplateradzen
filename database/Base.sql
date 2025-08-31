@@ -425,7 +425,7 @@ END
 IF NOT EXISTS (SELECT 1 FROM system_users WHERE Email = 'admin@admin.cl')
 BEGIN
     INSERT INTO system_users (Id, Nombre, Password, Email, OrganizationId, Active)
-    VALUES (@AdminUserId, 'Administrador Sistema', 'Soporte.2019', 'admin@admin.cl', @OrgId, 1);
+    VALUES (@AdminUserId, 'Administrador Sistema', 'U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5', 'admin@admin.cl', @OrgId, 1);
     PRINT '✅ Usuario admin@admin.cl creado';
 END
 ELSE
@@ -469,7 +469,7 @@ PRINT '========================================';
 PRINT '';
 PRINT '🏢 Organización: Organización Base';
 PRINT '👤 Usuario Admin: admin@admin.cl';
-PRINT '🔑 Password: Soporte.2019';
+PRINT '🔑 Password: U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5';
 PRINT '👥 Rol: Administrador';
 PRINT '🔐 Permiso: SuperAdmin';
 PRINT '';
@@ -490,7 +490,7 @@ PRINT '========================================';
 -- Mostrar información de conexión
 SELECT 
     'admin@admin.cl' as Usuario,
-    'Soporte.2019' as Password,
+    'U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5' as Password,
     'Organización Base' as Organizacion,
     'Administrador' as Rol,
     'SuperAdmin' as Permiso;

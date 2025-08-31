@@ -1,4 +1,6 @@
 using Backend.Utils.EFInterceptors.Extensions;
+using Backend.Modules.Auth.Login;
+using Shared.Models.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +9,12 @@ var connectionString = Environment.GetEnvironmentVariable("SQL")
     ?? "InMemoryTestConnection"; // Fallback para testing
 
 // Add services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
@@ -17,6 +24,9 @@ builder.Services.AddEFInterceptors(connectionString);
 
 // Register handlers from assemblies (this will scan for all handler classes)
 builder.Services.AddHandlersFromAssemblies(typeof(Program));
+
+// Register Authentication Services
+builder.Services.AddScoped<LoginService>();
 
 // CORS para Blazor WebAssembly
 builder.Services.AddCors(options =>
