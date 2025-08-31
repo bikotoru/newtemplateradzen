@@ -303,6 +303,85 @@ BEGIN
 END
 
 -- ========================================
+-- ⚙️ TABLA: system_config
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_config' AND xtype='U')
+BEGIN
+    CREATE TABLE system_config (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        Field NVARCHAR(255) NOT NULL,
+        TypeField NVARCHAR(255) NOT NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- Foreign Keys
+        CONSTRAINT FK_system_config_OrganizationId 
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_config_CreadorId 
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_config_ModificadorId 
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+    );
+    
+    -- Índices para system_config
+    CREATE NONCLUSTERED INDEX IX_system_config_Field ON system_config(Field);
+    CREATE NONCLUSTERED INDEX IX_system_config_TypeField ON system_config(TypeField);
+    CREATE NONCLUSTERED INDEX IX_system_config_OrganizationId ON system_config(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_config_Active ON system_config(Active);
+    CREATE NONCLUSTERED INDEX IX_system_config_FechaCreacion ON system_config(FechaCreacion);
+    
+    PRINT '✅ Tabla system_config creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_config ya existe';
+END
+
+-- ========================================
+-- 📊 TABLA: system_config_values
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_config_values' AND xtype='U')
+BEGIN
+    CREATE TABLE system_config_values (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        SystemConfigId UNIQUEIDENTIFIER NOT NULL,
+        Value NVARCHAR(MAX) NOT NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- Foreign Keys
+        CONSTRAINT FK_system_config_values_SystemConfigId 
+            FOREIGN KEY (SystemConfigId) REFERENCES system_config(Id) ON DELETE CASCADE,
+        CONSTRAINT FK_system_config_values_OrganizationId 
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_config_values_CreadorId 
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_config_values_ModificadorId 
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+    );
+    
+    -- Índices para system_config_values
+    CREATE NONCLUSTERED INDEX IX_system_config_values_SystemConfigId ON system_config_values(SystemConfigId);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_OrganizationId ON system_config_values(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_Active ON system_config_values(Active);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_FechaCreacion ON system_config_values(FechaCreacion);
+    
+    PRINT '✅ Tabla system_config_values creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_config_values ya existe';
+END
+
+-- ========================================
 -- 📊 DATOS INICIALES
 -- ========================================
 
@@ -413,6 +492,8 @@ PRINT '   • system_roles';
 PRINT '   • system_users_roles';
 PRINT '   • system_users_permissions';
 PRINT '   • system_roles_permissions';
+PRINT '   • system_config';
+PRINT '   • system_config_values';
 PRINT '';
 PRINT '🎯 Listo para usar con el generador de modelos Python!';
 PRINT '========================================';
