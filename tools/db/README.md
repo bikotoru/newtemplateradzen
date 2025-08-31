@@ -33,6 +33,24 @@ python tools/db/table.py --addfield "categories" \
 - descripcion (NVARCHAR(MAX))
 - imagen_url (NVARCHAR(500))
 
+### **3. Agregar Foreign Keys a Tabla Existente**
+```bash
+python tools/db/table.py --addfield "products" \
+    --fk "category_id:categories" "supplier_id:suppliers"
+```
+**Agrega solo las relaciones especificadas:**
+- category_id (UNIQUEIDENTIFIER, FK a categories)
+- supplier_id (UNIQUEIDENTIFIER, FK a suppliers)
+
+### **4. Agregar Campos AutoIncrementales**
+```bash
+python tools/db/table.py --addfield "orders" \
+    --fields "numero_orden:autoincremental"
+```
+**Agrega campo autoincremental y configuración:**
+- numero_orden (NVARCHAR(255))
+- Configuración en system_config para orders.numero_orden
+
 ---
 
 ## 🎯 Ejemplos Prácticos
@@ -127,12 +145,15 @@ python tools/db/table.py --name "app_settings" \
 
 | Opción | Descripción | Requerido | Ejemplo |
 |--------|-------------|-----------|---------|
-| `--name` | Nombre de la tabla | ✅ | `--name "products"` |
+| `--name` | Crear nueva tabla | ✅* | `--name "products"` |
+| `--addfield` | Agregar campos a tabla existente | ✅* | `--addfield "products"` |
 | `--fields` | Campos adicionales | ❌ | `--fields "nombre:string:255"` |
 | `--fk` | Foreign keys | ❌ | `--fk "user_id:system_users"` |
 | `--unique` | Campos únicos | ❌ | `--unique "email" "codigo"` |
 | `--execute` | Ejecutar en BD | ❌ | `--execute` |
 | `--preview` | Solo mostrar SQL | ❌ | `--preview` |
+
+**\* Nota:** `--name` y `--addfield` son mutuamente excluyentes. Usar uno u otro.
 
 ---
 
@@ -186,6 +207,27 @@ python tools/db/table.py --name "warehouse_stock" \
     --fk "product_id:products" "warehouse_id:warehouses"
 ```
 
+### **Casos de Uso con --addfield**
+
+```bash
+# 1. Agregar campos a tabla existente de productos
+python tools/db/table.py --addfield "products" \
+    --fields "imagen_principal:string:500" "peso_kg:decimal:10,3" "dimensiones:text"
+
+# 2. Agregar relación a tabla de órdenes
+python tools/db/table.py --addfield "orders" \
+    --fk "shipping_method_id:shipping_methods"
+
+# 3. Agregar campo autoincremental a facturas existentes
+python tools/db/table.py --addfield "invoices" \
+    --fields "numero_factura:autoincremental"
+
+# 4. Agregar campos únicos a clientes existentes
+python tools/db/table.py --addfield "customers" \
+    --fields "codigo_cliente:string:20" \
+    --unique "codigo_cliente"
+```
+
 ### **Sistema de CRM**
 
 ```bash
@@ -209,6 +251,8 @@ python tools/db/table.py --name "opportunities" \
 
 ## ⚡ Flujo de Trabajo Recomendado
 
+### **Para Crear Nueva Tabla:**
+
 ### **1. Diseñar la tabla**
 ```bash
 # Solo generar SQL para revisar
@@ -221,7 +265,21 @@ python tools/db/table.py --name "mi_tabla" --fields "campo:tipo" --preview
 python tools/db/table.py --name "mi_tabla" --fields "campo:tipo" --execute
 ```
 
-### **3. Regenerar modelos**
+### **Para Agregar Campos a Tabla Existente:**
+
+### **1. Verificar campos a agregar**
+```bash
+# Solo generar ALTER SQL para revisar
+python tools/db/table.py --addfield "tabla_existente" --fields "nuevo_campo:tipo" --preview
+```
+
+### **2. Ejecutar cambios en base de datos**
+```bash
+# Agregar campos a la tabla
+python tools/db/table.py --addfield "tabla_existente" --fields "nuevo_campo:tipo" --execute
+```
+
+### **3. Regenerar modelos (Ambos casos)**
 ```bash
 # Actualizar entidades .NET
 python tools/dbsync/generate-models.py
@@ -261,10 +319,15 @@ var query = await QueryService.For<MiTabla>()
 ## 🚨 Notas Importantes
 
 1. **Naming Convention:** Usa snake_case para nombres de tabla
-2. **BaseEntity:** Siempre se incluyen los campos base del sistema
+2. **BaseEntity:** Siempre se incluyen los campos base del sistema (solo en --name)
 3. **Foreign Keys:** Deben referenciar tablas existentes
 4. **Unique Fields:** Se crean como constraints únicos
 5. **Preview Mode:** Usa `--preview` para ver SQL antes de ejecutar
+6. **AddField Mode:** 
+   - Verifica que la tabla existe antes de agregar campos
+   - Solo agrega los campos especificados, no campos BaseEntity
+   - Funciona con todos los tipos de datos incluyendo autoincremental
+   - Mantiene todas las relaciones y constraints existentes
 
 ---
 
@@ -282,6 +345,16 @@ python tools/db/table.py --name "orders" --fk "customer_id:customers"
 # Usa tipos soportados
 python tools/db/table.py --name "test" --fields "campo:varchar:255"  # ❌ Incorrecto
 python tools/db/table.py --name "test" --fields "campo:string:255"   # ✅ Correcto
+```
+
+### **Error: "Tabla no existe" (AddField Mode)**
+```bash
+# Error al usar --addfield con tabla inexistente
+python tools/db/table.py --addfield "tabla_inexistente" --fields "campo:string:255"
+# ❌ Error: La tabla 'tabla_inexistente' no existe
+
+# Solución: Crear la tabla primero o verificar el nombre
+python tools/db/table.py --name "tabla_nueva" --fields "campo:string:255"  # ✅ Crear nueva tabla
 ```
 
 ### **Error de conexión**
