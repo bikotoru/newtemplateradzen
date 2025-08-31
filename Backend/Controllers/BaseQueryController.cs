@@ -337,5 +337,49 @@ namespace Backend.Controllers
         }
 
         #endregion
+
+        #region Search Operations (Intelligent Search)
+
+        /// <summary>
+        /// Búsqueda inteligente por texto
+        /// </summary>
+        [HttpPost("search")]
+        public virtual async Task<IActionResult> Search([FromBody] SearchRequest searchRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                var result = await _baseService.SearchAsync(searchRequest);
+                return Ok(ApiResponse<List<T>>.SuccessResponse(result, $"Search executed successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing search for {typeof(T).Name}");
+                return StatusCode(500, ApiResponse<List<T>>.ErrorResponse($"Error executing search: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Búsqueda inteligente por texto con paginación
+        /// </summary>
+        [HttpPost("search-paged")]
+        public virtual async Task<IActionResult> SearchPaged([FromBody] SearchRequest searchRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                var result = await _baseService.SearchPagedAsync(searchRequest);
+                return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.SuccessResponse(result, $"Paged search executed successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing paged search for {typeof(T).Name}");
+                return StatusCode(500, ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.ErrorResponse($"Error executing paged search: {ex.Message}"));
+            }
+        }
+
+        #endregion
     }
 }

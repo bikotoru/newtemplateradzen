@@ -603,6 +603,72 @@ namespace Backend.Utils.Services
 
         #endregion
 
+        #region Search Operations (Intelligent Search)
+
+        /// <summary>
+        /// Búsqueda inteligente por texto en campos específicos
+        /// </summary>
+        public virtual async Task<List<T>> SearchAsync(SearchRequest searchRequest)
+        {
+            _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+            try
+            {
+                var query = BuildSearchQuery(searchRequest);
+                return await query.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing search for {typeof(T).Name}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Búsqueda inteligente con paginación
+        /// </summary>
+        public virtual async Task<Shared.Models.QueryModels.PagedResult<T>> SearchPagedAsync(SearchRequest searchRequest)
+        {
+            _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+            try
+            {
+                var baseQuery = BuildSearchQuery(searchRequest, skipPagination: true);
+                
+                // Contar total sin paginación
+                var totalCount = await baseQuery.CountAsync();
+                
+                // Aplicar paginación
+                var query = baseQuery;
+                if (searchRequest.Skip.HasValue)
+                    query = query.Skip(searchRequest.Skip.Value);
+                if (searchRequest.Take.HasValue)
+                    query = query.Take(searchRequest.Take.Value);
+                
+                var data = await query.ToListAsync();
+                
+                var page = searchRequest.Skip.HasValue && searchRequest.Take.HasValue 
+                    ? (searchRequest.Skip.Value / searchRequest.Take.Value) + 1 
+                    : 1;
+                var pageSize = searchRequest.Take ?? totalCount;
+
+                return new Shared.Models.QueryModels.PagedResult<T>
+                {
+                    Data = data,
+                    TotalCount = totalCount,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing paged search for {typeof(T).Name}");
+                throw;
+            }
+        }
+
+        #endregion
+
         #region Private Query Building Methods
 
         private IQueryable<T> BuildQuery(QueryRequest queryRequest, bool skipPagination = false)
@@ -643,6 +709,185 @@ namespace Backend.Utils.Services
             }
 
             return query;
+        }
+
+        private IQueryable<T> BuildSearchQuery(SearchRequest searchRequest, bool skipPagination = false)
+        {
+            IQueryable<T> query = _dbSet;
+
+            // 1. Aplicar el BaseQuery completo si existe (filtros, includes, ordenamiento base)
+            if (searchRequest.BaseQuery != null)
+            {
+                // Aplicar includes del BaseQuery
+                if (searchRequest.BaseQuery.Include != null && searchRequest.BaseQuery.Include.Any())
+                {
+                    foreach (var include in searchRequest.BaseQuery.Include)
+                    {
+                        if (!string.IsNullOrEmpty(include))
+                        {
+                            query = query.Include(include);
+                        }
+                    }
+                }
+
+                // Aplicar filtros del BaseQuery
+                if (!string.IsNullOrEmpty(searchRequest.BaseQuery.Filter))
+                {
+                    query = query.Where(searchRequest.BaseQuery.Filter);
+                }
+
+                // Aplicar ordenamiento del BaseQuery (puede ser sobrescrito más adelante)
+                if (!string.IsNullOrEmpty(searchRequest.BaseQuery.OrderBy))
+                {
+                    query = query.OrderBy(searchRequest.BaseQuery.OrderBy);
+                }
+            }
+
+            // 2. Aplicar includes adicionales del SearchRequest (se combinan con los del BaseQuery)
+            if (searchRequest.Include != null && searchRequest.Include.Any())
+            {
+                foreach (var include in searchRequest.Include)
+                {
+                    if (!string.IsNullOrEmpty(include))
+                    {
+                        query = query.Include(include);
+                    }
+                }
+            }
+
+            // 3. Construir y aplicar la búsqueda inteligente como condición ADICIONAL
+            if (!string.IsNullOrWhiteSpace(searchRequest.SearchTerm))
+            {
+                var searchConditions = BuildSearchConditions(searchRequest.SearchTerm, searchRequest.SearchFields);
+                if (!string.IsNullOrEmpty(searchConditions))
+                {
+                    // La búsqueda se combina con AND al BaseQuery existente
+                    query = query.Where(searchConditions);
+                }
+            }
+
+            // 4. Aplicar ordenamiento específico del SearchRequest (sobrescribe el del BaseQuery)
+            if (!string.IsNullOrEmpty(searchRequest.OrderBy))
+            {
+                query = query.OrderBy(searchRequest.OrderBy);
+            }
+            else if (searchRequest.BaseQuery == null || string.IsNullOrEmpty(searchRequest.BaseQuery.OrderBy))
+            {
+                // Solo aplicar ordenamiento por defecto si no hay ninguno
+                var firstProperty = typeof(T).GetProperties().FirstOrDefault();
+                if (firstProperty != null)
+                {
+                    query = query.OrderBy(firstProperty.Name);
+                }
+            }
+
+            // 5. Aplicar paginación del SearchRequest (sobrescribe la del BaseQuery)
+            if (!skipPagination)
+            {
+                if (searchRequest.Skip.HasValue)
+                    query = query.Skip(searchRequest.Skip.Value);
+                else if (searchRequest.BaseQuery?.Skip.HasValue == true)
+                    query = query.Skip(searchRequest.BaseQuery.Skip.Value);
+
+                if (searchRequest.Take.HasValue)
+                    query = query.Take(searchRequest.Take.Value);
+                else if (searchRequest.BaseQuery?.Take.HasValue == true)
+                    query = query.Take(searchRequest.BaseQuery.Take.Value);
+            }
+
+            return query;
+        }
+
+        private string BuildSearchConditions(string searchTerm, string[] searchFields)
+        {
+            var conditions = new List<string>();
+            var properties = typeof(T).GetProperties();
+
+            // Si no se especifican campos, usar campos de texto por defecto
+            var fieldsToSearch = searchFields?.Any() == true ? searchFields : GetDefaultSearchFields(properties);
+
+            foreach (var fieldName in fieldsToSearch)
+            {
+                var property = properties.FirstOrDefault(p => p.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+                if (property == null) continue;
+
+                // Determinar el tipo de búsqueda según el tipo de propiedad
+                if (property.PropertyType == typeof(string) || property.PropertyType == typeof(string))
+                {
+                    // Para strings: contains case-insensitive
+                    conditions.Add($"{property.Name}.ToLower().Contains(\"{searchTerm.ToLower()}\")");
+                }
+                else if (IsNumericType(property.PropertyType))
+                {
+                    // Para números: convertir a string y buscar parcialmente (para folios como 16 → 1601, 1602)
+                    conditions.Add($"{property.Name}.ToString().Contains(\"{searchTerm}\")");
+                }
+                else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+                {
+                    // Para fechas: intentar parsear y comparar
+                    if (DateTime.TryParse(searchTerm, out var dateValue))
+                    {
+                        conditions.Add($"{property.Name}.Date == DateTime.Parse(\"{dateValue:yyyy-MM-dd}\").Date");
+                    }
+                }
+            }
+
+            return conditions.Any() ? string.Join(" || ", conditions) : string.Empty;
+        }
+
+        private string[] GetDefaultSearchFields(PropertyInfo[] properties)
+        {
+            // Buscar campos por defecto: strings y campos que contengan "nombre", "descripcion", "codigo", etc.
+            var defaultFields = new List<string>();
+
+            foreach (var prop in properties)
+            {
+                var propName = prop.Name.ToLower();
+                
+                if (prop.PropertyType == typeof(string) && (
+                    propName.Contains("nombre") ||
+                    propName.Contains("name") ||
+                    propName.Contains("descripcion") ||
+                    propName.Contains("description") ||
+                    propName.Contains("codigo") ||
+                    propName.Contains("code") ||
+                    propName.Contains("titulo") ||
+                    propName.Contains("title")))
+                {
+                    defaultFields.Add(prop.Name);
+                }
+                else if (IsNumericType(prop.PropertyType) && (
+                    propName.Contains("folio") ||
+                    propName.Contains("numero") ||
+                    propName.Contains("number") ||
+                    propName.Contains("id")))
+                {
+                    defaultFields.Add(prop.Name);
+                }
+            }
+
+            // Si no encuentra campos específicos, usar todos los strings
+            if (!defaultFields.Any())
+            {
+                defaultFields.AddRange(properties
+                    .Where(p => p.PropertyType == typeof(string))
+                    .Select(p => p.Name));
+            }
+
+            return defaultFields.ToArray();
+        }
+
+        private bool IsNumericType(Type type)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+            
+            return underlyingType == typeof(int) ||
+                   underlyingType == typeof(long) ||
+                   underlyingType == typeof(decimal) ||
+                   underlyingType == typeof(double) ||
+                   underlyingType == typeof(float) ||
+                   underlyingType == typeof(short) ||
+                   underlyingType == typeof(byte);
         }
 
         #endregion

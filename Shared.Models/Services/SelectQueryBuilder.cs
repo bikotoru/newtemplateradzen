@@ -16,6 +16,10 @@ namespace Shared.Models.Services
         private readonly List<string> _includeExpressions;
         private int? _skip;
         private int? _take;
+        
+        // Search properties
+        private string? _searchTerm;
+        private readonly List<Expression<Func<T, object>>> _searchFields = new();
 
         internal SelectQueryBuilder(
             HttpClient http,
@@ -26,7 +30,9 @@ namespace Shared.Models.Services
             Expression<Func<T, TResult>> selectExpression,
             List<string> includeExpressions,
             int? skip,
-            int? take)
+            int? take,
+            string? searchTerm = null,
+            List<Expression<Func<T, object>>>? searchFields = null)
         {
             _http = http;
             _entityName = entityName;
@@ -37,6 +43,9 @@ namespace Shared.Models.Services
             _includeExpressions = includeExpressions;
             _skip = skip;
             _take = take;
+            _searchTerm = searchTerm;
+            if (searchFields != null)
+                _searchFields.AddRange(searchFields);
         }
 
         public SelectQueryBuilder<T, TResult> Where(Expression<Func<T, bool>> predicate)
@@ -48,7 +57,26 @@ namespace Shared.Models.Services
         public SelectQueryBuilder<T, TResult> OrderBy<TProperty>(Expression<Func<T, TProperty>> property, bool descending = false)
         {
             return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, property, 
-                descending, _selectExpression, _includeExpressions, _skip, _take);
+                descending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
+        }
+
+        /// <summary>
+        /// Búsqueda inteligente por término (funciona con strings, números, fechas)
+        /// </summary>
+        public SelectQueryBuilder<T, TResult> Search(string searchTerm)
+        {
+            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, _orderByExpression, 
+                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, searchTerm, _searchFields);
+        }
+
+        /// <summary>
+        /// Especificar campos donde buscar (fuertemente tipado)
+        /// </summary>
+        public SelectQueryBuilder<T, TResult> InFields(params Expression<Func<T, object>>[] searchFields)
+        {
+            var newSearchFields = new List<Expression<Func<T, object>>>(searchFields);
+            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, _orderByExpression, 
+                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, newSearchFields);
         }
 
         public SelectQueryBuilder<T, TResult> Include<TProperty>(Expression<Func<T, TProperty>> navigationProperty)
@@ -72,6 +100,13 @@ namespace Shared.Models.Services
 
         public async Task<List<TResult>> ToListAsync()
         {
+            // Si hay búsqueda, usar endpoint de Search con Select
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                return await ExecuteSearchSelectAsync();
+            }
+
+            // Usar endpoint de Select normal
             var request = new QueryRequest
             {
                 Filter = BuildFilterString(),
@@ -95,6 +130,13 @@ namespace Shared.Models.Services
 
         public async Task<PagedResult<TResult>> ToPagedResultAsync()
         {
+            // Si hay búsqueda, usar endpoint de Search con Select paginado
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                return await ExecuteSearchSelectPagedAsync();
+            }
+
+            // Usar endpoint de Select paginado normal
             var request = new QueryRequest
             {
                 Filter = BuildFilterString(),
@@ -259,5 +301,69 @@ namespace Shared.Models.Services
                 _ => value.ToString() ?? "null"
             };
         }
+
+        #region Search Operations
+
+        private async Task<List<TResult>> ExecuteSearchSelectAsync()
+        {
+            var searchRequest = BuildSearchRequest();
+
+            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select", searchRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Search select failed: {response.StatusCode} - {errorContent}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<List<TResult>>();
+            return result ?? new List<TResult>();
+        }
+
+        private async Task<PagedResult<TResult>> ExecuteSearchSelectPagedAsync()
+        {
+            var searchRequest = BuildSearchRequest();
+
+            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select-paged", searchRequest);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<PagedResult<TResult>>();
+            return result ?? new PagedResult<TResult>();
+        }
+
+        private SearchRequest BuildSearchRequest()
+        {
+            // Crear BaseQuery con los filtros y configuración actual, incluyendo Select
+            var baseQuery = new QueryRequest
+            {
+                Filter = BuildFilterString(),
+                OrderBy = BuildOrderByString(),
+                Select = BuildSelectString(),
+                Include = _includeExpressions.ToArray(),
+                Skip = _skip,
+                Take = _take
+            };
+
+            // Crear SearchRequest con el BaseQuery
+            var searchRequest = new SearchRequest
+            {
+                SearchTerm = _searchTerm ?? string.Empty,
+                SearchFields = _searchFields.Any() ? _searchFields.Select(GetPropertyName).ToArray() : Array.Empty<string>(),
+                BaseQuery = baseQuery
+            };
+
+            return searchRequest;
+        }
+
+        private string GetPropertyName(Expression<Func<T, object>> expression)
+        {
+            return expression switch
+            {
+                { Body: MemberExpression member } => member.Member.Name,
+                { Body: UnaryExpression { Operand: MemberExpression member } } => member.Member.Name,
+                _ => throw new ArgumentException($"Expression '{expression}' is not a valid property expression.")
+            };
+        }
+
+        #endregion
     }
 }
