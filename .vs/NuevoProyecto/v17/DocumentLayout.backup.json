@@ -3,60 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\layout\\mainlayout.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\layout\\mainlayout.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\extensions\\dbcontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\extensions\\dbcontextextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\style\\fluent-base.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\style\\fluent-base.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\core\\basehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\core\\basehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\css\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\css\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\core\\interceptedappdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\core\\interceptedappdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\core\\efinterceptorservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\core\\efinterceptorservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\style\\fluent-dark-base.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\style\\fluent-dark-base.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\style\\fluent-base.css.old||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\style\\fluent-base.css.old||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\js\\theme-switcher.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\js\\theme-switcher.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\layout\\navmenu.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\frontend\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{775D0553-E61E-40A3-AE86-D5D84BA47AEC}|Frontend\\Frontend.csproj|solutionrelative:frontend\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\nuevoproyecto\\backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3C4C27AA-6F51-47E9-AF77-0A2CEB7B42E1}|Backend.Utils\\Backend.Utils.csproj|solutionrelative:backend.utils\\efinterceptors\\handlers\\updatehandlers\\globalupdatehandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -66,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 13,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -78,184 +42,67 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "fluent-base.css",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-base.css",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-base.css",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-base.css",
-              "RelativeToolTip": "Frontend\\wwwroot\\style\\fluent-base.css",
-              "ViewState": "AgIAAMVpAAAAAAAAAAAIwNtpAAA5AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-08-30T21:26:02.719Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "fluent-dark-base.css",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-dark-base.css",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-dark-base.css",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-dark-base.css",
-              "RelativeToolTip": "Frontend\\wwwroot\\style\\fluent-dark-base.css",
-              "ViewState": "AgIAAMlpAAAAAAAAAAAIwOtpAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-08-30T21:20:11.329Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "fluent-base.css.old",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-base.css.old",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-base.css.old",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\style\\fluent-base.css.old",
-              "RelativeToolTip": "Frontend\\wwwroot\\style\\fluent-base.css.old",
-              "ViewState": "AgIAAINSAAAAAAAAAAAuwJdSAAAgAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-08-30T21:20:08.305Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "bootstrap-reboot.css",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
-              "RelativeToolTip": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-08-30T21:17:26.768Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "bootstrap.css",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
-              "RelativeToolTip": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
-              "ViewState": "AgIAAPYuAAAAAAAAAAAIwBgvAAApAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-08-30T21:11:41.796Z",
+              "DocumentIndex": 0,
+              "Title": "DbContextExtensions.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Extensions\\DbContextExtensions.cs",
+              "ViewState": "AgIAACkAAAAAAAAAAAAewD0AAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T01:01:12.321Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "app.css",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\css\\app.css",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\css\\app.css",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\css\\app.css",
-              "RelativeToolTip": "Frontend\\wwwroot\\css\\app.css",
-              "ViewState": "AgIAAFQCAAAAAAAAAAAIwHMCAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-08-30T21:10:56.529Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "theme-switcher.js",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\js\\theme-switcher.js",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\js\\theme-switcher.js",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\js\\theme-switcher.js",
-              "RelativeToolTip": "Frontend\\wwwroot\\js\\theme-switcher.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2025-08-30T21:09:14.805Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "index.html",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\index.html",
-              "RelativeDocumentMoniker": "Frontend\\wwwroot\\index.html",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\wwwroot\\index.html",
-              "RelativeToolTip": "Frontend\\wwwroot\\index.html",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAAB0AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-08-30T20:48:48.499Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "_Imports.razor",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\_Imports.razor",
-              "RelativeDocumentMoniker": "Frontend\\_Imports.razor",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\_Imports.razor",
-              "RelativeToolTip": "Frontend\\_Imports.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-08-30T20:48:16.088Z",
+              "Title": "InterceptedAppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Core\\InterceptedAppDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T01:00:51.727Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "Home.razor",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Pages\\Home.razor",
-              "RelativeDocumentMoniker": "Frontend\\Pages\\Home.razor",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Pages\\Home.razor",
-              "RelativeToolTip": "Frontend\\Pages\\Home.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAMAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-08-30T20:47:59.523Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "NavMenu.razor",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Layout\\NavMenu.razor",
-              "RelativeDocumentMoniker": "Frontend\\Layout\\NavMenu.razor",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Layout\\NavMenu.razor",
-              "RelativeToolTip": "Frontend\\Layout\\NavMenu.razor",
+              "Title": "EFInterceptorService.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Core\\EFInterceptorService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-08-30T20:41:07.205Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MainLayout.razor",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Layout\\MainLayout.razor",
-              "RelativeDocumentMoniker": "Frontend\\Layout\\MainLayout.razor",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Layout\\MainLayout.razor",
-              "RelativeToolTip": "Frontend\\Layout\\MainLayout.razor",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAAwBMAAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-08-30T20:41:06.114Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Program.cs",
-              "RelativeDocumentMoniker": "Frontend\\Program.cs",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Program.cs",
-              "RelativeToolTip": "Frontend\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-30T20:40:50Z",
+              "WhenOpened": "2025-08-31T01:00:50.892Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "App.razor",
-              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\App.razor",
-              "RelativeDocumentMoniker": "Frontend\\App.razor",
-              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\App.razor",
-              "RelativeToolTip": "Frontend\\App.razor",
+              "DocumentIndex": 1,
+              "Title": "BaseHandler.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Core\\BaseHandler.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAgwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T01:00:50.099Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "GlobalUpdateHandler.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",
+              "RelativeDocumentMoniker": "Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",
+              "RelativeToolTip": "Backend.Utils\\EFInterceptors\\Handlers\\UpdateHandlers\\GlobalUpdateHandler.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-08-30T20:40:47.705Z",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T01:00:43.644Z",
               "EditorCaption": ""
             }
           ]

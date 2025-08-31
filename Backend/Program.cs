@@ -1,10 +1,22 @@
+using Backend.Utils.EFInterceptors.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Get connection string from environment variable (launchSettings.json)
+var connectionString = Environment.GetEnvironmentVariable("SQL") 
+    ?? throw new InvalidOperationException("SQL connection string not found in environment variables");
 
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
+
+// Add EF Interceptors
+builder.Services.AddEFInterceptors(connectionString);
+
+// Register handlers from assemblies (this will scan for all handler classes)
+builder.Services.AddHandlersFromAssemblies(typeof(Program));
 
 // CORS para Blazor WebAssembly
 builder.Services.AddCors(options =>
