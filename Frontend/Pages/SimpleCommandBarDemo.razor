@@ -122,8 +122,22 @@
                 Text = "Configuración", 
                 IconName = "settings", 
                 Key = "settings", 
-                Command = buttonCommand, 
-                CommandParameter = "Configuración"
+                SubMenuItems = new List<SimpleCommandBarItem> {
+                    new SimpleCommandBarItem { 
+                        Text = "Preferencias", 
+                        IconName = "tune", 
+                        Key = "preferences", 
+                        Command = buttonCommand, 
+                        CommandParameter = "Preferencias"
+                    },
+                    new SimpleCommandBarItem { 
+                        Text = "Idioma", 
+                        IconName = "language", 
+                        Key = "language", 
+                        Command = buttonCommand, 
+                        CommandParameter = "Idioma"
+                    }
+                }
             },
             new SimpleCommandBarItem { 
                 Text = "Ayuda", 

@@ -23,6 +23,10 @@ public class SimpleCommandBarItem
     public Action<SimpleItemClickedArgs>? OnClick { get; set; }
     
     public SimpleCommandBarItemType ItemType { get; set; } = SimpleCommandBarItemType.Normal;
+    
+    // Soporte para submenús
+    public List<SimpleCommandBarItem>? SubMenuItems { get; set; }
+    public bool HasSubMenu => SubMenuItems?.Any() == true;
 }
 
 public class SimpleItemClickedArgs

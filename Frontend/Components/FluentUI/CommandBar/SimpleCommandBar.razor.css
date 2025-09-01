@@ -96,7 +96,7 @@
     border-radius: 2px;
     box-shadow: 0 6.4px 14.4px 0 rgba(0, 0, 0, 0.132), 0 1.2px 3.6px 0 rgba(0, 0, 0, 0.108);
     z-index: 1000;
-    overflow: hidden;
+    overflow: visible;
     animation: slideDown 0.15s ease-out;
 }
 
@@ -148,6 +148,12 @@
 
 .ms-CommandBar-overflowItem .ms-CommandBar-icon {
     margin-right: 8px;
+}
+
+/* Submenús */
+.ms-CommandBar-submenuArrow {
+    margin-left: auto;
+    font-size: 16px;
 }
 
 /* Dark theme support */

@@ -39,15 +39,51 @@
                     <div class="ms-CommandBar-overflowMenu" @onclick:stopPropagation="true" @ref="overflowMenuRef">
                         @foreach (var item in GetOverflowItems())
                         {
-                            <button class="ms-CommandBar-overflowItem" 
-                                    @onclick="() => HandleItemClick(item)"
-                                    disabled="@(!CanExecute(item))">
-                                @if (!string.IsNullOrEmpty(item.IconName))
-                                {
-                                    <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
-                                }
-                                <span class="ms-CommandBar-text">@item.Text</span>
-                            </button>
+                            @if (item.HasSubMenu)
+                            {
+                                <div class="ms-CommandBar-submenuItem" style="position: relative;">
+                                    <button class="ms-CommandBar-overflowItem" 
+                                            @onclick="() => ToggleSubMenu(item.Key)"
+                                            disabled="@(!CanExecute(item))">
+                                        @if (!string.IsNullOrEmpty(item.IconName))
+                                        {
+                                            <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                                        }
+                                        <span class="ms-CommandBar-text">@item.Text</span>
+                                        <span class="ms-CommandBar-submenuArrow material-symbols-outlined">chevron_right</span>
+                                    </button>
+                                    
+                                    @if (activeSubMenu == item.Key)
+                                    {
+                                        <div class="ms-CommandBar-submenu" style="position: absolute; left: 100%; top: 0; min-width: 180px; background: white; border: 1px solid #ccc; z-index: 1001; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                            @foreach (var subItem in item.SubMenuItems!)
+                                            {
+                                                <button class="ms-CommandBar-overflowItem" 
+                                                        @onclick="() => HandleItemClick(subItem)"
+                                                        disabled="@(!CanExecute(subItem))">
+                                                    @if (!string.IsNullOrEmpty(subItem.IconName))
+                                                    {
+                                                        <span class="ms-CommandBar-icon material-symbols-outlined">@subItem.IconName</span>
+                                                    }
+                                                    <span class="ms-CommandBar-text">@subItem.Text</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="ms-CommandBar-overflowItem" 
+                                        @onclick="() => HandleItemClick(item)"
+                                        disabled="@(!CanExecute(item))">
+                                    @if (!string.IsNullOrEmpty(item.IconName))
+                                    {
+                                        <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                                    }
+                                    <span class="ms-CommandBar-text">@item.Text</span>
+                                </button>
+                            }
                         }
                     </div>
                 }
@@ -126,6 +162,7 @@
     private int maxVisibleItems = 6; // Por defecto mostrar 6 items máximo
     private bool windowSizeChecked = false;
     private int? resizeHandlerId;
+    private string? activeSubMenu = null;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -309,6 +346,20 @@
     {
         showOverflowMenu = false;
         showFarOverflowMenu = false;
+        activeSubMenu = null;
+        StateHasChanged();
+    }
+
+    private void ToggleSubMenu(string key)
+    {
+        if (activeSubMenu == key)
+        {
+            activeSubMenu = null;
+        }
+        else
+        {
+            activeSubMenu = key;
+        }
         StateHasChanged();
     }
 
