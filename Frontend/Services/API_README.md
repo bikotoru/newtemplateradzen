@@ -2,6 +2,11 @@
 
 El servicio `API` es un servicio genérico para realizar peticiones HTTP con diferentes tipos de retorno y soporte para métodos autenticados y no autenticados.
 
+## Archivos del Servicio
+
+- **`Frontend/Services/API.cs`** - Servicio principal
+- **`Frontend.Tests/Services/APITests.cs`** - Tests completos del servicio
+
 ## Características
 
 - ✅ **Métodos HTTP**: GET, POST, PUT, DELETE
