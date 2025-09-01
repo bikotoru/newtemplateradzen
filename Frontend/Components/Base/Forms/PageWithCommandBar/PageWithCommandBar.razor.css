@@ -40,3 +40,12 @@
 [data-theme="dark"] .page-commandbar-container {
     border-bottom-color: #3e3e42;
 }
+
+[data-theme="dark"] .page-content-scroll {
+    background-color: #292929;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .page-with-commandbar {
+    background-color: #292929;
+}

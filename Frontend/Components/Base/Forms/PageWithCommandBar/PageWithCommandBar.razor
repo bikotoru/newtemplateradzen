@@ -2,7 +2,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
-<div class="page-with-commandbar">
+<div class="page-with-commandbar" data-theme="@currentTheme">
     <div class="page-commandbar-container">
         <SimpleCommandBar Items="@allItems" FarItems="@FarItems" OverflowItems="@OverflowItems" />
     </div>
@@ -18,18 +18,65 @@
     [Parameter] public List<SimpleCommandBarItem>? CustomItems { get; set; }
     [Parameter] public List<SimpleCommandBarItem>? FarItems { get; set; }
     [Parameter] public List<SimpleCommandBarItem>? OverflowItems { get; set; }
-    [Parameter] public bool ShowSave { get; set; } = true;
+    
+    // Botón Back (siempre presente)
     [Parameter] public string? BackPath { get; set; }
     [Parameter] public EventCallback OnBackClick { get; set; }
-    [Parameter] public EventCallback OnSaveClick { get; set; }
     [Parameter] public bool UseHistoryBack { get; set; } = true;
+    
+    // Botón Nuevo (siempre presente)
+    [Parameter] public string? NewPath { get; set; }
+    [Parameter] public EventCallback OnNewClick { get; set; }
+    
+    // Botón Save (opcional)
+    [Parameter] public bool ShowSave { get; set; } = true;
+    [Parameter] public EventCallback OnSaveClick { get; set; }
+    
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private List<SimpleCommandBarItem> allItems = new();
+    private string currentTheme = "light";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCurrentTheme();
+            await SetupThemeListener();
+        }
+    }
 
     protected override void OnParametersSet()
     {
         BuildStandardItems();
+    }
+
+    private async Task LoadCurrentTheme()
+    {
+        try
+        {
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            currentTheme = savedTheme ?? "light";
+            StateHasChanged();
+        }
+        catch
+        {
+            currentTheme = "light";
+        }
+    }
+
+    private async Task SetupThemeListener()
+    {
+        var dotnetRef = DotNetObjectReference.Create(this);
+        
+        await JSRuntime.InvokeVoidAsync("setupPageWithCommandBarThemeListener", dotnetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnThemeChanged(string newTheme)
+    {
+        currentTheme = newTheme ?? "light";
+        await InvokeAsync(StateHasChanged);
     }
 
     private void BuildStandardItems()
@@ -45,7 +92,16 @@
             OnClick = HandleBackClick
         });
 
-        // 2. Save button (opcional)
+        // 2. New button (siempre presente)
+        allItems.Add(new SimpleCommandBarItem
+        {
+            Text = "Nuevo",
+            IconName = "add",
+            Key = "new",
+            OnClick = HandleNewClick
+        });
+
+        // 3. Save button (opcional)
         if (ShowSave)
         {
             allItems.Add(new SimpleCommandBarItem
@@ -57,7 +113,7 @@
             });
         }
 
-        // 3. Agregar items personalizados
+        // 4. Agregar items personalizados
         if (CustomItems != null)
         {
             allItems.AddRange(CustomItems);
@@ -78,6 +134,19 @@
         else if (UseHistoryBack)
         {
             await JSRuntime.InvokeVoidAsync("history.back");
+        }
+    }
+
+    private async void HandleNewClick(SimpleItemClickedArgs args)
+    {
+        // Prioridad: OnNewClick > NewPath
+        if (OnNewClick.HasDelegate)
+        {
+            await OnNewClick.InvokeAsync();
+        }
+        else if (!string.IsNullOrEmpty(NewPath))
+        {
+            NavigationManager.NavigateTo(NewPath);
         }
     }
 

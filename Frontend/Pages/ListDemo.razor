@@ -8,7 +8,9 @@
                     FarItems="@farItems"
                     ShowSave="true"
                     OnSaveClick="@SaveData"
-                    BackPath="/commandbar-demo">
+                    BackPath="/commandbar-demo"
+                    NewPath="/categoria/new"
+                    OnNewClick="@CreateNewCategory">
     
     <div style="margin-bottom: 20px;">
         <h1>🗂️ Lista de Categorías</h1>
@@ -30,13 +32,13 @@
     <div style="margin-bottom: 20px; padding: 16px; background: #e3f2fd; border-radius: 4px;">
         <h3>ℹ️ Información de Comandos</h3>
         <ul>
-            <li><strong>← Atrás:</strong> Va a /commandbar-demo (BackPath)</li>
-            <li><strong>💾 Guardar:</strong> Ejecuta SaveData() personalizado</li>
-            <li><strong>➕ Nuevo:</strong> Simula crear nueva categoría</li>
-            <li><strong>✏️ Editar:</strong> Simula editar categoría seleccionada</li>
-            <li><strong>🗑️ Eliminar:</strong> Simula eliminar con confirmación</li>
-            <li><strong>📄 Exportar:</strong> Simula exportar a Excel</li>
-            <li><strong>📊 Reportes:</strong> Submenú con opciones de reportes</li>
+            <li><strong>← Atrás:</strong> Va a /commandbar-demo (BackPath estándar)</li>
+            <li><strong>➕ Nuevo:</strong> OnNewClick personalizado + NewPath de respaldo (estándar)</li>
+            <li><strong>💾 Guardar:</strong> OnSaveClick personalizado (estándar opcional)</li>
+            <li><strong>✏️ Editar:</strong> 100% personalizado en CustomItems</li>
+            <li><strong>🗑️ Eliminar:</strong> 100% personalizado en CustomItems</li>
+            <li><strong>📄 Exportar:</strong> 100% personalizado en FarItems</li>
+            <li><strong>📊 Reportes:</strong> 100% personalizado con submenú en FarItems</li>
         </ul>
     </div>
 
@@ -56,17 +58,8 @@
 
     protected override void OnInitialized()
     {
-        // Items personalizados con OnClick incluido
+        // Items 100% personalizados (Editar, Eliminar, etc.)
         myItems = new List<SimpleCommandBarItem> {
-            new SimpleCommandBarItem { 
-                Text = "Nuevo", 
-                IconName = "add", 
-                Key = "new",
-                OnClick = (args) => {
-                    lastAction = "Crear nueva categoría - Formulario abierto";
-                    StateHasChanged();
-                }
-            },
             new SimpleCommandBarItem { 
                 Text = "Editar", 
                 IconName = "edit", 
@@ -124,6 +117,12 @@
                 }
             }
         };
+    }
+
+    private async Task CreateNewCategory()
+    {
+        lastAction = "Botón NUEVO estándar - Lógica personalizada ejecutada";
+        StateHasChanged();
     }
 
     private async Task SaveData()

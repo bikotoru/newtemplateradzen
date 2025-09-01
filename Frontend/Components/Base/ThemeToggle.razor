@@ -38,6 +38,7 @@
         isDarkMode = !isDarkMode;
         await ApplyTheme();
         await SaveThemeToStorage();
+        await NotifyThemeChange();
         StateHasChanged();
     }
 
@@ -59,6 +60,24 @@
         {
             var themeValue = isDarkMode ? "dark" : "light";
             await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", themeValue);
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    private async Task NotifyThemeChange()
+    {
+        try
+        {
+            var themeValue = isDarkMode ? "dark" : "light";
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                // Dispatch custom event for components listening to theme changes
+                const event = new CustomEvent('themeChanged', {{
+                    detail: {{ theme: '{themeValue}' }}
+                }});
+                window.dispatchEvent(event);
+            ");
         }
         catch (Exception ex)
         {

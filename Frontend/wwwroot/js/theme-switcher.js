@@ -60,3 +60,29 @@ window.initializeTheme = () => {
         console.error('Error initializing theme:', error);
     }
 };
+
+// Setup theme listener for PageWithCommandBar
+window.setupPageWithCommandBarThemeListener = (dotnetRef) => {
+    console.log('Setting up PageWithCommandBar theme listener');
+    
+    // Store the .NET reference
+    window.pageWithCommandBarInstance = dotnetRef;
+    
+    // Listen for storage events (when theme changes in different tabs)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            console.log('Storage theme change detected:', e.newValue);
+            if (window.pageWithCommandBarInstance) {
+                window.pageWithCommandBarInstance.invokeMethodAsync('OnThemeChanged', e.newValue);
+            }
+        }
+    });
+    
+    // Listen for custom theme change events (when theme changes in same tab)
+    window.addEventListener('themeChanged', function(e) {
+        console.log('Custom theme change event detected:', e.detail.theme);
+        if (window.pageWithCommandBarInstance) {
+            window.pageWithCommandBarInstance.invokeMethodAsync('OnThemeChanged', e.detail.theme);
+        }
+    });
+};
