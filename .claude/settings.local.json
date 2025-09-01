@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(for f in *.cs)",
+      "Bash(do sed -i 's/namespace BlazorFluentUI/namespace Frontend.Components.FluentUI/g' \"$f\")",
+      "Bash(done)",
+      "Bash(dotnet build:*)",
+      "Bash(for f in *.cs *.razor)",
+      "Bash(do [ -f \"$f\" ])",
+      "Bash(sed:*)",
+      "Bash(dotnet run:*)"
+    ],
+    "deny": []
+  }
+}

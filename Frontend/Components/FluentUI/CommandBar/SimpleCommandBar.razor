@@ -1,0 +1,256 @@
+@using System.Windows.Input
+@namespace Frontend.Components.FluentUI
+@inject IJSRuntime JSRuntime
+
+<div class="ms-CommandBar" @ref="commandBarRef">
+    <div class="ms-CommandBar-primarySet">
+        @if (Items != null)
+        {
+            @foreach (var item in GetVisibleItems())
+            {
+                <button class="ms-CommandBar-item @GetButtonClasses(item)" 
+                        @onclick="() => HandleItemClick(item)"
+                        title="@item.Text"
+                        disabled="@(!CanExecute(item))">
+                    @if (!string.IsNullOrEmpty(item.IconName))
+                    {
+                        <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                    }
+                    @if (!item.IconOnly)
+                    {
+                        <span class="ms-CommandBar-text">@item.Text</span>
+                    }
+                </button>
+            }
+        }
+
+        @if (GetOverflowItems().Any())
+        {
+            <button class="ms-CommandBar-item ms-CommandBar-overflowButton" 
+                    @onclick="ToggleOverflowMenu"
+                    title="Más opciones">
+                <span class="ms-CommandBar-icon material-symbols-outlined">more_horiz</span>
+            </button>
+        }
+    </div>
+
+    <div class="ms-CommandBar-secondarySet">
+        @if (FarItems != null)
+        {
+            @foreach (var item in GetVisibleFarItems())
+            {
+                <button class="ms-CommandBar-item @GetButtonClasses(item)" 
+                        @onclick="() => HandleItemClick(item)"
+                        title="@item.Text"
+                        disabled="@(!CanExecute(item))">
+                    @if (!string.IsNullOrEmpty(item.IconName))
+                    {
+                        <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                    }
+                    @if (!item.IconOnly)
+                    {
+                        <span class="ms-CommandBar-text">@item.Text</span>
+                    }
+                </button>
+            }
+        }
+
+        @if (GetFarOverflowItems().Any())
+        {
+            <button class="ms-CommandBar-item ms-CommandBar-overflowButton" 
+                    @onclick="ToggleFarOverflowMenu"
+                    title="Más opciones">
+                <span class="ms-CommandBar-icon material-symbols-outlined">more_horiz</span>
+            </button>
+        }
+    </div>
+</div>
+
+@if (showOverflowMenu && GetOverflowItems().Any())
+{
+    <div class="ms-CommandBar-overflowMenu" @onclick:stopPropagation="true">
+        @foreach (var item in GetOverflowItems())
+        {
+            <button class="ms-CommandBar-overflowItem" 
+                    @onclick="() => HandleItemClick(item)"
+                    disabled="@(!CanExecute(item))">
+                @if (!string.IsNullOrEmpty(item.IconName))
+                {
+                    <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                }
+                <span class="ms-CommandBar-text">@item.Text</span>
+            </button>
+        }
+    </div>
+}
+
+@if (showFarOverflowMenu && GetFarOverflowItems().Any())
+{
+    <div class="ms-CommandBar-overflowMenu ms-CommandBar-farOverflowMenu" @onclick:stopPropagation="true">
+        @foreach (var item in GetFarOverflowItems())
+        {
+            <button class="ms-CommandBar-overflowItem" 
+                    @onclick="() => HandleItemClick(item)"
+                    disabled="@(!CanExecute(item))">
+                @if (!string.IsNullOrEmpty(item.IconName))
+                {
+                    <span class="ms-CommandBar-icon material-symbols-outlined">@item.IconName</span>
+                }
+                <span class="ms-CommandBar-text">@item.Text</span>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public List<SimpleCommandBarItem>? Items { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? FarItems { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? OverflowItems { get; set; }
+
+    private ElementReference commandBarRef;
+    private bool showOverflowMenu = false;
+    private bool showFarOverflowMenu = false;
+    private int availableWidth = 0;
+    private int maxVisibleItems = 6; // Por defecto mostrar 6 items máximo
+    private bool windowSizeChecked = false;
+    private int? resizeHandlerId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SetupResizeHandler();
+        }
+    }
+
+    private async Task SetupResizeHandler()
+    {
+        try 
+        {
+            resizeHandlerId = await JSRuntime.InvokeAsync<int>("addWindowResizeHandler", 
+                DotNetObjectReference.Create(this), nameof(OnWindowResize));
+        }
+        catch
+        {
+            // Si falla el JS, usar comportamiento por defecto
+            maxVisibleItems = 4;
+            windowSizeChecked = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnWindowResize(int width, int height)
+    {
+        CalculateMaxVisibleItems(width);
+        windowSizeChecked = true;
+        StateHasChanged();
+    }
+
+    private void CalculateMaxVisibleItems(int windowWidth)
+    {
+        if (windowWidth < 600)
+            maxVisibleItems = 2; // Móvil - solo 2 items visibles
+        else if (windowWidth < 900)
+            maxVisibleItems = 3; // Tablet - 3 items visibles  
+        else if (windowWidth < 1200)
+            maxVisibleItems = 4; // Desktop pequeño - 4 items
+        else
+            maxVisibleItems = 6; // Desktop grande - 6 items
+    }
+
+    private List<SimpleCommandBarItem> GetVisibleItems()
+    {
+        if (Items == null || !windowSizeChecked) return Items ?? new List<SimpleCommandBarItem>();
+        
+        // Mostrar solo los items que caben según el tamaño de ventana
+        return Items.Take(maxVisibleItems).ToList();
+    }
+
+    private List<SimpleCommandBarItem> GetOverflowItems()
+    {
+        if (Items == null || !windowSizeChecked) return OverflowItems ?? new List<SimpleCommandBarItem>();
+        
+        // Items que no caben + overflow items predefinidos
+        var hiddenItems = Items.Skip(maxVisibleItems).ToList();
+        
+        if (OverflowItems != null)
+        {
+            hiddenItems.AddRange(OverflowItems);
+        }
+        
+        return hiddenItems;
+    }
+
+    private List<SimpleCommandBarItem> GetVisibleFarItems()
+    {
+        if (FarItems == null) return new List<SimpleCommandBarItem>();
+        return FarItems.Take(Math.Min(FarItems.Count, 3)).ToList();
+    }
+
+    private List<SimpleCommandBarItem> GetFarOverflowItems()
+    {
+        if (FarItems == null) return new List<SimpleCommandBarItem>();
+        return FarItems.Skip(GetVisibleFarItems().Count).ToList();
+    }
+
+    private void HandleItemClick(SimpleCommandBarItem item)
+    {
+        if (item.OnClick != null)
+        {
+            item.OnClick.Invoke(new SimpleItemClickedArgs { Key = item.Key });
+        }
+
+        if (item.Command?.CanExecute(item.CommandParameter) == true)
+        {
+            item.Command.Execute(item.CommandParameter);
+        }
+
+        if (item.CanCheck)
+        {
+            item.Checked = !item.Checked;
+        }
+
+        // Cerrar menús overflow
+        showOverflowMenu = false;
+        showFarOverflowMenu = false;
+    }
+
+    private bool CanExecute(SimpleCommandBarItem item)
+    {
+        return item.Command?.CanExecute(item.CommandParameter) ?? true;
+    }
+
+    private string GetButtonClasses(SimpleCommandBarItem item)
+    {
+        var classes = new List<string>();
+        
+        if (item.Checked)
+            classes.Add("ms-CommandBar-item--checked");
+            
+        if (item.IsRadioButton)
+            classes.Add("ms-CommandBar-item--radio");
+            
+        return string.Join(" ", classes);
+    }
+
+    private void ToggleOverflowMenu()
+    {
+        showOverflowMenu = !showOverflowMenu;
+        showFarOverflowMenu = false; // Cerrar el otro menú
+    }
+
+    private void ToggleFarOverflowMenu()
+    {
+        showFarOverflowMenu = !showFarOverflowMenu;
+        showOverflowMenu = false; // Cerrar el otro menú
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (resizeHandlerId.HasValue)
+        {
+            await JSRuntime.InvokeVoidAsync("removeWindowResizeHandler", resizeHandlerId.Value);
+        }
+    }
+}

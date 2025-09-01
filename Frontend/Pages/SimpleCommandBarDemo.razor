@@ -1,0 +1,272 @@
+@page "/commandbar-demo"
+@using System.Windows.Input
+@inject IJSRuntime JSRuntime
+
+<PageTitle>CommandBar Demo</PageTitle>
+
+<h1>CommandBar Demo</h1>
+
+<p>Demo de CommandBar con funcionalidad de overflow responsivo. Redimensiona la ventana para ver cómo los botones se mueven automáticamente al menú "..."</p>
+
+<div style="margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 4px;">
+    <h3>CommandBar Básico</h3>
+    <SimpleCommandBar Items=@items FarItems=@farItems OverflowItems=@overflowItems />
+</div>
+
+<div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 4px;">
+    <h3>CommandBar con Items Personalizados</h3>
+    <SimpleCommandBar Items=@customItems />
+</div>
+
+<div style="margin: 20px 0; padding: 20px; border: 1px solid #eee; border-radius: 4px;">
+    <h3>CommandBar con Radio Buttons</h3>
+    <SimpleCommandBar Items=@itemsWithRadioButtons />
+</div>
+
+@if (!string.IsNullOrEmpty(debugText))
+{
+    <div style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px;">
+        <strong>Último evento:</strong> @debugText
+    </div>
+}
+
+<div style="margin-top: 30px; padding: 15px; background-color: #e8f4f8; border-radius: 4px;">
+    <h4>Instrucciones:</h4>
+    <ul>
+        <li>Redimensiona la ventana del navegador para ver el comportamiento responsive</li>
+        <li>Los botones principales se moverán automáticamente al menú overflow ("...") cuando no haya espacio</li>
+        <li>Los FarItems (lado derecho) también tienen su propio overflow</li>
+        <li>Haz clic en los botones para ver los eventos en acción</li>
+    </ul>
+</div>
+
+@code {
+    private ICommand? buttonCommand;
+    private string? debugText;
+    private int commandCount = 0;
+
+    private List<SimpleCommandBarItem>? items;
+    private List<SimpleCommandBarItem>? farItems;
+    private List<SimpleCommandBarItem>? overflowItems;
+    private List<SimpleCommandBarItem>? customItems;
+    private List<SimpleCommandBarItem>? itemsWithRadioButtons;
+
+    private Action<SimpleItemClickedArgs> OnClick => args =>
+    {
+        var item = farItems?.FirstOrDefault(x => x.Key == args.Key);
+        if (item != null)
+        {
+            item.Checked = !item.Checked;
+        }
+        debugText = $"Far item '{args.Key}' clicked. Checked: {item?.Checked}";
+        StateHasChanged();
+    };
+
+    protected override Task OnInitializedAsync()
+    {
+        buttonCommand = new RelayCommand((p) =>
+        {
+            debugText = $"'{p?.ToString()}' button was clicked. Count: {commandCount++}";
+            StateHasChanged();
+        });
+
+        // Items principales (lado izquierdo)
+        items = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Nuevo", 
+                IconName = "add", 
+                Key = "new", 
+                Command = buttonCommand, 
+                CommandParameter = "Nuevo Archivo"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Abrir", 
+                IconName = "folder_open", 
+                Key = "open", 
+                Command = buttonCommand, 
+                CommandParameter = "Abrir Archivo"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Guardar", 
+                IconName = "save", 
+                Key = "save", 
+                Command = buttonCommand, 
+                CommandParameter = "Guardar"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Imprimir", 
+                IconName = "print", 
+                Key = "print", 
+                Command = buttonCommand, 
+                CommandParameter = "Imprimir"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Compartir", 
+                IconName = "share", 
+                Key = "share", 
+                Command = buttonCommand, 
+                CommandParameter = "Compartir"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Exportar", 
+                IconName = "download", 
+                Key = "export", 
+                Command = buttonCommand, 
+                CommandParameter = "Exportar"
+            },
+        };
+
+        // Items de overflow (se muestran cuando no hay espacio)
+        overflowItems = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Configuración", 
+                IconName = "settings", 
+                Key = "settings", 
+                Command = buttonCommand, 
+                CommandParameter = "Configuración"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Ayuda", 
+                IconName = "help", 
+                Key = "help", 
+                Command = buttonCommand, 
+                CommandParameter = "Ayuda"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Acerca de", 
+                IconName = "info", 
+                Key = "about", 
+                Command = buttonCommand, 
+                CommandParameter = "Acerca de"
+            }
+        };
+
+        // Far items (lado derecho)
+        farItems = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Vista Grid", 
+                IconName = "grid_view", 
+                Key = "grid", 
+                IconOnly = true, 
+                CanCheck = true, 
+                OnClick = OnClick, 
+                Command = buttonCommand, 
+                CommandParameter = "Vista Grid"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Vista Lista", 
+                IconName = "list", 
+                Key = "list", 
+                IconOnly = true, 
+                CanCheck = true, 
+                OnClick = OnClick, 
+                Command = buttonCommand, 
+                CommandParameter = "Vista Lista"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Filtros", 
+                IconName = "filter_alt", 
+                Key = "filter", 
+                IconOnly = true, 
+                CanCheck = true, 
+                OnClick = OnClick, 
+                Command = buttonCommand, 
+                CommandParameter = "Filtros"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Buscar", 
+                IconName = "search", 
+                Key = "search", 
+                IconOnly = true, 
+                Command = buttonCommand, 
+                CommandParameter = "Buscar"
+            }
+        };
+
+        // Items personalizados con separadores
+        customItems = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Cortar", 
+                IconName = "content_cut", 
+                Key = "cut", 
+                Command = buttonCommand, 
+                CommandParameter = "Cortar"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Copiar", 
+                IconName = "content_copy", 
+                Key = "copy", 
+                Command = buttonCommand, 
+                CommandParameter = "Copiar"
+            },
+            new SimpleCommandBarItem { 
+                Key = "divider1", 
+                ItemType = SimpleCommandBarItemType.Divider 
+            },
+            new SimpleCommandBarItem { 
+                Text = "Pegar", 
+                IconName = "content_paste", 
+                Key = "paste", 
+                Command = buttonCommand, 
+                CommandParameter = "Pegar"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Deshacer", 
+                IconName = "undo", 
+                Key = "undo", 
+                Command = buttonCommand, 
+                CommandParameter = "Deshacer"
+            }
+        };
+
+        // Items con radio buttons
+        itemsWithRadioButtons = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Normal", 
+                IconName = "radio_button_unchecked", 
+                Key = "normal", 
+                Command = buttonCommand, 
+                CommandParameter = "Normal", 
+                Toggle = true
+            },
+            new SimpleCommandBarItem { 
+                Text = "Opción A1", 
+                IconName = "radio_button_unchecked", 
+                Key = "radioA1", 
+                Command = buttonCommand, 
+                CommandParameter = "RadioA1", 
+                IsRadioButton = true, 
+                GroupName = "groupA"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Opción A2", 
+                IconName = "radio_button_unchecked", 
+                Key = "radioA2", 
+                Command = buttonCommand, 
+                CommandParameter = "RadioA2", 
+                IsRadioButton = true, 
+                GroupName = "groupA"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Opción B1", 
+                IconName = "radio_button_unchecked", 
+                Key = "radioB1", 
+                Command = buttonCommand, 
+                CommandParameter = "RadioB1", 
+                IsRadioButton = true, 
+                GroupName = "groupB"
+            },
+            new SimpleCommandBarItem { 
+                Text = "Opción B2", 
+                IconName = "radio_button_unchecked", 
+                Key = "radioB2", 
+                Command = buttonCommand, 
+                CommandParameter = "RadioB2", 
+                IsRadioButton = true, 
+                GroupName = "groupB"
+            }
+        };
+
+        return Task.CompletedTask;
+    }
+}
