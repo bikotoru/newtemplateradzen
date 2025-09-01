@@ -1,0 +1,91 @@
+@using Frontend.Components.FluentUI
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="page-with-commandbar">
+    <div class="page-commandbar-container">
+        <SimpleCommandBar Items="@allItems" FarItems="@FarItems" OverflowItems="@OverflowItems" />
+    </div>
+    
+    <div class="page-content-container">
+        <div class="page-content-scroll">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<SimpleCommandBarItem>? CustomItems { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? FarItems { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? OverflowItems { get; set; }
+    [Parameter] public bool ShowSave { get; set; } = true;
+    [Parameter] public string? BackPath { get; set; }
+    [Parameter] public EventCallback OnBackClick { get; set; }
+    [Parameter] public EventCallback OnSaveClick { get; set; }
+    [Parameter] public bool UseHistoryBack { get; set; } = true;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private List<SimpleCommandBarItem> allItems = new();
+
+    protected override void OnParametersSet()
+    {
+        BuildStandardItems();
+    }
+
+    private void BuildStandardItems()
+    {
+        allItems.Clear();
+
+        // 1. Back button (siempre presente)
+        allItems.Add(new SimpleCommandBarItem
+        {
+            Text = "Atrás",
+            IconName = "arrow_back",
+            Key = "back",
+            OnClick = HandleBackClick
+        });
+
+        // 2. Save button (opcional)
+        if (ShowSave)
+        {
+            allItems.Add(new SimpleCommandBarItem
+            {
+                Text = "Guardar",
+                IconName = "save",
+                Key = "save",
+                OnClick = HandleSaveClick
+            });
+        }
+
+        // 3. Agregar items personalizados
+        if (CustomItems != null)
+        {
+            allItems.AddRange(CustomItems);
+        }
+    }
+
+    private async void HandleBackClick(SimpleItemClickedArgs args)
+    {
+        // Prioridad: OnBackClick > BackPath > UseHistoryBack
+        if (OnBackClick.HasDelegate)
+        {
+            await OnBackClick.InvokeAsync();
+        }
+        else if (!string.IsNullOrEmpty(BackPath))
+        {
+            NavigationManager.NavigateTo(BackPath);
+        }
+        else if (UseHistoryBack)
+        {
+            await JSRuntime.InvokeVoidAsync("history.back");
+        }
+    }
+
+    private async void HandleSaveClick(SimpleItemClickedArgs args)
+    {
+        if (OnSaveClick.HasDelegate)
+        {
+            await OnSaveClick.InvokeAsync();
+        }
+    }
+}

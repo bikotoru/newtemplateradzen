@@ -1,0 +1,137 @@
+@page "/list-demo"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Lista Demo - CommandBar</PageTitle>
+
+<PageWithCommandBar CustomItems="@myItems" 
+                    FarItems="@farItems"
+                    ShowSave="true"
+                    OnSaveClick="@SaveData"
+                    BackPath="/commandbar-demo">
+    
+    <div style="margin-bottom: 20px;">
+        <h1>🗂️ Lista de Categorías</h1>
+        <p>Esta es una demo de cómo usar PageWithCommandBar en una página real.</p>
+    </div>
+
+    <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
+        <h3>📋 Elementos de la Lista</h3>
+        
+        @for (int i = 1; i <= 25; i++)
+        {
+            <div style="padding: 8px; margin: 4px 0; background: white; border: 1px solid #ddd; border-radius: 2px;">
+                <strong>Categoría @i</strong> - Descripción de la categoría número @i
+                <span style="float: right; color: #666;">ID: @i</span>
+            </div>
+        }
+    </div>
+
+    <div style="margin-bottom: 20px; padding: 16px; background: #e3f2fd; border-radius: 4px;">
+        <h3>ℹ️ Información de Comandos</h3>
+        <ul>
+            <li><strong>← Atrás:</strong> Va a /commandbar-demo (BackPath)</li>
+            <li><strong>💾 Guardar:</strong> Ejecuta SaveData() personalizado</li>
+            <li><strong>➕ Nuevo:</strong> Simula crear nueva categoría</li>
+            <li><strong>✏️ Editar:</strong> Simula editar categoría seleccionada</li>
+            <li><strong>🗑️ Eliminar:</strong> Simula eliminar con confirmación</li>
+            <li><strong>📄 Exportar:</strong> Simula exportar a Excel</li>
+            <li><strong>📊 Reportes:</strong> Submenú con opciones de reportes</li>
+        </ul>
+    </div>
+
+    @if (!string.IsNullOrEmpty(lastAction))
+    {
+        <div style="margin-top: 20px; padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+            <strong>✅ Última acción:</strong> @lastAction
+        </div>
+    }
+
+</PageWithCommandBar>
+
+@code {
+    private string? lastAction;
+    private List<SimpleCommandBarItem> myItems = new();
+    private List<SimpleCommandBarItem> farItems = new();
+
+    protected override void OnInitialized()
+    {
+        // Items personalizados con OnClick incluido
+        myItems = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Nuevo", 
+                IconName = "add", 
+                Key = "new",
+                OnClick = (args) => {
+                    lastAction = "Crear nueva categoría - Formulario abierto";
+                    StateHasChanged();
+                }
+            },
+            new SimpleCommandBarItem { 
+                Text = "Editar", 
+                IconName = "edit", 
+                Key = "edit",
+                OnClick = (args) => {
+                    lastAction = "Editar categoría seleccionada - Formulario abierto";
+                    StateHasChanged();
+                }
+            },
+            new SimpleCommandBarItem { 
+                Text = "Eliminar", 
+                IconName = "delete", 
+                Key = "delete",
+                OnClick = (args) => {
+                    lastAction = "Eliminar categoría - Confirmación mostrada";
+                    StateHasChanged();
+                }
+            }
+        };
+
+        // Far items (lado derecho)
+        farItems = new List<SimpleCommandBarItem> {
+            new SimpleCommandBarItem { 
+                Text = "Exportar", 
+                IconName = "download", 
+                Key = "export",
+                OnClick = (args) => {
+                    lastAction = "Exportar a Excel - Descarga iniciada";
+                    StateHasChanged();
+                }
+            },
+            new SimpleCommandBarItem { 
+                Text = "Reportes", 
+                IconName = "assessment", 
+                Key = "reports",
+                SubMenuItems = new List<SimpleCommandBarItem> {
+                    new SimpleCommandBarItem { 
+                        Text = "Reporte General", 
+                        IconName = "summarize", 
+                        Key = "report-general",
+                        OnClick = (args) => {
+                            lastAction = "Reporte General generado";
+                            StateHasChanged();
+                        }
+                    },
+                    new SimpleCommandBarItem { 
+                        Text = "Reporte Detallado", 
+                        IconName = "description", 
+                        Key = "report-detailed",
+                        OnClick = (args) => {
+                            lastAction = "Reporte Detallado generado";
+                            StateHasChanged();
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    private async Task SaveData()
+    {
+        lastAction = "Datos guardados correctamente - Base de datos actualizada";
+        StateHasChanged();
+        
+        // Simular delay de guardado
+        await Task.Delay(500);
+    }
+}
