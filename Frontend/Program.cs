@@ -40,6 +40,9 @@ builder.Services.AddRadzenComponents();
 // Servicios de autorización
 builder.Services.AddAuthorizationCore();
 
+// Servicio API
+builder.Services.AddScoped<API>();
+
 var app = builder.Build();
 
 // AuthService se inicializará automáticamente cuando se use por primera vez

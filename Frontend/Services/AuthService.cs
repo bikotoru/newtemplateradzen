@@ -51,7 +51,7 @@ public class AuthService
     /// <summary>
     /// Inicializa el servicio de forma lazy cuando se necesite
     /// </summary>
-    private async Task EnsureInitializedAsync()
+    public async Task EnsureInitializedAsync()
     {
         if (_isInitialized) 
         {
@@ -172,7 +172,7 @@ public class AuthService
     /// <summary>
     /// Carga el contexto de usuario desde datos encriptados del backend usando JavaScript
     /// </summary>
-    private async Task LoadUserContextFromEncryptedData(string encryptedData)
+    private async Task LoadUserContextFromEncryptedData(string encryptedData, string token)
     {
         try
         {
@@ -192,6 +192,7 @@ public class AuthService
             if (userData != null)
             {
                 _session = userData;
+                _session.Token = token;
             }
             else
             {
@@ -237,7 +238,7 @@ public class AuthService
 
                 if (authResponse != null && !string.IsNullOrEmpty(authResponse.Data))
                 {
-                    await LoadUserContextFromEncryptedData(authResponse.Data);
+                    await LoadUserContextFromEncryptedData(authResponse.Data, _authToken);
                 }
                 else
                 {

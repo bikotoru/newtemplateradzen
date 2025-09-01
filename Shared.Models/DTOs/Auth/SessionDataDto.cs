@@ -7,6 +7,7 @@ namespace Shared.Models.DTOs.Auth
         public Guid Id { get; set; } = Guid.Empty;
         public List<RoleDto> Roles { get; set; } = new();
         public List<string> Permisos { get; set; } = new();
+        public string Token { get; set; } = string.Empty;
         public OrganizationDto Organization { get; set; } = new();
         
         // Propiedades de conveniencia para acceso directo
