@@ -6,6 +6,7 @@
     border-bottom: 1px solid #e1e1e1;
     padding: 0 8px;
     position: relative;
+    overflow: visible;
 }
 
 .ms-CommandBar-primarySet {
@@ -13,7 +14,7 @@
     flex: 1 1 auto;
     align-items: center;
     gap: 2px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .ms-CommandBar-secondarySet {
@@ -96,11 +97,23 @@
     box-shadow: 0 6.4px 14.4px 0 rgba(0, 0, 0, 0.132), 0 1.2px 3.6px 0 rgba(0, 0, 0, 0.108);
     z-index: 1000;
     overflow: hidden;
+    animation: slideDown 0.15s ease-out;
 }
 
 .ms-CommandBar-farOverflowMenu {
-    left: auto;
     right: 0;
+    left: auto;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .ms-CommandBar-overflowItem {
