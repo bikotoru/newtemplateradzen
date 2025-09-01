@@ -1,0 +1,38 @@
+@page "/demo/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+
+<PageTitle>Demo Lista</PageTitle>
+
+<PageWithCommandBar NewPath="/demo/form">
+    
+    <div style="margin-bottom: 20px;">
+        <h1>📋 Demo Lista</h1>
+        <p>Página de demostración con lista y PageWithCommandBar</p>
+    </div>
+
+    <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
+        <h3>📄 Elementos de la Lista</h3>
+        
+        @for (int i = 1; i <= 15; i++)
+        {
+            <div style="padding: 12px; margin: 8px 0; background: white; border: 1px solid #ddd; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Elemento @i</strong>
+                    <div style="color: #666; font-size: 14px;">Descripción del elemento número @i</div>
+                </div>
+                <div style="color: #666; font-size: 12px;">
+                    ID: @i
+                </div>
+            </div>
+        }
+    </div>
+
+    <div style="padding: 16px; background: #e3f2fd; border-radius: 4px;">
+        <h4>ℹ️ Comandos Disponibles</h4>
+        <ul>
+            <li><strong>← Atrás:</strong> Navegación con history.back()</li>
+            <li><strong>➕ Nuevo:</strong> Va a /demo/form</li>
+        </ul>
+    </div>
+
+</PageWithCommandBar>

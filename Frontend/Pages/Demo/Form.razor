@@ -1,0 +1,68 @@
+@page "/demo/form"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+
+<PageTitle>Demo Formulario</PageTitle>
+
+<PageWithCommandBar BackPath="/demo/list" 
+                    ShowSave="true"
+                    OnSaveClick="@SaveForm">
+    
+    <div style="margin-bottom: 20px;">
+        <h1>📝 Demo Formulario</h1>
+        <p>Página de demostración con formulario y PageWithCommandBar</p>
+    </div>
+
+    <div style="max-width: 600px;">
+        <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
+            <h3>✏️ Formulario de Ejemplo</h3>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Nombre:</label>
+                <input type="text" @bind="formData.Nombre" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" 
+                       placeholder="Ingrese el nombre" />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Descripción:</label>
+                <textarea @bind="formData.Descripcion" 
+                          style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-height: 100px;" 
+                          placeholder="Ingrese la descripción"></textarea>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Categoría:</label>
+                <select @bind="formData.Categoria" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Seleccione una categoría</option>
+                    <option value="categoria1">Categoría 1</option>
+                    <option value="categoria2">Categoría 2</option>
+                    <option value="categoria3">Categoría 3</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" @bind="formData.Activo" />
+                    <span>Elemento activo</span>
+                </label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(mensaje))
+        {
+            <div style="padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724; margin-bottom: 16px;">
+                <strong>✅ @mensaje</strong>
+            </div>
+        }
+
+        <div style="padding: 16px; background: #e3f2fd; border-radius: 4px;">
+            <h4>ℹ️ Comandos Disponibles</h4>
+            <ul>
+                <li><strong>← Atrás:</strong> Regresa a /demo/list</li>
+                <li><strong>💾 Guardar:</strong> Guarda el formulario (OnSaveClick personalizado)</li>
+            </ul>
+        </div>
+    </div>
+
+</PageWithCommandBar>

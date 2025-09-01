@@ -246,7 +246,8 @@ public class AuthService
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
+                // Token inválido o expirado - limpiar y redirigir a login
+                await LogoutAsync();
             }
         }
         catch (Exception ex)
