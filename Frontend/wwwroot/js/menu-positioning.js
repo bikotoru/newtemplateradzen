@@ -75,8 +75,38 @@ function closeAllOverflowMenus() {
     }
 }
 
+// Posicionar submenús
+function positionSubMenu(submenuElement) {
+    console.log('positionSubMenu called', submenuElement);
+    
+    if (!submenuElement) return;
+    
+    // Obtener el elemento padre (el botón del menú)
+    const parentContainer = submenuElement.closest('.ms-CommandBar-submenuItem');
+    if (!parentContainer) return;
+    
+    const parentRect = parentContainer.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const submenuWidth = 180; // Ancho mínimo del submenú
+    
+    // Calcular si hay espacio a la derecha
+    const spaceOnRight = viewportWidth - parentRect.right;
+    const needsLeftPosition = spaceOnRight < submenuWidth + 20; // 20px de margen
+    
+    if (needsLeftPosition) {
+        submenuElement.style.left = '-100%';
+        submenuElement.style.right = 'auto';
+        console.log('Positioned submenu to the left - insufficient space on right');
+    } else {
+        submenuElement.style.left = '100%';
+        submenuElement.style.right = 'auto';
+        console.log('Positioned submenu to the right - sufficient space');
+    }
+}
+
 // Funciones globales
 window.positionOverflowMenu = positionOverflowMenu;
+window.positionSubMenu = positionSubMenu;
 window.registerMenuInstance = registerMenuInstance;
 window.unregisterMenuInstance = unregisterMenuInstance;
 window.closeAllOverflowMenus = closeAllOverflowMenus;

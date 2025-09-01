@@ -55,7 +55,7 @@
                                     
                                     @if (activeSubMenu == item.Key)
                                     {
-                                        <div class="ms-CommandBar-submenu" style="position: absolute; left: 100%; top: 0; min-width: 180px; background: white; border: 1px solid #ccc; z-index: 1001; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                        <div class="ms-CommandBar-submenu" @ref="activeSubMenuRef" style="position: absolute; top: 0; min-width: 180px; background: white; border: 1px solid #ccc; z-index: 1001; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                                             @foreach (var subItem in item.SubMenuItems!)
                                             {
                                                 <button class="ms-CommandBar-overflowItem" 
@@ -156,6 +156,7 @@
     private ElementReference farOverflowButtonRef;
     private ElementReference overflowMenuRef;
     private ElementReference farOverflowMenuRef;
+    private ElementReference activeSubMenuRef;
     private bool showOverflowMenu = false;
     private bool showFarOverflowMenu = false;
     private int availableWidth = 0;
@@ -350,7 +351,7 @@
         StateHasChanged();
     }
 
-    private void ToggleSubMenu(string key)
+    private async Task ToggleSubMenu(string key)
     {
         if (activeSubMenu == key)
         {
@@ -359,8 +360,23 @@
         else
         {
             activeSubMenu = key;
+            StateHasChanged();
+            await Task.Delay(10); // Esperar renderizado
+            await PositionSubMenu();
         }
         StateHasChanged();
+    }
+
+    private async Task PositionSubMenu()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("positionSubMenu", activeSubMenuRef);
+        }
+        catch
+        {
+            // Si falla JS, mantener posición por defecto
+        }
     }
 
     public async ValueTask DisposeAsync()
