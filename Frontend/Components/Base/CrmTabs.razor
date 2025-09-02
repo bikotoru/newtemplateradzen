@@ -1,0 +1,53 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="crm-tabs-nav">
+    <button class="crm-tab-arrow crm-tab-arrow-left">
+        <span>◀</span>
+    </button>
+
+    <div class="crm-tabs-container">
+        <div class="crm-tabs-scroll">
+            @foreach (var tab in _tabs.Where(t => t.IsVisible))
+            {
+                <button class="crm-tab-button @(tab.IsActive ? "active" : "")"
+                        data-tab="@tab.Id"
+                        @onclick="() => SetActiveTab(tab.Id)"
+                        style="@(!string.IsNullOrEmpty(tab.TitleColor) ? $"color: {tab.TitleColor};" : "")">
+                    @if (!string.IsNullOrEmpty(tab.Icon))
+                    {
+                        <RadzenIcon Icon="@tab.Icon" Style="@($"margin-right: 6px;" + (!string.IsNullOrEmpty(tab.IconColor) ? $" color: {tab.IconColor};" : ""))" />
+                    }
+                    @tab.Title
+                </button>
+            }
+        </div>
+    </div>
+
+    <button class="crm-tab-arrow crm-tab-arrow-right">
+        <span>▶</span>
+    </button>
+</div>
+
+<!-- Main Content Container -->
+<div class="crm-main-content">
+    <!-- Tab Contents - Solo renderizar tab activo -->
+    @foreach (var tab in _tabs.Where(t => t.IsActive))
+    {
+        <div class="crm-tab-content active" id="@tab.Id" @key="@tab.Id">
+            <RadzenRow>
+
+                @tab.Content
+            </RadzenRow>
+
+        </div>
+    }
+</div>
+
+<!-- CascadingValue para registrar tabs hijos -->
+<div style="display: none;">
+    <CascadingValue Value="this">
+        @ChildContent
+    </CascadingValue>
+</div>

@@ -1,0 +1,317 @@
+@using Frontend.Componentes.CustomRadzen.Dialog
+@using Radzen
+@using Radzen.Blazor
+@using System.Collections.Generic
+@using System.Linq
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="@(Options.Horizontal ? "row" : "")">
+    @foreach (var field in Options.Fields)
+    {
+        <div class="@(Options.Horizontal ? "col-md-6" : "") @Options.FieldSpacing">
+            <RadzenFormField Text="@field.Label" Variant="Variant.Outlined">
+                @switch (field.Type)
+                {
+                    case FormFieldType.Text:
+                        {
+                            string value = formData[field.Name]?.ToString() ?? string.Empty;
+                            <RadzenTextBox Value="@value"
+                                           ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                           Name="@field.Name"
+                                           Placeholder="@field.Placeholder"
+                                           Disabled="@field.Disabled"
+                                           TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                           class="@field.CssClass"
+                                           Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.TextArea:
+                        {
+                            string value = formData[field.Name]?.ToString() ?? string.Empty;
+                            <RadzenTextArea Value="@value"
+                                            ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                            Name="@field.Name"
+                                            Placeholder="@field.Placeholder"
+                                            Disabled="@field.Disabled"
+                                            TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                            class="@field.CssClass"
+                                            Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.Numeric:
+                        {
+                            decimal value = formData[field.Name] != null ? Convert.ToDecimal(formData[field.Name]) : 0;
+                            <RadzenNumeric Value="@value"
+                                           ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                           Name="@field.Name"
+                                           Min="@(field.MinValue is null ? null : Convert.ToDecimal(field.MinValue))"
+                                           Max="@(field.MaxValue is null ? null : Convert.ToDecimal(field.MaxValue))"
+                                           Placeholder="@field.Placeholder"
+                                           Disabled="@field.Disabled"
+                                           TValue="decimal"
+                                           TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                           class="@field.CssClass"
+                                           Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.Date:
+                        {
+                            DateTime? value = null;
+                            if (formData[field.Name] != null)
+                            {
+                                try { value = Convert.ToDateTime(formData[field.Name]); } catch { }
+                            }
+                            <RadzenDatePicker Value="@value"
+                                              ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                              Name="@field.Name"
+                                              Min="@(field.MinValue is null ? null : (DateTime?)Convert.ToDateTime(field.MinValue))"
+                                              Max="@(field.MaxValue is null ? null : (DateTime?)Convert.ToDateTime(field.MaxValue))"
+                                              Placeholder="@field.Placeholder"
+                                              Disabled="@field.Disabled"
+                                              TValue="DateTime?"
+                                              TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                              class="@field.CssClass"
+                                              DateFormat="yyyy-MM-dd"
+                                              Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.DateTime:
+                        {
+                            DateTime? value = null;
+                            if (formData[field.Name] != null)
+                            {
+                                try { value = Convert.ToDateTime(formData[field.Name]); } catch { }
+                            }
+                            <RadzenDatePicker Value="@value"
+                                              ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                              Name="@field.Name"
+                                              ShowTime="true"
+                                              TValue="DateTime?"
+                                              Min="@(field.MinValue is null ? null : (DateTime?)Convert.ToDateTime(field.MinValue))"
+                                              Max="@(field.MaxValue is null ? null : (DateTime?)Convert.ToDateTime(field.MaxValue))"
+                                              Placeholder="@field.Placeholder"
+                                              Disabled="@field.Disabled"
+                                              TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                              class="@field.CssClass"
+                                              DateFormat="yyyy-MM-dd HH:mm"
+                                              Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.Select:
+                        {
+                            <RadzenDropDown Value="@formData[field.Name]"
+                                            ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                            Data="@field.Items"
+                                            Name="@field.Name"
+                                            TextProperty="@field.TextProperty"
+                                            ValueProperty="@field.ValueProperty"
+                                            Placeholder="@field.Placeholder"
+                                            Disabled="@field.Disabled"
+                                            TValue="object"
+                                            TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                            class="@field.CssClass"
+                                            Style="width: 100%;" />
+                        }
+                        break;
+
+                    case FormFieldType.Checkbox:
+                        {
+                            bool value = formData[field.Name] != null && Convert.ToBoolean(formData[field.Name]);
+                            <RadzenCheckBox Value="@value"
+                                            ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                            Name="@field.Name"
+                                            TValue="bool"
+                                            Disabled="@field.Disabled"
+                                            TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                            class="@field.CssClass" />
+                        }
+                        break;
+
+                    case FormFieldType.Radio:
+                        {
+                            <RadzenRadioButtonList Value="@formData[field.Name]"
+                                                   ValueChanged="@(v => UpdateValue(field.Name, v))"
+                                                   Data="@field.Items"
+                                                   TValue="object"
+                                                   Name="@field.Name"
+                                                   TextProperty="@field.TextProperty"
+                                                   ValueProperty="@field.ValueProperty"
+                                                   Disabled="@field.Disabled"
+                                                   TabIndex="@field.TabIndex.GetValueOrDefault(0)"
+                                                   class="@field.CssClass" />
+                        }
+                        break;
+                }
+
+                @if (!string.IsNullOrEmpty(field.HelpText))
+                {
+                    <small class="form-text text-muted">@field.HelpText</small>
+                }
+
+                @if (validationErrors.ContainsKey(field.Name) && !string.IsNullOrEmpty(validationErrors[field.Name]))
+                {
+                    <div class="validation-message text-danger">@validationErrors[field.Name]</div>
+                }
+            </RadzenFormField>
+        </div>
+    }
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+    <RadzenButton ButtonType="ButtonType.Button"
+                  ButtonStyle="@Options.CancelButtonStyle"
+                  Text="@Options.CancelButtonText"
+                  Click="@Cancel"
+                  Style="margin-right: 10px;" />
+
+    <RadzenButton ButtonType="ButtonType.Button"
+                  ButtonStyle="@Options.SaveButtonStyle"
+                  Text="@Options.SaveButtonText"
+                  Click="@HandleSubmit" />
+</div>
+
+@code {
+    [Parameter]
+    public FormDialogOptions Options { get; set; }
+
+    [Parameter]
+    public DialogService DialogService { get; set; }
+
+    private Dictionary<string, object> formData = new Dictionary<string, object>();
+    private Dictionary<string, string> validationErrors = new Dictionary<string, string>();
+
+    protected override void OnInitialized()
+    {
+        // Inicializar formData con valores por defecto y valores iniciales
+        foreach (var field in Options.Fields)
+        {
+            if (Options.InitialValues != null && Options.InitialValues.ContainsKey(field.Name))
+            {
+                formData[field.Name] = Options.InitialValues[field.Name];
+            }
+            else if (field.DefaultValue != null)
+            {
+                formData[field.Name] = field.DefaultValue;
+            }
+            else
+            {
+                // Asignar valor por defecto según el tipo
+                switch (field.Type)
+                {
+                    case FormFieldType.Text:
+                    case FormFieldType.TextArea:
+                        formData[field.Name] = string.Empty;
+                        break;
+                    case FormFieldType.Numeric:
+                        formData[field.Name] = 0m;
+                        break;
+                    case FormFieldType.Date:
+                    case FormFieldType.DateTime:
+                        formData[field.Name] = null;
+                        break;
+                    case FormFieldType.Select:
+                    case FormFieldType.Radio:
+                        formData[field.Name] = null;
+                        break;
+                    case FormFieldType.Checkbox:
+                        formData[field.Name] = false;
+                        break;
+                }
+            }
+
+            // Inicializar el diccionario de errores
+            validationErrors[field.Name] = string.Empty;
+        }
+    }
+
+    private void UpdateValue<T>(string fieldName, T value)
+    {
+        formData[fieldName] = value;
+        // Limpiar el error al modificar el valor
+        validationErrors[fieldName] = string.Empty;
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        bool isValid = true;
+        validationErrors.Clear();
+
+        // Inicializar todos los errores como vacíos
+        foreach (var field in Options.Fields)
+        {
+            validationErrors[field.Name] = string.Empty;
+        }
+
+        // Validar campos requeridos
+        foreach (var field in Options.Fields.Where(f => f.Required))
+        {
+            bool isEmpty = false;
+
+            switch (field.Type)
+            {
+                case FormFieldType.Text:
+                case FormFieldType.TextArea:
+                    isEmpty = string.IsNullOrWhiteSpace(formData[field.Name]?.ToString());
+                    break;
+                case FormFieldType.Select:
+                case FormFieldType.Radio:
+                case FormFieldType.Date:
+                case FormFieldType.DateTime:
+                    isEmpty = formData[field.Name] == null;
+                    break;
+                case FormFieldType.Numeric:
+                    isEmpty = formData[field.Name] == null;
+                    break;
+                case FormFieldType.Checkbox:
+                    isEmpty = formData[field.Name] == null || !(bool)formData[field.Name];
+                    break;
+            }
+
+            if (isEmpty)
+            {
+                validationErrors[field.Name] = field.RequiredMessage;
+                isValid = false;
+            }
+        }
+
+        // Ejecutar validaciones personalizadas
+        foreach (var field in Options.Fields.Where(f => f.Validator != null))
+        {
+            try
+            {
+                var validationResult = field.Validator(formData[field.Name]);
+                if (validationResult != null && validationResult != System.ComponentModel.DataAnnotations.ValidationResult.Success)
+                {
+                    validationErrors[field.Name] = validationResult.ErrorMessage;
+                    isValid = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                validationErrors[field.Name] = $"Error de validación: {ex.Message}";
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
+    private void HandleSubmit()
+    {
+        if (ValidateForm())
+        {
+            DialogService.Close(formData);
+        }
+    }
+
+    private void Cancel()
+    {
+        DialogService.Close(null);
+    }
+}

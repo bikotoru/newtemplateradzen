@@ -1,0 +1,110 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Radzen
+@using Radzen.Blazor
+@using System.Timers
+@implements IDisposable
+
+<RadzenButton Text="@DisplayText"
+              Click="@OnClickHandler"
+              Disabled="@IsDisabled"
+              Style="@Style"
+              ButtonStyle="@ButtonStyle"
+              Variant="@Variant"
+              Icon="@Icon"
+              Size="@Size"
+              IsBusy="@IsBusy"
+              BusyText="@DisplayText"
+              
+              />
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = "Confirm";
+
+    [Parameter]
+    public int WaitSeconds { get; set; } = 5;
+
+    [Parameter]
+    public string CountdownFormat { get; set; } = "{0}s";
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> Click { get; set; }
+
+    [Parameter]
+    public string Style { get; set; } = "margin-bottom: 10px; width: 150px";
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Primary;
+
+    [Parameter]
+    public bool ShowBusyIndicator { get; set; } = false;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Filled;
+
+    [Parameter]
+    public string Icon { get; set; }
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    private Timer _timer;
+    private int _remainingSeconds;
+    private bool _isDisabled = true;
+
+    private string DisplayText => _isDisabled
+        ? string.Format(CountdownFormat, _remainingSeconds)
+        : Text;
+
+    private bool IsDisabled => _isDisabled;
+
+    private bool IsBusy => ShowBusyIndicator && _isDisabled;
+
+    protected override void OnInitialized()
+    {
+        _remainingSeconds = WaitSeconds;
+        StartTimer();
+    }
+
+    private void StartTimer()
+    {
+        _timer = new Timer(1000);
+        _timer.Elapsed += TimerElapsed;
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
+    }
+
+    private void TimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            _remainingSeconds--;
+
+            if (_remainingSeconds <= 0)
+            {
+                _timer.Stop();
+                _timer.Dispose();
+                _timer = null;
+                _isDisabled = false;
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private async Task OnClickHandler(MouseEventArgs args)
+    {
+        await Click.InvokeAsync(args);
+    }
+
+    public void Dispose()
+    {
+        if (_timer != null)
+        {
+            _timer.Stop();
+            _timer.Dispose();
+            _timer = null;
+        }
+    }
+}
