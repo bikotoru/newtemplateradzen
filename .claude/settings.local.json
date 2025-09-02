@@ -10,7 +10,8 @@
       "Bash(for f in *.cs *.razor)",
       "Bash(do [ -f \"$f\" ])",
       "Bash(sed:*)",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(sqlcmd:*)"
     ],
     "deny": []
   }

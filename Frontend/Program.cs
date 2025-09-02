@@ -22,17 +22,8 @@ builder.Services.AddScoped<HttpClient>(sp =>
     return httpClient;
 });
 
-// Servicios de autenticación unificados
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<AuthStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
-{
-    var authStateProvider = provider.GetRequiredService<AuthStateProvider>();
-    return authStateProvider;
-});
-
-// AuthHttpHandler para inyección automática de tokens (opcional para requests que necesiten auth)
-builder.Services.AddScoped<AuthHttpHandler>();
+// Registrar todos los servicios usando ServiceRegistry
+builder.Services.RegisterAllServices();
 
 // Servicios adicionales
 builder.Services.AddRadzenComponents();

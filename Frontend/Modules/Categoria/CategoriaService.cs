@@ -9,8 +9,8 @@ namespace Frontend.Modules.Categoria
 {
     public class CategoriaService : BaseApiService<Shared.Models.Entities.Categoria>
     {
-        public CategoriaService(HttpClient httpClient, ILogger<CategoriaService> logger) 
-            : base(httpClient, logger, "api/categoria")
+        public CategoriaService(API api, ILogger<CategoriaService> logger) 
+            : base(api, logger, "api/categoria")
         {
         }
 

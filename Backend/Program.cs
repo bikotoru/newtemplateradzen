@@ -2,6 +2,7 @@ using Backend.Utils.EFInterceptors.Extensions;
 using Backend.Modules.Auth.Login;
 using Backend.Utils.Security;
 using Backend.Utils.Services;
+using Backend.Services;
 using Shared.Models.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,9 +28,8 @@ builder.Services.AddEFInterceptors(connectionString);
 // Register handlers from assemblies (this will scan for all handler classes)
 builder.Services.AddHandlersFromAssemblies(typeof(Program));
 
-// Register Authentication Services
-builder.Services.AddScoped<LoginService>();
-builder.Services.AddScoped<TokenCacheService>();
+// Register all services using ServiceRegistry
+builder.Services.RegisterAllServices();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<TokenEncryptionService>();
 

@@ -1,35 +1,66 @@
 @page "/demo/list"
 @using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Modules.Categoria
+@using Shared.Models.Entities
+@inject CategoriaService CategoriaService
 
 <PageTitle>Demo Lista</PageTitle>
 
 <PageWithCommandBar NewPath="/demo/form">
     
     <div style="margin-bottom: 20px;">
-        <h1>📋 Demo Lista</h1>
-        <p>Página de demostración con lista y PageWithCommandBar</p>
+        <h1>📋 Demo Lista - Categorías</h1>
+        <p>Lista real de categorías usando CategoriaService y RadzenDataGrid</p>
     </div>
 
-    <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
-        <h3>📄 Elementos de la Lista</h3>
-        
-        @for (int i = 1; i <= 15; i++)
-        {
-            <div style="padding: 12px; margin: 8px 0; background: white; border: 1px solid #ddd; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong>Elemento @i</strong>
-                    <div style="color: #666; font-size: 14px;">Descripción del elemento número @i</div>
-                </div>
-                <div style="color: #666; font-size: 12px;">
-                    ID: @i
-                </div>
-            </div>
-        }
-    </div>
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 40px;">
+            <p>Cargando categorías...</p>
+        </div>
+    }
+    else if (categorias != null && categorias.Any())
+    {
+        <RadzenDataGrid @ref="grid" 
+                        Data="@categorias" 
+                        TItem="Categoria"
+                        AllowFiltering="true" 
+                        AllowSorting="true"
+                        Style="margin-bottom: 20px;">
+            
+            <Columns>
+                <RadzenDataGridColumn TItem="Categoria" Property="Nombre" Title="Nombre" Width="300px">
+                    <Template Context="categoria">
+                        <strong>@categoria.Nombre</strong>
+                    </Template>
+                </RadzenDataGridColumn>
+                
+                <RadzenDataGridColumn TItem="Categoria" Property="Descripcion" Title="Descripción">
+                    <Template Context="categoria">
+                        @categoria.Descripcion
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+    else
+    {
+        <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 4px;">
+            <p>No se encontraron categorías</p>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div style="padding: 12px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24; margin-bottom: 16px;">
+            <strong>❌ Error:</strong> @errorMessage
+        </div>
+    }
 
     <div style="padding: 16px; background: #e3f2fd; border-radius: 4px;">
-        <h4>ℹ️ Comandos Disponibles</h4>
+        <h4>ℹ️ Información</h4>
         <ul>
+            <li><strong>Total categorías:</strong> @(categorias?.Count ?? 0)</li>
             <li><strong>← Atrás:</strong> Navegación con history.back()</li>
             <li><strong>➕ Nuevo:</strong> Va a /demo/form</li>
         </ul>
