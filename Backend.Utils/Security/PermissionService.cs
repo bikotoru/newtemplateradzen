@@ -33,10 +33,26 @@ namespace Backend.Utils.Security
                     .Where(up => up.SystemUsersId == userId && up.Active)
                     .Include(up => up.SystemPermissions)
                     .Where(up => up.SystemPermissions.Active && 
-                                up.SystemPermissions.OrganizationId == organizationId &&
-                                !string.IsNullOrEmpty(up.SystemPermissions.ActionKey))
-                    .Select(up => up.SystemPermissions.ActionKey!)
+                                up.SystemPermissions.OrganizationId == organizationId)
+                    .Select(up => up.SystemPermissions.Nombre!)
                     .ToListAsync();
+
+                // ⭐ VALIDACIÓN SUPERADMIN: Si tiene SuperAdmin directamente, devolver todos los permisos
+                if (directPermissions.Contains("SuperAdmin"))
+                {
+                    _logger.LogDebug("Usuario {UserId} tiene permiso SuperAdmin - devolviendo todos los permisos", userId);
+                    
+                    // Obtener todos los permisos disponibles (excepto SuperAdmin para evitar recursión)
+                    var allSystemPermissions = await _context.SystemPermissions
+                        .Where(p => p.Active && 
+                                   p.OrganizationId == organizationId &&
+                                   !string.IsNullOrEmpty(p.ActionKey) &&
+                                   p.ActionKey != "SuperAdmin")
+                        .Select(p => p.ActionKey!)
+                        .ToListAsync();
+
+                    return allSystemPermissions;
+                }
 
                 // Permisos por roles
                 var rolePermissions = await _context.SystemUsersRoles
