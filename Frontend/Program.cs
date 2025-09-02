@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Frontend;
 using Frontend.Services;
 using Radzen;
-using Shared.Models.Services;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

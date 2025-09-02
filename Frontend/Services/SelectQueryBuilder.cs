@@ -1,13 +1,12 @@
 using System.Linq.Expressions;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Shared.Models.QueryModels;
+using Shared.Models.Responses;
 
-namespace Shared.Models.Services
+namespace Frontend.Services
 {
     public class SelectQueryBuilder<T, TResult> where T : class
     {
-        private readonly HttpClient _http;
+        private readonly API _api;
         private readonly string _entityName;
         private readonly List<Expression<Func<T, bool>>> _filters;
         private readonly LambdaExpression? _orderByExpression;
@@ -22,7 +21,7 @@ namespace Shared.Models.Services
         private readonly List<Expression<Func<T, object>>> _searchFields = new();
 
         internal SelectQueryBuilder(
-            HttpClient http,
+            API api,
             string entityName,
             List<Expression<Func<T, bool>>> filters,
             LambdaExpression? orderByExpression,
@@ -34,7 +33,7 @@ namespace Shared.Models.Services
             string? searchTerm = null,
             List<Expression<Func<T, object>>>? searchFields = null)
         {
-            _http = http;
+            _api = api;
             _entityName = entityName;
             _filters = filters;
             _orderByExpression = orderByExpression;
@@ -56,7 +55,7 @@ namespace Shared.Models.Services
 
         public SelectQueryBuilder<T, TResult> OrderBy<TProperty>(Expression<Func<T, TProperty>> property, bool descending = false)
         {
-            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, property, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, property, 
                 descending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
         }
 
@@ -65,7 +64,7 @@ namespace Shared.Models.Services
         /// </summary>
         public SelectQueryBuilder<T, TResult> Search(string searchTerm)
         {
-            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
                 _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, searchTerm, _searchFields);
         }
 
@@ -75,7 +74,7 @@ namespace Shared.Models.Services
         public SelectQueryBuilder<T, TResult> InFields(params Expression<Func<T, object>>[] searchFields)
         {
             var newSearchFields = new List<Expression<Func<T, object>>>(searchFields);
-            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
                 _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, newSearchFields);
         }
 
@@ -117,15 +116,13 @@ namespace Shared.Models.Services
                 Take = _take
             };
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select", request);
-            if (!response.IsSuccessStatusCode)
+            var response = await _api.PostAsync<List<TResult>>($"/api/query/{_entityName}/select", request);
+            if (!response.Success)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Select query failed: {response.StatusCode} - {errorContent}");
+                throw new HttpRequestException($"Select query failed: {response.Message}");
             }
             
-            var result = await response.Content.ReadFromJsonAsync<List<TResult>>();
-            return result ?? new List<TResult>();
+            return response.Data ?? new List<TResult>();
         }
 
         public async Task<PagedResult<TResult>> ToPagedResultAsync()
@@ -147,11 +144,13 @@ namespace Shared.Models.Services
                 Take = _take
             };
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select-paged", request);
-            response.EnsureSuccessStatusCode();
+            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/query/{_entityName}/select-paged", request);
+            if (!response.Success)
+            {
+                throw new HttpRequestException($"Paged select query failed: {response.Message}");
+            }
             
-            var result = await response.Content.ReadFromJsonAsync<PagedResult<TResult>>();
-            return result ?? new PagedResult<TResult>();
+            return response.Data ?? new PagedResult<TResult>();
         }
 
         private string? BuildFilterString()
@@ -308,26 +307,26 @@ namespace Shared.Models.Services
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select", searchRequest);
-            if (!response.IsSuccessStatusCode)
+            var response = await _api.PostAsync<List<TResult>>($"/api/query/{_entityName}/select", searchRequest);
+            if (!response.Success)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Search select failed: {response.StatusCode} - {errorContent}");
+                throw new HttpRequestException($"Search select failed: {response.Message}");
             }
 
-            var result = await response.Content.ReadFromJsonAsync<List<TResult>>();
-            return result ?? new List<TResult>();
+            return response.Data ?? new List<TResult>();
         }
 
         private async Task<PagedResult<TResult>> ExecuteSearchSelectPagedAsync()
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/select-paged", searchRequest);
-            response.EnsureSuccessStatusCode();
+            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/query/{_entityName}/select-paged", searchRequest);
+            if (!response.Success)
+            {
+                throw new HttpRequestException($"Paged search select failed: {response.Message}");
+            }
 
-            var result = await response.Content.ReadFromJsonAsync<PagedResult<TResult>>();
-            return result ?? new PagedResult<TResult>();
+            return response.Data ?? new PagedResult<TResult>();
         }
 
         private SearchRequest BuildSearchRequest()

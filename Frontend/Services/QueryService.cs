@@ -1,28 +1,27 @@
 using System.Linq.Expressions;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Shared.Models.QueryModels;
+using Shared.Models.Responses;
 
-namespace Shared.Models.Services
+namespace Frontend.Services
 {
     public class QueryService
     {
-        private readonly HttpClient _http;
+        private readonly API _api;
 
-        public QueryService(HttpClient http)
+        public QueryService(API api)
         {
-            _http = http;
+            _api = api;
         }
 
         public QueryBuilder<T> For<T>() where T : class
         {
-            return new QueryBuilder<T>(_http, typeof(T).Name);
+            return new QueryBuilder<T>(_api, typeof(T).Name);
         }
     }
 
     public class QueryBuilder<T> where T : class
     {
-        protected readonly HttpClient _http;
+        protected readonly API _api;
         protected readonly string _entityName;
         protected readonly List<Expression<Func<T, bool>>> _filters = new();
         protected LambdaExpression? _orderByExpression;
@@ -35,9 +34,9 @@ namespace Shared.Models.Services
         protected string? _searchTerm;
         protected readonly List<Expression<Func<T, object>>> _searchFields = new();
 
-        public QueryBuilder(HttpClient http, string entityName)
+        public QueryBuilder(API api, string entityName)
         {
-            _http = http;
+            _api = api;
             _entityName = entityName;
         }
 
@@ -56,7 +55,7 @@ namespace Shared.Models.Services
 
         public SelectQueryBuilder<T, TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
         {
-            return new SelectQueryBuilder<T, TResult>(_http, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
                 _orderByDescending, selector, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
         }
 
@@ -125,15 +124,13 @@ namespace Shared.Models.Services
                 Take = _take
             };
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/query", request);
-            if (!response.IsSuccessStatusCode)
+            var response = await _api.PostAsync<List<T>>($"/api/query/{_entityName}/query", request);
+            if (!response.Success)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Query failed: {response.StatusCode} - {errorContent}");
+                throw new HttpRequestException($"Query failed: {response.Message}");
             }
             
-            var result = await response.Content.ReadFromJsonAsync<List<T>>();
-            return result ?? new List<T>();
+            return response.Data ?? new List<T>();
         }
 
         /// <summary>
@@ -181,11 +178,13 @@ namespace Shared.Models.Services
             // Usar endpoint de Query paginado normal
             var request = ToQueryRequest(autoInclude);
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/paged", request);
-            response.EnsureSuccessStatusCode();
+            var response = await _api.PostAsync<PagedResult<T>>($"/api/query/{_entityName}/paged", request);
+            if (!response.Success)
+            {
+                throw new HttpRequestException($"Paged query failed: {response.Message}");
+            }
             
-            var result = await response.Content.ReadFromJsonAsync<PagedResult<T>>();
-            return result ?? new PagedResult<T>();
+            return response.Data ?? new PagedResult<T>();
         }
 
         protected string? BuildFilterString()
@@ -301,26 +300,26 @@ namespace Shared.Models.Services
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/search", searchRequest);
-            if (!response.IsSuccessStatusCode)
+            var response = await _api.PostAsync<List<T>>($"/api/query/{_entityName}/search", searchRequest);
+            if (!response.Success)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Search failed: {response.StatusCode} - {errorContent}");
+                throw new HttpRequestException($"Search failed: {response.Message}");
             }
 
-            var result = await response.Content.ReadFromJsonAsync<List<T>>();
-            return result ?? new List<T>();
+            return response.Data ?? new List<T>();
         }
 
         private async Task<PagedResult<T>> ExecuteSearchPagedAsync(bool autoInclude)
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _http.PostAsJsonAsync($"/api/query/{_entityName}/search-paged", searchRequest);
-            response.EnsureSuccessStatusCode();
+            var response = await _api.PostAsync<PagedResult<T>>($"/api/query/{_entityName}/search-paged", searchRequest);
+            if (!response.Success)
+            {
+                throw new HttpRequestException($"Paged search failed: {response.Message}");
+            }
 
-            var result = await response.Content.ReadFromJsonAsync<PagedResult<T>>();
-            return result ?? new PagedResult<T>();
+            return response.Data ?? new PagedResult<T>();
         }
 
         private SearchRequest BuildSearchRequest(bool autoInclude)
