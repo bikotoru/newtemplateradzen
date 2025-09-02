@@ -49,6 +49,10 @@
                                                    EntityDisplayName="Categoría"
                                                    FastCreateComponentType="typeof(Fast)"
                                                    BaseQuery="@baseQueryFilter"
+                                                   EnableCache="true"
+                                                   CacheTTL="TimeSpan.FromMinutes(10)"
+                                                   CacheKey="categorias_z"
+                                                   SearchableFields="@categoriaSearchFields"
                                                    ShowAdd="true"
                                                    ShowSearch="true"
                                                    Placeholder="Seleccione una categoría..." />

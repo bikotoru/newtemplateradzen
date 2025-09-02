@@ -6,7 +6,9 @@
 @using Shared.Models.QueryModels
 @using Shared.Models.Entities
 @using Shared.Models.Responses
+@using System.Linq.Expressions
 @inject DialogService DialogService
+@inject CacheService CacheService
 
 <div class="lookup-container">
     <RadzenDropDownDataGrid @bind-Value="Value" 
@@ -64,6 +66,17 @@
     // Configuración del modal
     [Parameter] public string ModalWidth { get; set; } = "400px";
     [Parameter] public string ModalHeight { get; set; } = "600px";
+    
+    // OnLoad personalizado
+    [Parameter] public Func<LoadDataArgs, QueryBuilder<TEntity>?, Task<ApiResponse<PagedResult<TEntity>>>>? OnLoad { get; set; }
+    
+    // Parámetros de Cache
+    [Parameter] public bool EnableCache { get; set; } = false;
+    [Parameter] public TimeSpan? CacheTTL { get; set; } = TimeSpan.FromMinutes(5);
+    [Parameter] public string? CacheKey { get; set; }
+    
+    // Campos buscables fuertemente tipados
+    [Parameter] public Expression<Func<TEntity, object>>[]? SearchableFields { get; set; }
 
     private IEnumerable<TEntity>? _data;
     private bool _isLoading = false;
@@ -109,8 +122,88 @@
         {
             _isLoading = true;
             
-            // Crear query combinado sin mutar el BaseQuery original
-            ApiResponse<PagedResult<TEntity>> response;
+            if (EnableCache)
+            {
+                // CACHE: Cargar TODOS los datos una vez y filtrar en memoria
+                await LoadAllDataToCache(args);
+            }
+            else
+            {
+                // SIN CACHE: Lógica normal (paginado)
+                await LoadDataNormal(args);
+            }
+        }
+        catch (Exception ex)
+        {
+            _data = new List<TEntity>();
+            _count = 0;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadAllDataToCache(LoadDataArgs args)
+    {
+        var cacheKey = GenerateFullDataCacheKey();
+        
+        // Obtener TODOS los datos (sin paginación)
+        var allData = await CacheService.GetOrSetAsync(
+            cacheKey,
+            async () => await LoadCompleteDataset(),
+            CacheTTL
+        );
+        
+        if (allData != null && allData.Any())
+        {
+            // Filtrar EN MEMORIA
+            var filteredData = FilterDataInMemory(allData, args);
+            
+            // Aplicar paginación EN MEMORIA
+            var pagedData = ApplyPaginationInMemory(filteredData, args);
+            
+            _data = pagedData;
+            _count = filteredData.Count(); // Total después del filtro
+        }
+        else
+        {
+            _data = new List<TEntity>();
+            _count = 0;
+        }
+    }
+
+    private async Task LoadDataNormal(LoadDataArgs args)
+    {
+        // Lógica original sin cache
+        ApiResponse<PagedResult<TEntity>> response;
+        
+        if (OnLoad != null)
+        {
+            // Preparar query combinado para pasar al OnLoad personalizado
+            QueryBuilder<TEntity>? finalQuery = null;
+            
+            if (BaseQuery != null)
+            {
+                // Crear nuevo QueryBuilder que combine BaseQuery + filtros de RadzenDropDownDataGrid
+                var searchQuery = Service.Query();
+                
+                // Si hay filtro de búsqueda de Radzen, agregarlo
+                if (!string.IsNullOrEmpty(args.Filter))
+                {
+                    searchQuery = searchQuery.Search(args.Filter);
+                }
+                
+                // Combinar BaseQuery (inmutable) + searchQuery usando AND
+                finalQuery = BaseQuery.And(searchQuery);
+            }
+            
+            // Llamar al OnLoad personalizado
+            response = await OnLoad(args, finalQuery);
+        }
+        else
+        {
+            // Lógica por defecto
             if (BaseQuery != null)
             {
                 // Crear nuevo QueryBuilder que combine BaseQuery + filtros de RadzenDropDownDataGrid
@@ -131,59 +224,180 @@
             {
                 response = await Service.LoadDataAsync(args);
             }
+        }
+        
+        if (response.Success && response.Data != null)
+        {
+            var newData = response.Data.Data?.ToList() ?? new List<TEntity>();
             
-            if (response.Success && response.Data != null)
+            // Si hay un valor seleccionado y NO hay filtro de búsqueda activo, asegurar que esté en la lista
+            if (Value != null && !EqualityComparer<TValue>.Default.Equals(Value, default(TValue)) && 
+                string.IsNullOrEmpty(args.Filter))
             {
-                var newData = response.Data.Data?.ToList() ?? new List<TEntity>();
-                
-                // Si hay un valor seleccionado y NO hay filtro de búsqueda activo, asegurar que esté en la lista
-                if (Value != null && !EqualityComparer<TValue>.Default.Equals(Value, default(TValue)) && 
-                    string.IsNullOrEmpty(args.Filter))
+                var valueProperty = typeof(TEntity).GetProperty(ValueProperty);
+                if (valueProperty != null)
                 {
-                    var valueProperty = typeof(TEntity).GetProperty(ValueProperty);
-                    if (valueProperty != null)
+                    var selectedExists = newData.Any(item =>
                     {
-                        var selectedExists = newData.Any(item =>
+                        var itemValue = valueProperty.GetValue(item);
+                        return itemValue != null && itemValue.Equals(Value);
+                    });
+                    
+                    // Si el elemento seleccionado no está en los resultados, agregarlo
+                    if (!selectedExists && _data != null)
+                    {
+                        var currentSelected = _data.FirstOrDefault(item =>
                         {
                             var itemValue = valueProperty.GetValue(item);
                             return itemValue != null && itemValue.Equals(Value);
                         });
                         
-                        // Si el elemento seleccionado no está en los resultados, agregarlo
-                        if (!selectedExists && _data != null)
+                        if (currentSelected != null)
                         {
-                            var currentSelected = _data.FirstOrDefault(item =>
-                            {
-                                var itemValue = valueProperty.GetValue(item);
-                                return itemValue != null && itemValue.Equals(Value);
-                            });
-                            
-                            if (currentSelected != null)
-                            {
-                                newData.Insert(0, currentSelected);
-                            }
+                            newData.Insert(0, currentSelected);
                         }
                     }
                 }
-                
-                _data = newData;
-                _count = response.Data.TotalCount;
             }
-            else
-            {
-                _data = new List<TEntity>();
-                _count = 0;
-            }
+            
+            _data = newData;
+            _count = response.Data.TotalCount;
         }
-        catch (Exception ex)
+        else
         {
             _data = new List<TEntity>();
             _count = 0;
         }
-        finally
+    }
+
+    private async Task<List<TEntity>> LoadCompleteDataset()
+    {
+        // Crear args para traer TODO (sin paginación)
+        var allDataArgs = new LoadDataArgs 
+        { 
+            Skip = 0, 
+            Top = 50000, // Límite alto para traer todo
+            Filter = null // Sin filtro para traer todo
+        };
+        
+        ApiResponse<PagedResult<TEntity>> response;
+        
+        if (OnLoad != null)
         {
-            _isLoading = false;
+            // Usar OnLoad personalizado pero sin filtros
+            response = await OnLoad(allDataArgs, BaseQuery);
         }
+        else
+        {
+            // Lógica por defecto
+            response = BaseQuery != null 
+                ? await Service.LoadDataAsync(allDataArgs, BaseQuery)
+                : await Service.LoadDataAsync(allDataArgs);
+        }
+        
+        return response.Success && response.Data?.Data != null 
+            ? response.Data.Data.ToList() 
+            : new List<TEntity>();
+    }
+
+    private IEnumerable<TEntity> FilterDataInMemory(List<TEntity> allData, LoadDataArgs args)
+    {
+        var filteredData = allData.AsEnumerable();
+        
+        // Aplicar filtro de búsqueda EN MEMORIA
+        if (!string.IsNullOrEmpty(args.Filter))
+        {
+            var searchTerm = args.Filter.ToLowerInvariant();
+            
+            filteredData = filteredData.Where(item =>
+            {
+                // Si hay campos específicos configurados, buscar solo en esos
+                if (SearchableFields != null && SearchableFields.Any())
+                {
+                    foreach (var fieldExpression in SearchableFields)
+                    {
+                        var propertyName = GetPropertyNameFromExpression(fieldExpression);
+                        var value = GetPropertyValue(item, propertyName)?.ToString()?.ToLowerInvariant();
+                        if (!string.IsNullOrEmpty(value) && value.Contains(searchTerm))
+                            return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    // Comportamiento por defecto: buscar en DisplayProperty + otras string properties
+                    var displayValue = GetPropertyValue(item, DisplayProperty)?.ToString()?.ToLowerInvariant();
+                    if (!string.IsNullOrEmpty(displayValue) && displayValue.Contains(searchTerm))
+                        return true;
+                    
+                    // Buscar en otras propiedades string
+                    var stringProperties = typeof(TEntity).GetProperties()
+                        .Where(p => p.PropertyType == typeof(string));
+                        
+                    foreach (var prop in stringProperties)
+                    {
+                        var value = prop.GetValue(item)?.ToString()?.ToLowerInvariant();
+                        if (!string.IsNullOrEmpty(value) && value.Contains(searchTerm))
+                            return true;
+                    }
+                    
+                    return false;
+                }
+            });
+        }
+        
+        // Aplicar ordenamiento EN MEMORIA si es necesario
+        if (args.Sorts != null && args.Sorts.Any())
+        {
+            foreach (var sort in args.Sorts)
+            {
+                if (!string.IsNullOrEmpty(sort.Property))
+                {
+                    filteredData = sort.SortOrder == SortOrder.Descending
+                        ? filteredData.OrderByDescending(item => GetPropertyValue(item, sort.Property))
+                        : filteredData.OrderBy(item => GetPropertyValue(item, sort.Property));
+                }
+            }
+        }
+        
+        return filteredData;
+    }
+
+    private IEnumerable<TEntity> ApplyPaginationInMemory(IEnumerable<TEntity> data, LoadDataArgs args)
+    {
+        var skip = args.Skip ?? 0;
+        var take = args.Top ?? 10;
+        
+        return data.Skip(skip).Take(take);
+    }
+
+    private object? GetPropertyValue(TEntity entity, string propertyName)
+    {
+        return typeof(TEntity).GetProperty(propertyName)?.GetValue(entity);
+    }
+
+    private string GetPropertyNameFromExpression(Expression<Func<TEntity, object>> expression)
+    {
+        return expression.Body switch
+        {
+            MemberExpression member => member.Member.Name,
+            UnaryExpression { Operand: MemberExpression member } => member.Member.Name,
+            _ => throw new ArgumentException($"Expression '{expression}' is not a valid property expression.")
+        };
+    }
+
+    private string GenerateFullDataCacheKey()
+    {
+        if (!string.IsNullOrEmpty(CacheKey))
+        {
+            return $"lookup_full_{CacheKey}";
+        }
+        
+        var entityType = typeof(TEntity).Name;
+        var baseQueryHash = BaseQuery?.GetHashCode() ?? 0;
+        var serviceHash = Service.GetType().Name.GetHashCode();
+        
+        return $"lookup_full_{entityType}_{serviceHash}_{baseQueryHash}";
     }
 
     private async Task OnValueChanged(object value)
@@ -201,6 +415,14 @@
         if (Add.HasDelegate)
         {
             await Add.InvokeAsync();
+            
+            // Si hay cache habilitado, invalidar para recargar
+            if (EnableCache)
+            {
+                InvalidateCache();
+                // Recargar datos inmediatamente
+                await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+            }
         }
         // Si no, usar el comportamiento por defecto (FastCreateComponentType)
         else if (FastCreateComponentType != null)
@@ -223,30 +445,57 @@
             {
                 if (result is TEntity newEntity)
                 {
-                    // Agregar a la lista actual
-                    var currentList = _data?.ToList() ?? new List<TEntity>();
-                    currentList.Add(newEntity);
-                    _data = currentList;
-                    _count++;
-                    
-                    // Seleccionar el nuevo elemento
-                    var valueProperty = typeof(TEntity).GetProperty(ValueProperty);
-                    if (valueProperty != null)
+                    if (EnableCache)
                     {
-                        var newValue = valueProperty.GetValue(newEntity);
-                        if (newValue != null)
-                        {
-                            Value = (TValue)newValue;
-                            if (ValueChanged.HasDelegate)
-                            {
-                                await ValueChanged.InvokeAsync(Value);
-                            }
-                        }
+                        // Con cache: Invalidar y recargar todo
+                        InvalidateCache();
+                        await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+                        
+                        // Luego seleccionar el nuevo elemento
+                        SelectNewEntity(newEntity);
+                    }
+                    else
+                    {
+                        // Sin cache: Agregar directamente a la lista (lógica actual)
+                        var currentList = _data?.ToList() ?? new List<TEntity>();
+                        currentList.Add(newEntity);
+                        _data = currentList;
+                        _count++;
+                        SelectNewEntity(newEntity);
                     }
                     
                     StateHasChanged();
                 }
             }
+        }
+    }
+
+    private void SelectNewEntity(TEntity newEntity)
+    {
+        var valueProperty = typeof(TEntity).GetProperty(ValueProperty);
+        if (valueProperty != null)
+        {
+            var newValue = valueProperty.GetValue(newEntity);
+            if (newValue != null)
+            {
+                Value = (TValue)newValue;
+                if (ValueChanged.HasDelegate)
+                {
+                    ValueChanged.InvokeAsync(Value);
+                }
+            }
+        }
+    }
+
+    public void InvalidateCache()
+    {
+        if (EnableCache)
+        {
+            var pattern = !string.IsNullOrEmpty(CacheKey) 
+                ? $"lookup_full_{CacheKey}" 
+                : $"lookup_full_{typeof(TEntity).Name}_";
+                
+            CacheService.RemoveByPattern(pattern);
         }
     }
 

@@ -27,6 +27,9 @@ builder.Services.RegisterAllServices();
 // Servicios adicionales
 builder.Services.AddRadzenComponents();
 
+// Servicio de Cache
+builder.Services.AddSingleton<CacheService>();
+
 // Servicios de autorización
 builder.Services.AddAuthorizationCore();
 
