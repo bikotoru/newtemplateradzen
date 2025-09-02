@@ -1,0 +1,97 @@
+@using Shared.Models.Entities
+@using Shared.Models.Requests
+@using Frontend.Modules.Categoria
+@inject CategoriaService CategoriaService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<div class="fast-create-container">
+    <RadzenStack Gap="1rem">
+        <RadzenFormField Text="Nombre *">
+            <RadzenTextBox @bind-Value="categoria.Nombre" 
+                          Placeholder="Ingrese el nombre" 
+                          Style="width: 100%;" />
+        </RadzenFormField>
+        
+        <RadzenFormField Text="Descripción">
+            <RadzenTextArea @bind-Value="categoria.Descripcion" 
+                           Placeholder="Ingrese la descripción" 
+                           Rows="3"
+                           Style="width: 100%;" />
+        </RadzenFormField>
+    </RadzenStack>
+    
+    <div class="dialog-actions">
+        <RadzenButton Text="Cancelar" 
+                     ButtonStyle="ButtonStyle.Light" 
+                     Click="@(() => DialogService.Close())" />
+        <RadzenButton Text="Guardar" 
+                     ButtonStyle="ButtonStyle.Primary" 
+                     Click="@SaveCategoria"
+                     Disabled="@_isSaving" />
+    </div>
+</div>
+
+@code {
+    private Categoria categoria = new();
+    private bool _isSaving = false;
+
+    private async Task SaveCategoria()
+    {
+        if (string.IsNullOrWhiteSpace(categoria.Nombre))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Validación", "El nombre es obligatorio");
+            return;
+        }
+
+        try
+        {
+            _isSaving = true;
+            
+            var createRequest = new CreateRequest<Categoria>
+            {
+                Entity = categoria
+            };
+
+            var response = await CategoriaService.CreateAsync(createRequest);
+
+            if (response.Success)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Éxito", "Categoría creada exitosamente");
+                DialogService.Close(response.Data); // Retornar la nueva categoría
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Error", response.Message ?? "Error al crear categoría");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Error", $"Error inesperado: {ex.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}
+
+<style>
+    .fast-create-container {
+        padding: 16px;
+    }
+
+    .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e1e1e1;
+    }
+
+    body.dark-theme .dialog-actions,
+    [data-theme="dark"] .dialog-actions {
+        border-top-color: #3c3c3c;
+    }
+</style>

@@ -196,7 +196,7 @@ namespace Frontend.Services
             try
             {
                 _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search-paged", searchRequest);
+                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search", searchRequest);
             }
             catch (Exception ex)
             {

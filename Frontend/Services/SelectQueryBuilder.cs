@@ -116,7 +116,7 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<List<TResult>>($"/api/query/{_entityName}/select", request);
+            var response = await _api.PostAsync<List<TResult>>($"/api/{_entityName}/select", request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Select query failed: {response.Message}");
@@ -144,7 +144,7 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/query/{_entityName}/select-paged", request);
+            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/{_entityName}/select-paged", request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged select query failed: {response.Message}");
@@ -307,7 +307,7 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _api.PostAsync<List<TResult>>($"/api/query/{_entityName}/select", searchRequest);
+            var response = await _api.PostAsync<List<TResult>>($"/api/{_entityName}/select", searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search select failed: {response.Message}");
@@ -320,7 +320,7 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/query/{_entityName}/select-paged", searchRequest);
+            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/{_entityName}/select-paged", searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search select failed: {response.Message}");

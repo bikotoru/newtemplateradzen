@@ -1,0 +1,180 @@
+@typeparam TEntity where TEntity : class
+@typeparam TValue
+@using Radzen
+@using Radzen.Blazor
+@using Frontend.Services
+@using Shared.Models.QueryModels
+@using Shared.Models.Entities
+@inject DialogService DialogService
+
+<div class="lookup-container">
+    <RadzenDropDownDataGrid @bind-Value="Value" 
+                           Data="@_data"
+                           LoadData="@LoadData"
+                           TValue="TValue"
+                           TextProperty="@DisplayProperty"
+                           ValueProperty="@ValueProperty"
+                           Placeholder="@Placeholder"
+                           AllowClear="@AllowClear"
+                           FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                           FilterOperator="StringFilterOperator.Contains"
+                           AllowFiltering="@ShowSearch"
+                           ShowSearch=@ShowSearch
+                           ShowAdd="@ShowAdd"
+                           Add="@HandleAdd"
+                           PageSize="10"
+                           Style="width: 100%;"
+                           Change="@OnValueChanged">
+        
+        <Columns>
+            @if (ColumnsTemplate != null)
+            {
+                @ColumnsTemplate
+            }
+            else
+            {
+                <RadzenDropDownDataGridColumn Property="@DisplayProperty" Title="@DisplayProperty" Width="100%" />
+            }
+        </Columns>
+        
+    </RadzenDropDownDataGrid>
+</div>
+
+@code {
+    [Parameter] public TValue Value { get; set; } = default!;
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+    [Parameter] public BaseApiService<TEntity> Service { get; set; } = null!;
+    [Parameter] public string DisplayProperty { get; set; } = "Nombre";
+    [Parameter] public string ValueProperty { get; set; } = "Id";
+    [Parameter] public string Placeholder { get; set; } = "Seleccionar...";
+    [Parameter] public bool AllowClear { get; set; } = true;
+    [Parameter] public string EntityDisplayName { get; set; } = "elemento";
+    [Parameter] public RenderFragment? ColumnsTemplate { get; set; }
+    [Parameter] public Type? FastCreateComponentType { get; set; }
+    
+    // QueryBuilder como filtro base fuertemente tipado
+    [Parameter] public QueryBuilder<TEntity>? BaseQuery { get; set; }
+    
+    // Control del botón + y búsqueda
+    [Parameter] public bool ShowAdd { get; set; } = true;
+    [Parameter] public EventCallback Add { get; set; }
+    [Parameter] public bool ShowSearch { get; set; } = true;
+    
+    // Configuración del modal
+    [Parameter] public string ModalWidth { get; set; } = "400px";
+    [Parameter] public string ModalHeight { get; set; } = "300px";
+
+    private IEnumerable<TEntity>? _data;
+    private bool _isLoading = false;
+    private int _count = 0;
+
+    private async Task LoadData(LoadDataArgs args)
+    {
+        try
+        {
+            _isLoading = true;
+            
+            // Usar LoadDataAsync con BaseQuery si está disponible
+            var response = BaseQuery != null 
+                ? await Service.LoadDataAsync(args, BaseQuery)
+                : await Service.LoadDataAsync(args);
+            
+            if (response.Success && response.Data != null)
+            {
+                _data = response.Data.Data;
+                _count = response.Data.TotalCount;
+            }
+            else
+            {
+                _data = new List<TEntity>();
+                _count = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _data = new List<TEntity>();
+            _count = 0;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnValueChanged(object value)
+    {
+        Value = (TValue)value;
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(Value);
+        }
+    }
+
+    private async Task HandleAdd()
+    {
+        // Si hay un callback personalizado, usarlo
+        if (Add.HasDelegate)
+        {
+            await Add.InvokeAsync();
+        }
+        // Si no, usar el comportamiento por defecto (FastCreateComponentType)
+        else if (FastCreateComponentType != null)
+        {
+            var result = await DialogService.OpenAsync(
+                $"Crear {EntityDisplayName}",
+                FastCreateComponentType,
+                new Dictionary<string, object>(),
+                new DialogOptions 
+                { 
+                    Width = ModalWidth, 
+                    Height = ModalHeight,
+                    Resizable = true,
+                    Draggable = true
+                });
+
+            // Si se creó exitosamente, agregar a la lista y seleccionar
+            if (result != null)
+            {
+                if (result is TEntity newEntity)
+                {
+                    // Agregar a la lista actual
+                    var currentList = _data?.ToList() ?? new List<TEntity>();
+                    currentList.Add(newEntity);
+                    _data = currentList;
+                    _count++;
+                    
+                    // Seleccionar el nuevo elemento
+                    var valueProperty = typeof(TEntity).GetProperty(ValueProperty);
+                    if (valueProperty != null)
+                    {
+                        var newValue = valueProperty.GetValue(newEntity);
+                        if (newValue != null)
+                        {
+                            Value = (TValue)newValue;
+                            if (ValueChanged.HasDelegate)
+                            {
+                                await ValueChanged.InvokeAsync(Value);
+                            }
+                        }
+                    }
+                    
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+
+    public async Task RefreshData()
+    {
+        // Refrescar datos del dropdown
+        await LoadData(new LoadDataArgs { Skip = 0, Top = 10 });
+        StateHasChanged();
+    }
+}
+
+<style>
+    .lookup-container {
+        position: relative;
+        width: 100%;
+    }
+</style>

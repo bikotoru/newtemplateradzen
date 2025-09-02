@@ -124,7 +124,7 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<List<T>>($"/api/query/{_entityName}/query", request);
+            var response = await _api.PostAsync<List<T>>($"/api/{_entityName}/query", request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Query failed: {response.Message}");
@@ -229,9 +229,23 @@ namespace Frontend.Services
         {
             if (method.Method.Name == "Contains" && method.Object != null)
             {
-                var obj = ExpressionToString(method.Object);
+                var obj = GetPropertyPath(method.Object);
                 var arg = ExpressionToString(method.Arguments[0]);
                 return $"{obj}.Contains({arg})";
+            }
+            
+            if (method.Method.Name == "StartsWith" && method.Object != null)
+            {
+                var obj = GetPropertyPath(method.Object);
+                var arg = ExpressionToString(method.Arguments[0]);
+                return $"{obj}.StartsWith({arg})";
+            }
+            
+            if (method.Method.Name == "EndsWith" && method.Object != null)
+            {
+                var obj = GetPropertyPath(method.Object);
+                var arg = ExpressionToString(method.Arguments[0]);
+                return $"{obj}.EndsWith({arg})";
             }
             
             if (method.Method.Name == "Any" && method.Arguments.Count > 0)
@@ -300,7 +314,7 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _api.PostAsync<List<T>>($"/api/query/{_entityName}/search", searchRequest);
+            var response = await _api.PostAsync<List<T>>($"/api/{_entityName}/search", searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search failed: {response.Message}");
@@ -313,7 +327,7 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _api.PostAsync<PagedResult<T>>($"/api/query/{_entityName}/search-paged", searchRequest);
+            var response = await _api.PostAsync<PagedResult<T>>($"/api/{_entityName}/search-paged", searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search failed: {response.Message}");

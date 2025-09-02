@@ -15,7 +15,7 @@ public partial class CrmTabs : ComponentBase, IDisposable
     /// </summary>
     [Parameter] public bool DisableUrlSync { get; set; } = false;
 
-    private readonly List<CrmTab> _tabs = new();
+    private readonly List<CrmTabModel> _tabs = new();
     private string _activeTabId = "";
     private bool _initialized = false;
     private bool _firstRender = true;
@@ -158,7 +158,7 @@ public partial class CrmTabs : ComponentBase, IDisposable
         if (_tabs.Any(t => t.Id == id))
             return;
 
-        var tab = new CrmTab
+        var tab = new CrmTabModel
         {
             Id = id,
             Title = title,
@@ -234,7 +234,8 @@ public partial class CrmTabs : ComponentBase, IDisposable
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-public class CrmTab
+
+public class CrmTabModel
 {
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";

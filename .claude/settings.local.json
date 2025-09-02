@@ -11,7 +11,8 @@
       "Bash(do [ -f \"$f\" ])",
       "Bash(sed:*)",
       "Bash(dotnet run:*)",
-      "Bash(sqlcmd:*)"
+      "Bash(sqlcmd:*)",
+      "Bash(del \"C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Components\\Base\\Forms\\FormularioConTabs.razor\")"
     ],
     "deny": []
   }

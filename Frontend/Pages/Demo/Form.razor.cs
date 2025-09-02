@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Frontend.Modules.Categoria;
 using Shared.Models.Entities;
 using Shared.Models.Requests;
+using Frontend.Services;
 
 namespace Frontend.Pages.Demo;
 
@@ -13,6 +14,14 @@ public partial class Form : ComponentBase
     private Categoria categoria = new();
     private string mensaje = string.Empty;
     private string errorMessage = string.Empty;
+    private Guid? categoriaRelacionadaId;
+    private QueryBuilder<Categoria>? baseQueryFilter;
+
+    protected override void OnInitialized()
+    {
+        // Crear QueryBuilder que filtre categorías que empiecen con "A"
+        baseQueryFilter = CategoriaService.Query().Where(c => c.Nombre.StartsWith("Z"));
+    }
 
     private async Task SaveForm()
     {
