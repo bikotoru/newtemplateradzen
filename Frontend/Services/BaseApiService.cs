@@ -253,12 +253,10 @@ namespace Frontend.Services
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args);
-                return await query.ToPagedResultAsync() switch
-                {
-                    var result when result != null => ApiResponse<PagedResult<T>>.SuccessResponse(result),
-                    _ => ApiResponse<PagedResult<T>>.ErrorResponse("No data returned from query")
-                };
+                _logger.LogInformation($"LoadData for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
+                
+                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, null);
+                return await QueryPagedAsync(queryRequest);
             }
             catch (Exception ex)
             {
@@ -433,11 +431,11 @@ namespace Frontend.Services
 
             if (args.Sorts != null && args.Sorts.Any())
             {
-                var firstSort = args.Sorts.First();
-                var orderByString = ConvertRadzenSortToString(firstSort);
-                if (!string.IsNullOrEmpty(orderByString))
+                // El ordenamiento se maneja en ConvertLoadDataArgsToQueryRequest
+                var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
+                if (sorts.Any())
                 {
-                    _logger.LogWarning($"Sort conversion not fully implemented: {orderByString}");
+                    _logger.LogDebug($"Sort will be applied via QueryRequest: {string.Join(", ", sorts)}");
                 }
             }
 
@@ -495,6 +493,7 @@ namespace Frontend.Services
                 if (sorts.Any())
                 {
                     queryRequest.OrderBy = string.Join(", ", sorts);
+                    _logger.LogDebug($"OrderBy applied to QueryRequest: {queryRequest.OrderBy}");
                 }
             }
 

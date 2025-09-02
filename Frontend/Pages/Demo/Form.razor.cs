@@ -1,31 +1,58 @@
 using Microsoft.AspNetCore.Components;
+using Frontend.Modules.Categoria;
+using Shared.Models.Entities;
+using Shared.Models.Requests;
 
 namespace Frontend.Pages.Demo;
 
 public partial class Form : ComponentBase
 {
-    private FormData formData = new();
+    [Inject] private CategoriaService CategoriaService { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+
+    private Categoria categoria = new();
     private string mensaje = string.Empty;
+    private string errorMessage = string.Empty;
 
     private async Task SaveForm()
     {
-        // Simular guardado
-        await Task.Delay(500);
-        
-        mensaje = $"Formulario guardado: {formData.Nombre} - {formData.Descripcion}";
-        StateHasChanged();
-        
-        // Limpiar mensaje después de 3 segundos
-        await Task.Delay(3000);
-        mensaje = string.Empty;
-        StateHasChanged();
-    }
+        try
+        {
+            mensaje = string.Empty;
+            errorMessage = string.Empty;
 
-    public class FormData
-    {
-        public string Nombre { get; set; } = string.Empty;
-        public string Descripcion { get; set; } = string.Empty;
-        public string Categoria { get; set; } = string.Empty;
-        public bool Activo { get; set; } = true;
+            if (string.IsNullOrWhiteSpace(categoria.Nombre))
+            {
+                errorMessage = "El nombre es obligatorio";
+                return;
+            }
+
+            var createRequest = new CreateRequest<Categoria>
+            {
+                Entity = categoria
+            };
+
+            var response = await CategoriaService.CreateAsync(createRequest);
+
+            if (response.Success)
+            {
+                mensaje = "Categoría creada exitosamente";
+                categoria = new Categoria();
+                StateHasChanged();
+                
+                // Limpiar mensaje después de 3 segundos
+                await Task.Delay(3000);
+                mensaje = string.Empty;
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = response.Message ?? "Error al crear la categoría";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error inesperado: {ex.Message}";
+        }
     }
 }

@@ -14,38 +14,21 @@
 
     <div style="max-width: 600px;">
         <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 4px;">
-            <h3>✏️ Formulario de Ejemplo</h3>
+            <h3>✏️ Formulario Categoría</h3>
             
             <div style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: 500;">Nombre:</label>
-                <input type="text" @bind="formData.Nombre" 
+                <input type="text" @bind="categoria.Nombre" 
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" 
-                       placeholder="Ingrese el nombre" />
+                       placeholder="Ingrese el nombre de la categoría" 
+                       required />
             </div>
 
             <div style="margin-bottom: 16px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: 500;">Descripción:</label>
-                <textarea @bind="formData.Descripcion" 
+                <textarea @bind="categoria.Descripcion" 
                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-height: 100px;" 
-                          placeholder="Ingrese la descripción"></textarea>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 4px; font-weight: 500;">Categoría:</label>
-                <select @bind="formData.Categoria" 
-                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">Seleccione una categoría</option>
-                    <option value="categoria1">Categoría 1</option>
-                    <option value="categoria2">Categoría 2</option>
-                    <option value="categoria3">Categoría 3</option>
-                </select>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" @bind="formData.Activo" />
-                    <span>Elemento activo</span>
-                </label>
+                          placeholder="Ingrese la descripción de la categoría"></textarea>
             </div>
         </div>
 
@@ -56,11 +39,18 @@
             </div>
         }
 
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div style="padding: 12px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24; margin-bottom: 16px;">
+                <strong>❌ Error:</strong> @errorMessage
+            </div>
+        }
+
         <div style="padding: 16px; background: #e3f2fd; border-radius: 4px;">
             <h4>ℹ️ Comandos Disponibles</h4>
             <ul>
                 <li><strong>← Atrás:</strong> Regresa a /demo/list</li>
-                <li><strong>💾 Guardar:</strong> Guarda el formulario (OnSaveClick personalizado)</li>
+                <li><strong>💾 Guardar:</strong> Crear nueva categoría</li>
             </ul>
         </div>
     </div>
