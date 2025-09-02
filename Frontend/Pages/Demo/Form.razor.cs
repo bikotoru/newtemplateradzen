@@ -19,8 +19,13 @@ public partial class Form : ComponentBase
 
     protected override void OnInitialized()
     {
-        // Crear QueryBuilder que filtre categorías que empiecen con "A"
+        // Crear QueryBuilder que filtre categorías que empiecen con "Z"
         baseQueryFilter = CategoriaService.Query().Where(c => c.Nombre.StartsWith("Z"));
+        
+        // Ejemplo de cómo combinar QueryBuilders (comentado para demostrar flexibilidad):
+        // var otherFilter = CategoriaService.Query().Where(c => c.Descripcion != null);
+        // var combinedAnd = baseQueryFilter.And(otherFilter); // Z + Descripción no null
+        // var combinedOr = baseQueryFilter.Or(otherFilter);   // Z OR Descripción no null
     }
 
     private async Task SaveForm()

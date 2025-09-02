@@ -106,6 +106,81 @@ namespace Frontend.Services
             return this;
         }
 
+        /// <summary>
+        /// Combina este QueryBuilder con otro usando operador AND (crea nuevo QueryBuilder)
+        /// </summary>
+        public QueryBuilder<T> And(QueryBuilder<T> other)
+        {
+            var newQuery = new QueryBuilder<T>(_api, _entityName);
+            
+            // Copiar filtros de ambos QueryBuilders
+            newQuery._filters.AddRange(_filters);
+            newQuery._filters.AddRange(other._filters);
+            
+            // Copiar otras propiedades del QueryBuilder actual
+            newQuery._orderByExpression = _orderByExpression;
+            newQuery._orderByDescending = _orderByDescending;
+            newQuery._includeExpressions.AddRange(_includeExpressions);
+            newQuery._skip = _skip;
+            newQuery._take = _take;
+            newQuery._searchTerm = _searchTerm;
+            newQuery._searchFields.AddRange(_searchFields);
+            
+            return newQuery;
+        }
+
+        /// <summary>
+        /// Combina este QueryBuilder con otro usando operador OR (crea nuevo QueryBuilder)
+        /// </summary>
+        public QueryBuilder<T> Or(QueryBuilder<T> other)
+        {
+            var newQuery = new QueryBuilder<T>(_api, _entityName);
+            
+            // Crear una expresión OR que combine los filtros de ambos QueryBuilders
+            if (_filters.Any() && other._filters.Any())
+            {
+                // Combinar todos los filtros del primer QueryBuilder con AND
+                Expression<Func<T, bool>>? leftExpression = null;
+                foreach (var filter in _filters)
+                {
+                    leftExpression = leftExpression == null ? filter : CombineWithAnd(leftExpression, filter);
+                }
+                
+                // Combinar todos los filtros del segundo QueryBuilder con AND
+                Expression<Func<T, bool>>? rightExpression = null;
+                foreach (var filter in other._filters)
+                {
+                    rightExpression = rightExpression == null ? filter : CombineWithAnd(rightExpression, filter);
+                }
+                
+                // Combinar ambas expresiones con OR
+                if (leftExpression != null && rightExpression != null)
+                {
+                    var orExpression = CombineWithOr(leftExpression, rightExpression);
+                    newQuery._filters.Add(orExpression);
+                }
+            }
+            else if (_filters.Any())
+            {
+                newQuery._filters.AddRange(_filters);
+            }
+            else if (other._filters.Any())
+            {
+                newQuery._filters.AddRange(other._filters);
+            }
+            
+            // Copiar otras propiedades del QueryBuilder actual
+            newQuery._orderByExpression = _orderByExpression;
+            newQuery._orderByDescending = _orderByDescending;
+            newQuery._includeExpressions.AddRange(_includeExpressions);
+            newQuery._skip = _skip;
+            newQuery._take = _take;
+            newQuery._searchTerm = _searchTerm;
+            newQuery._searchFields.AddRange(_searchFields);
+            
+            return newQuery;
+        }
+
         public async Task<List<T>> ToListAsync(bool autoInclude = false)
         {
             // Si hay búsqueda, usar endpoint de Search
@@ -374,6 +449,62 @@ namespace Frontend.Services
             return Expression.Lambda<Func<T, object>>(
                 Expression.Convert(expression.Body, typeof(object)),
                 expression.Parameters);
+        }
+
+        /// <summary>
+        /// Combina dos expresiones con operador AND
+        /// </summary>
+        private Expression<Func<T, bool>> CombineWithAnd(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
+        {
+            var parameter = Expression.Parameter(typeof(T), "x");
+            
+            var leftBody = ReplaceParameter(left.Body, left.Parameters[0], parameter);
+            var rightBody = ReplaceParameter(right.Body, right.Parameters[0], parameter);
+            
+            var andExpression = Expression.AndAlso(leftBody, rightBody);
+            return Expression.Lambda<Func<T, bool>>(andExpression, parameter);
+        }
+
+        /// <summary>
+        /// Combina dos expresiones con operador OR
+        /// </summary>
+        private Expression<Func<T, bool>> CombineWithOr(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
+        {
+            var parameter = Expression.Parameter(typeof(T), "x");
+            
+            var leftBody = ReplaceParameter(left.Body, left.Parameters[0], parameter);
+            var rightBody = ReplaceParameter(right.Body, right.Parameters[0], parameter);
+            
+            var orExpression = Expression.OrElse(leftBody, rightBody);
+            return Expression.Lambda<Func<T, bool>>(orExpression, parameter);
+        }
+
+        /// <summary>
+        /// Reemplaza un parámetro en una expresión
+        /// </summary>
+        private Expression ReplaceParameter(Expression expression, ParameterExpression oldParameter, ParameterExpression newParameter)
+        {
+            return new ParameterReplacer(oldParameter, newParameter).Visit(expression);
+        }
+
+        /// <summary>
+        /// Visitor para reemplazar parámetros en expresiones
+        /// </summary>
+        private class ParameterReplacer : ExpressionVisitor
+        {
+            private readonly ParameterExpression _oldParameter;
+            private readonly ParameterExpression _newParameter;
+
+            public ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter)
+            {
+                _oldParameter = oldParameter;
+                _newParameter = newParameter;
+            }
+
+            protected override Expression VisitParameter(ParameterExpression node)
+            {
+                return node == _oldParameter ? _newParameter : node;
+            }
         }
 
         #endregion
