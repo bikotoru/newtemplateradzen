@@ -69,7 +69,7 @@ public partial class CategoriaList : ComponentBase
     /// </summary>
     private string GetGridKey()
     {
-        // Clave única basada en la vista actual para forzar reconstrucción completa
-        return $"{currentView?.DisplayName ?? "default"}_{DateTime.Now.Ticks}";
+        // Clave única basada SOLO en la vista actual - no cambiar en cada render
+        return $"grid_{currentView?.DisplayName ?? "default"}";
     }
 }

@@ -259,13 +259,21 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private async Task LoadData(LoadDataArgs args)
     {
+        var callId = Guid.NewGuid().ToString()[..8];
+        Console.WriteLine($"[DEBUG] ==> LoadData INICIO #{callId} con searchTerm: '{searchTerm}'");
+        Console.WriteLine($"[DEBUG] ==> #{callId} ColumnConfigs Count: {ColumnConfigs?.Count ?? 0}");
+        Console.WriteLine($"[DEBUG] ==> #{callId} isLoading: {isLoading}");
+        
+        if (isLoading)
+        {
+            Console.WriteLine($"[DEBUG] ==> #{callId} YA ESTÁ CARGANDO, SALTANDO...");
+            return;
+        }
+        
         try
         {
             isLoading = true;
             lastLoadDataArgs = args;
-            
-            Console.WriteLine($"[DEBUG] ==> LoadData iniciado con searchTerm: '{searchTerm}'");
-            Console.WriteLine($"[DEBUG] ==> ColumnConfigs Count: {ColumnConfigs?.Count ?? 0}");
 
             // Si hay callback custom, usarlo
             if (OnLoadData.HasDelegate)
@@ -331,6 +339,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         }
         finally
         {
+            Console.WriteLine($"[DEBUG] ==> LoadData TERMINADO #{callId}");
             isLoading = false;
             StateHasChanged();
         }
