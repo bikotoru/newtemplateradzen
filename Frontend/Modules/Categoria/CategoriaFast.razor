@@ -1,0 +1,31 @@
+@using Frontend.Components.Base
+@using Shared.Models.Entities
+@using Frontend.Modules.Categoria
+@inherits ComponentBase
+
+<EssentialsCard Title="Nueva Categoría" 
+               Icon="add" 
+               IconColor="#0078d4">
+    <ChildContent>
+        <RadzenStack Gap="1rem">
+            <RadzenFormField Text="Nombre">
+                <RadzenTextBox @bind-Value="entity.Nombre" Placeholder="Ingrese el nombre de la categoría" />
+            </RadzenFormField>
+            
+            <RadzenFormField Text="Descripción">
+                <RadzenTextArea @bind-Value="entity.Descripcion" Placeholder="Ingrese la descripción" />
+            </RadzenFormField>
+            
+            <RadzenFormField Text="Activo">
+                <RadzenCheckBox @bind-Value="entity.Active" />
+            </RadzenFormField>
+        </RadzenStack>
+    </ChildContent>
+</EssentialsCard>
+
+<style>
+    .fast-form {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+</style>

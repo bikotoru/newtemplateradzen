@@ -1,0 +1,191 @@
+@typeparam T where T : class
+@using Radzen
+@using Radzen.Blazor
+@using Shared.Models.Export
+@using Frontend.Services
+@using Shared.Models.QueryModels
+
+<div class="entity-table-container">
+    @if (ShowSearchBar || ShowExcelExport || ShowRefreshButton || ShowAutoRefresh)
+    {
+        <RadzenRow class="mb-3">
+            @if (ShowSearchBar)
+            {
+                <RadzenColumn SizeLG="@GetSearchColumnSize()" SizeMD="@GetSearchColumnSize()" SizeSM="@GetSearchColumnSize()">
+                    <form @onsubmit="@OnSearchSubmit" @onsubmit:preventDefault="true">
+                        <RadzenFormField>
+                            <ChildContent>
+                                <RadzenTextBox @bind-Value="searchTerm"
+                                               Placeholder="@SearchPlaceholder" />
+                            </ChildContent>
+                            <End>
+                                <RadzenButton Icon="search"
+                                              ButtonType="ButtonType.Submit"
+                                              Variant="Variant.Text"
+                                              Size="ButtonSize.Small" />
+                            </End>
+                        </RadzenFormField>
+                    </form>
+                </RadzenColumn>
+            }
+            
+            <RadzenColumn SizeLG="@GetButtonsColumnSize()" SizeMD="@GetButtonsColumnSize()" SizeSM="@GetButtonsColumnSize()">
+                <div class="d-flex gap-2 justify-content-end">
+                    @if (ShowAutoRefresh)
+                    {
+                        <RadzenSplitButton Click="@(async (item) => await OnSplitButtonClick(item, "AutoRefresh"))"
+                                           ButtonStyle="ButtonStyle.Base"
+                                           Size="ButtonSize.Small"
+                                           Icon="refresh"
+                                           Text="@GetRefreshText()">
+                            <ChildContent>
+                                <RadzenSplitButtonItem Text="Detener auto-actualización" 
+                                                       Value="0" />
+                                @foreach (var interval in AutoRefreshIntervals)
+                                {
+                                    <RadzenSplitButtonItem Text="@GetAutoRefreshLabel(interval)" 
+                                                           Value="@interval.ToString()" />
+                                }
+                            </ChildContent>
+                        </RadzenSplitButton>
+                    }
+                    else if (ShowRefreshButton)
+                    {
+                        <RadzenButton Click="@ManualRefresh"
+                                      ButtonStyle="ButtonStyle.Base"
+                                      Size="ButtonSize.Small"
+                                      Icon="refresh"
+                                      title="@RefreshButtonText" />
+                    }
+                    
+                    @if (ShowExcelExport)
+                    {
+                        <RadzenButton Click="@ExportToExcel"
+                                      ButtonStyle="ButtonStyle.Base"
+                                      Size="ButtonSize.ExtraSmall"
+                                      Style="padding: 6px; border-radius: 4px; margin-left: 10px"
+                                      Icon="download"
+                                      IconColor="green"
+                                      title="@ExcelButtonText" />
+                    }
+                </div>
+            </RadzenColumn>
+        </RadzenRow>
+    }
+
+    <RadzenDataGrid @ref="grid"
+                    TItem="T"
+                    Data="@entities"
+                    Count="@totalCount"
+                    LoadData="@LoadData"
+                    AllowPaging="@AllowPaging"
+                    AllowSorting="@AllowSorting"
+                    AllowFiltering="@AllowFiltering"
+                    AllowColumnResize="@AllowColumnResize"
+                    PageSize="@PageSize"
+                    PageSizeOptions="@PageSizeOptions"
+                    ShowPagingSummary="@ShowPagingSummary"
+                    PagerHorizontalAlign="@PagerHorizontalAlign"
+                    EmptyText="@EmptyText"
+                    Style="@Style"
+                    IsLoading="@isLoading"
+                    IsBusy="@isLoading"
+                    ColumnWidth="@ColumnWidth">
+
+        <Columns>
+            @if (ShowActions)
+            {
+                <RadzenDataGridColumn TItem="T"
+                                      Sortable="false"
+                                      Filterable="false"
+                                      Width="@ActionsColumnWidth"
+                                      TextAlign="TextAlign.Center"
+                                      Frozen="@FreezeActionsColumn">
+                    <HeaderTemplate>
+                        <span>@ActionsColumnTitle</span>
+                    </HeaderTemplate>
+                    <Template Context="item">
+                        @if (CustomActions != null)
+                        {
+                            @CustomActions(item)
+                        }
+                        else
+                        {
+                            @if (ShowEditButton)
+                            {
+                                <RadzenButton Icon="@EditIcon"
+                                              ButtonStyle="@EditButtonStyle"
+                                              Size="ButtonSize.Small"
+                                              Click="@(() => HandleEdit(item))"
+                                              class="me-1" />
+                            }
+                            @if (ShowDeleteButton)
+                            {
+                                <RadzenButton Icon="@DeleteIcon"
+                                              ButtonStyle="@DeleteButtonStyle"
+                                              Size="ButtonSize.Small"
+                                              Click="@(() => HandleDelete(item))" />
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+
+            @if (Columns != null)
+            {
+                @Columns
+            }
+            else if (ColumnConfigs != null && ColumnConfigs.Any())
+            {
+                @foreach (var col in ColumnConfigs.OrderBy(c => c.Order ?? 999))
+                {
+                    @if (col.Template != null)
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible">
+                            <Template Context="item">
+                                @col.Template(item)
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                    else
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible" />
+                    }
+                }
+            }
+            else
+            {
+                @* Generar columnas automáticas usando reflexión *@
+                @foreach (var prop in GetAutoColumns())
+                {
+                    <RadzenDataGridColumn TItem="T"
+                                          Property="@prop.Name"
+                                          Title="@GetDisplayName(prop.Name)" />
+                }
+            }
+        </Columns>
+    </RadzenDataGrid>
+</div>
+
+<style>
+    .entity-table-container {
+        width: 100%;
+        position: relative;
+    }
+</style>

@@ -1,0 +1,44 @@
+@page "/categoria/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities
+
+<PageTitle>Categorías</PageTitle>
+
+<PageWithCommandBar BackPath="/"
+                    ShowNew
+                    OnNewClick="@GoToCreate">
+
+    <RadzenCard>
+        <EntityTable T="Categoria" 
+                     @ref="entityTable"
+                     ShowSearchBar="true"
+                     ShowExcelExport="true"
+                     ShowRefreshButton="true"
+                     ShowAutoRefresh="true"
+                     ShowActions="true"
+                     SearchPlaceholder="Buscar categorías..."
+                     OnEdit="@HandleEdit"
+                     OnDelete="@HandleDelete">
+            <Columns>
+                <RadzenDataGridColumn TItem="Categoria" Property="Nombre" Title="Nombre" />
+                <RadzenDataGridColumn TItem="Categoria" Property="Descripcion" Title="Descripción" />
+                
+                <RadzenDataGridColumn TItem="Categoria" Property="Active" Title="Estado">
+                    <Template Context="categoria">
+                        <RadzenBadge Text="@(categoria.Active ? "Activo" : "Inactivo")"
+                                     BadgeStyle="@(categoria.Active ? BadgeStyle.Success : BadgeStyle.Danger)" />
+                    </Template>
+                </RadzenDataGridColumn>
+                
+                <RadzenDataGridColumn TItem="Categoria" Property="FechaCreacion" Title="Fecha Creación">
+                    <Template Context="categoria">
+                        @categoria.FechaCreacion.ToString("dd/MM/yyyy")
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </EntityTable>
+    </RadzenCard>
+
+</PageWithCommandBar>
+

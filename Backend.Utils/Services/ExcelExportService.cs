@@ -297,13 +297,6 @@ namespace Backend.Utils.Services
                 }
             }
             
-            // Filtros automáticos
-            if (request.AutoFilter && request.IncludeHeaders)
-            {
-                var headerRow = request.Title != null ? (request.Subtitle != null ? 4 : 3) : 1;
-                worksheet.Range(headerRow, 1, lastRow, request.Columns.Count).SetAutoFilter();
-            }
-            
             // Congelar encabezados
             if (request.FreezeHeaders && request.IncludeHeaders)
             {
@@ -311,7 +304,7 @@ namespace Backend.Utils.Services
                 worksheet.SheetView.FreezeRows(headerRow);
             }
             
-            // Formato de tabla
+            // Formato de tabla (incluye automáticamente autofilter)
             if (request.FormatAsTable && request.IncludeHeaders && lastRow > 1)
             {
                 var headerRow = request.Title != null ? (request.Subtitle != null ? 4 : 3) : 1;
@@ -331,6 +324,12 @@ namespace Backend.Utils.Services
                         table.Theme = XLTableTheme.TableStyleMedium2;
                     }
                 }
+            }
+            // Solo aplicar AutoFilter si NO se está usando FormatAsTable
+            else if (request.AutoFilter && request.IncludeHeaders)
+            {
+                var headerRow = request.Title != null ? (request.Subtitle != null ? 4 : 3) : 1;
+                worksheet.Range(headerRow, 1, lastRow, request.Columns.Count).SetAutoFilter();
             }
         }
 

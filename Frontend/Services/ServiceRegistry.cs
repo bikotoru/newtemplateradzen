@@ -14,6 +14,7 @@ public static class ServiceRegistry
         services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
         services.AddTransient<AuthHttpHandler>();
         services.AddScoped<CryptoService>();
+        services.AddScoped<FileDownloadService>();
 
         // Module Services
         services.AddScoped<CategoriaService>();

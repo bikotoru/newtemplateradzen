@@ -549,16 +549,10 @@ namespace Frontend.Services
             try
             {
                 _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
-                var response = await _api.PostAsync<byte[]>($"{_baseUrl}/export/excel", exportRequest);
+                var excelBytes = await _api.PostFileAsync($"{_baseUrl}/export/excel", exportRequest);
                 
-                if (response.Success && response.Data != null)
-                {
-                    _logger.LogInformation($"Excel export completed for {typeof(T).Name}. Downloaded {response.Data.Length} bytes");
-                    return response.Data;
-                }
-
-                _logger.LogError($"Error exporting to Excel for {typeof(T).Name}: {response.Message}");
-                throw new HttpRequestException($"Error exporting to Excel: {response.Message}");
+                _logger.LogInformation($"Excel export completed for {typeof(T).Name}. Downloaded {excelBytes.Length} bytes");
+                return excelBytes;
             }
             catch (Exception ex)
             {
@@ -584,6 +578,119 @@ namespace Frontend.Services
             {
                 _logger.LogError(ex, $"Exception downloading Excel for {typeof(T).Name}");
                 throw new InvalidOperationException($"Error descargando Excel: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Exporta a Excel usando LoadDataArgs (convierte automáticamente)
+        /// </summary>
+        public virtual async Task<byte[]> ExportToExcelAsync(LoadDataArgs args, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        {
+            try
+            {
+                _logger.LogInformation($"Converting LoadDataArgs to ExcelExportRequest for {typeof(T).Name}");
+                
+                // Convertir LoadDataArgs a QueryRequest (sin paginación para exportar todo)
+                var queryRequest = ConvertLoadDataArgsToQueryRequest(args);
+                queryRequest.Skip = null; // Quitar paginación
+                queryRequest.Take = null; // Quitar paginación
+                
+                // Crear ExcelExportRequest
+                var exportRequest = new Shared.Models.Export.ExcelExportRequest
+                {
+                    Query = queryRequest,
+                    Columns = columns ?? new List<Shared.Models.Export.ExcelColumnConfig>(),
+                    SheetName = typeof(T).Name,
+                    Title = $"Exportación de {typeof(T).Name}",
+                    Subtitle = $"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}",
+                    IncludeHeaders = true,
+                    AutoFilter = true,
+                    FreezeHeaders = true,
+                    FormatAsTable = true,
+                    AutoFitColumns = true
+                };
+                
+                return await ExportToExcelAsync(exportRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception converting LoadDataArgs to Excel export for {typeof(T).Name}");
+                throw new InvalidOperationException($"Error exportando con LoadDataArgs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Descarga Excel usando LoadDataArgs
+        /// </summary>
+        public virtual async Task DownloadExcelAsync(LoadDataArgs args, FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        {
+            try
+            {
+                var excelBytes = await ExportToExcelAsync(args, columns, fileName);
+                var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);
+                
+                _logger.LogInformation($"Excel file downloaded successfully: {finalFileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception downloading Excel with LoadDataArgs for {typeof(T).Name}");
+                throw new InvalidOperationException($"Error descargando Excel con LoadDataArgs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Exporta a Excel simple (sin filtros)
+        /// </summary>
+        public virtual async Task<byte[]> ExportToExcelAsync(List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        {
+            try
+            {
+                _logger.LogInformation($"Starting simple Excel export for {typeof(T).Name}");
+                
+                // Crear ExcelExportRequest básico
+                var exportRequest = new Shared.Models.Export.ExcelExportRequest
+                {
+                    Query = new QueryRequest(), // Query vacío = todos los datos
+                    Columns = columns ?? new List<Shared.Models.Export.ExcelColumnConfig>(),
+                    SheetName = typeof(T).Name,
+                    Title = $"Exportación de {typeof(T).Name}",
+                    Subtitle = $"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}",
+                    IncludeHeaders = true,
+                    AutoFilter = true,
+                    FreezeHeaders = true,
+                    FormatAsTable = true,
+                    AutoFitColumns = true
+                };
+                
+                return await ExportToExcelAsync(exportRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in simple Excel export for {typeof(T).Name}");
+                throw new InvalidOperationException($"Error en exportación simple: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Descarga Excel simple (sin filtros)
+        /// </summary>
+        public virtual async Task DownloadExcelAsync(FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        {
+            try
+            {
+                var excelBytes = await ExportToExcelAsync(columns, fileName);
+                var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);
+                
+                _logger.LogInformation($"Excel file downloaded successfully: {finalFileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception downloading simple Excel for {typeof(T).Name}");
+                throw new InvalidOperationException($"Error descargando Excel simple: {ex.Message}", ex);
             }
         }
 

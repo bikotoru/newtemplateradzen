@@ -840,4 +840,62 @@ public class API
     }
 
     #endregion
+
+    #region Métodos para archivos binarios
+
+    /// <summary>
+    /// POST request que retorna un archivo binario (para descargas de Excel, PDF, etc.)
+    /// </summary>
+    public async Task<byte[]> PostFileAsync(string endpoint, object? data = null)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data);
+            var response = await _httpClient.SendAsync(request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error HTTP {response.StatusCode}: {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error descargando archivo: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// GET request que retorna un archivo binario
+    /// </summary>
+    public async Task<byte[]> GetFileAsync(string endpoint)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint);
+            var response = await _httpClient.SendAsync(request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error HTTP {response.StatusCode}: {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error descargando archivo: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
 }
