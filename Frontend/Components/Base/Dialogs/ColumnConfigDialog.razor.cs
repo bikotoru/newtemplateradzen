@@ -102,7 +102,7 @@ public partial class ColumnConfigDialog : ComponentBase
     {
         return columnType switch
         {
-            ColumnSourceType.RenderFragment => "Custom",
+            ColumnSourceType.RenderFragment => "",
             ColumnSourceType.ColumnConfig => "Config",
             ColumnSourceType.Auto => "Auto",
             _ => "Unknown"

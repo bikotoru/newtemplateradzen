@@ -12,20 +12,35 @@
             @if (ShowSearchBar)
             {
                 <RadzenColumn SizeLG="@GetSearchColumnSize()" SizeMD="@GetSearchColumnSize()" SizeSM="@GetSearchColumnSize()">
-                    <form @onsubmit="@OnSearchSubmit" @onsubmit:preventDefault="true">
-                        <RadzenFormField>
+                    <RadzenFormField>
+                        <ChildContent>
+                            <RadzenTextBox @oninput=@(async arg => { searchTerm = arg.Value is null ? "" : arg.Value.ToString(); })
+                                           Placeholder="@SearchPlaceholder"
+                                           @onkeypress="@OnSearchKeyPress" />
+                        </ChildContent>
+                        <End>
+                            <RadzenButton Icon="search"
+                                          Click="@OnSearchSubmit"
+                                          Variant="Variant.Text"
+                                          Size="ButtonSize.Small" />
+                        </End>
+                    </RadzenFormField>
+                    
+                    @if (ShowSearchFieldsInput)
+                    {
+                        <RadzenFormField class="mt-2">
                             <ChildContent>
-                                <RadzenTextBox @bind-Value="searchTerm"
-                                               Placeholder="@SearchPlaceholder" />
+                                <RadzenTextBox @bind-Value="currentSearchFieldsInput"
+                                               Placeholder="Campos de búsqueda (ej: Nombre,Descripcion)"
+                                               Style="font-size: 12px;" />
                             </ChildContent>
                             <End>
-                                <RadzenButton Icon="search"
-                                              ButtonType="ButtonType.Submit"
-                                              Variant="Variant.Text"
-                                              Size="ButtonSize.Small" />
+                                <RadzenText TextStyle="TextStyle.Caption" Class="text-muted">
+                                    Campos
+                                </RadzenText>
                             </End>
                         </RadzenFormField>
-                    </form>
+                    }
                 </RadzenColumn>
             }
             

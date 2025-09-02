@@ -444,6 +444,54 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Ejecutar búsqueda inteligente con Select personalizado
+        /// </summary>
+        [HttpPost("search-select")]
+        public virtual async Task<IActionResult> SearchSelect([FromBody] Shared.Models.QueryModels.SearchRequest searchRequest)
+        {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                _logger.LogInformation($"Executing search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                var result = await _baseService.SearchSelectAsync(searchRequest, user);
+                return Ok(ApiResponse<List<object>>.SuccessResponse(result, $"Search select executed successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing search select for {typeof(T).Name}");
+                return StatusCode(500, ApiResponse<List<object>>.ErrorResponse($"Error executing search select: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Ejecutar búsqueda inteligente con Select personalizado y paginación
+        /// </summary>
+        [HttpPost("search-select-paged")]
+        public virtual async Task<IActionResult> SearchSelectPaged([FromBody] Shared.Models.QueryModels.SearchRequest searchRequest)
+        {
+            // Validar permiso automáticamente: CATEGORIA.VIEW, USUARIO.VIEW, etc.
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                _logger.LogInformation($"Executing paged search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                var result = await _baseService.SearchSelectPagedAsync(searchRequest, user);
+                return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<object>>.SuccessResponse(result, $"Paged search select executed successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing paged search select for {typeof(T).Name}");
+                return StatusCode(500, ApiResponse<Shared.Models.QueryModels.PagedResult<object>>.ErrorResponse($"Error executing paged search select: {ex.Message}"));
+            }
+        }
+
         #endregion
 
         #region Excel Export Operations

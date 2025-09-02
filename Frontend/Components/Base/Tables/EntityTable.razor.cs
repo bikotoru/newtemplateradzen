@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 using Shared.Models.Export;
 using Frontend.Services;
 using Shared.Models.QueryModels;
+using Shared.Models.Requests;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
@@ -38,6 +40,10 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     // Column configuration variables
     private string currentPath = "";
     private bool hasLoadedColumnConfig = false;
+
+    // Search variables
+    private List<string>? effectiveSearchFields;
+    private string currentSearchFieldsInput = "";
 
     #region Parameters - Data Loading
 
@@ -81,6 +87,11 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Parameter] public EventCallback<string> OnSearch { get; set; }
     [Parameter] public string SearchPlaceholder { get; set; } = "Buscar...";
     [Parameter] public List<string>? SearchFields { get; set; }
+    [Parameter] public List<string>? CustomSearchFields { get; set; }
+    [Parameter] public SearchOperator SearchOperator { get; set; } = SearchOperator.Contains;
+    [Parameter] public bool AutoDetectSearchFields { get; set; } = true;
+    [Parameter] public bool SearchOnlyStringAndNumeric { get; set; } = true;
+    [Parameter] public bool ShowSearchFieldsInput { get; set; } = false;
 
     #endregion
 
@@ -88,6 +99,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     [Parameter] public bool ShowExcelExport { get; set; } = false;
     [Parameter] public EventCallback OnExcelExport { get; set; }
+    [Parameter] public EventCallback<ExcelExportContext<T>> OnCustomExcelExport { get; set; }
     [Parameter] public string ExcelButtonText { get; set; } = "Exportar Excel";
     [Parameter] public string ExcelFileName { get; set; } = "";
     [Parameter] public List<ExcelColumnConfig>? ExcelColumns { get; set; }
@@ -190,6 +202,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         if (grid != null)
         {
             await grid.FirstPage();
+            await grid.Reload();
         }
     }
 
@@ -235,27 +248,35 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             }
             else if (apiService != null)
             {
-                // Decidir si usar optimización de Select
-                if (ShouldUseSelectOptimization())
+                // Verificar si hay búsqueda activa
+                if (!string.IsNullOrWhiteSpace(searchTerm))
                 {
-                    await LoadDataWithSelectOptimization(args);
+                    await LoadDataWithSearch(args);
                 }
                 else
                 {
-                    // Usar el servicio API normal
-                    var response = BaseQuery != null 
-                        ? await apiService.LoadDataAsync(args, BaseQuery)
-                        : await apiService.LoadDataAsync(args);
-                    
-                    if (response.Success && response.Data != null)
+                    // Decidir si usar optimización de Select
+                    if (ShouldUseSelectOptimization())
                     {
-                        entities = response.Data.Data;
-                        totalCount = response.Data.TotalCount;
+                        await LoadDataWithSelectOptimization(args);
                     }
                     else
                     {
-                        entities = new List<T>();
-                        totalCount = 0;
+                        // Usar el servicio API normal
+                        var response = BaseQuery != null 
+                            ? await apiService.LoadDataAsync(args, BaseQuery)
+                            : await apiService.LoadDataAsync(args);
+                        
+                        if (response.Success && response.Data != null)
+                        {
+                            entities = response.Data.Data;
+                            totalCount = response.Data.TotalCount;
+                        }
+                        else
+                        {
+                            entities = new List<T>();
+                            totalCount = 0;
+                        }
                     }
                 }
             }
@@ -322,6 +343,109 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             var response = BaseQuery != null 
                 ? await apiService!.LoadDataAsync(args, BaseQuery)
                 : await apiService!.LoadDataAsync(args);
+            
+            if (response.Success && response.Data != null)
+            {
+                entities = response.Data.Data;
+                totalCount = response.Data.TotalCount;
+            }
+            else
+            {
+                entities = new List<T>();
+                totalCount = 0;
+            }
+        }
+    }
+
+    private async Task LoadDataWithSearch(LoadDataArgs args)
+    {
+        try
+        {
+            // Obtener campos de búsqueda efectivos
+            var searchFields = GetEffectiveSearchFields();
+            
+            // Crear SearchRequest
+            var searchRequest = BuildSearchRequest(args, searchFields);
+            
+            // Decidir si usar optimización de Select con búsqueda
+            if (ShouldUseSelectOptimization())
+            {
+                await LoadDataWithSearchAndSelectOptimization(args, searchRequest);
+            }
+            else
+            {
+                // Ejecutar búsqueda usando endpoint search-paged normal
+                var response = await apiService!.SearchPagedAsync(searchRequest);
+                
+                if (response.Success && response.Data != null)
+                {
+                    entities = response.Data.Data;
+                    totalCount = response.Data.TotalCount;
+                }
+                else
+                {
+                    entities = new List<T>();
+                    totalCount = 0;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Si falla la búsqueda, fallback al método normal
+            var response = BaseQuery != null 
+                ? await apiService!.LoadDataAsync(args, BaseQuery)
+                : await apiService!.LoadDataAsync(args);
+            
+            if (response.Success && response.Data != null)
+            {
+                entities = response.Data.Data;
+                totalCount = response.Data.TotalCount;
+            }
+            else
+            {
+                entities = new List<T>();
+                totalCount = 0;
+            }
+        }
+    }
+
+    private async Task LoadDataWithSearchAndSelectOptimization(LoadDataArgs args, SearchRequest searchRequest)
+    {
+        try
+        {
+            // Agregar Select string al SearchRequest
+            var selectString = BuildSelectString();
+            
+            // Asegurarse de que BaseQuery tenga el Select
+            if (searchRequest.BaseQuery != null)
+            {
+                searchRequest.BaseQuery.Select = selectString;
+            }
+            else
+            {
+                searchRequest.BaseQuery = new QueryRequest { Select = selectString };
+            }
+            
+            // Ejecutar búsqueda con select usando endpoint search-select-paged
+            var response = await apiService!.SearchSelectPagedAsync(searchRequest);
+            
+            if (response.Success && response.Data != null)
+            {
+                // Los datos vienen como List<object> del endpoint search-select
+                // Necesitamos convertirlos de vuelta a T usando reflection
+                entities = ConvertSelectResultsToEntityType(response.Data.Data);
+                totalCount = response.Data.TotalCount;
+            }
+            else
+            {
+                entities = new List<T>();
+                totalCount = 0;
+            }
+        }
+        catch (Exception)
+        {
+            // Si falla la búsqueda con select, fallback a búsqueda normal
+            var response = await apiService!.SearchPagedAsync(searchRequest);
             
             if (response.Success && response.Data != null)
             {
@@ -572,6 +696,135 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #region Private Methods - Search
 
+    private List<string> GetEffectiveSearchFields()
+    {
+        // 1. Si hay campos custom especificados, usarlos
+        if (CustomSearchFields?.Any() == true)
+        {
+            return CustomSearchFields;
+        }
+
+        // 2. Si hay SearchFields legacy, usarlos
+        if (SearchFields?.Any() == true)
+        {
+            return SearchFields;
+        }
+
+        // 3. Si hay input manual de campos, usarlo
+        if (!string.IsNullOrWhiteSpace(currentSearchFieldsInput))
+        {
+            return currentSearchFieldsInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        // 4. Auto-detectar campos si está habilitado
+        if (AutoDetectSearchFields)
+        {
+            return GetAutoDetectedSearchFields();
+        }
+
+        // 5. Por defecto, usar todos los campos visibles
+        return GetVisibleFieldNames();
+    }
+
+    private List<string> GetAutoDetectedSearchFields()
+    {
+        var fields = new List<string>();
+        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        foreach (var prop in properties)
+        {
+            // Excluir campos que no son apropiados para búsqueda
+            if (ExcludeProperties?.Contains(prop.Name) == true)
+                continue;
+
+            // Si SearchOnlyStringAndNumeric está habilitado, filtrar por tipo
+            if (SearchOnlyStringAndNumeric)
+            {
+                if (IsStringOrNumericType(prop.PropertyType))
+                {
+                    fields.Add(prop.Name);
+                }
+            }
+            else
+            {
+                // Incluir todos los tipos simples
+                if (IsSimpleProperty(prop.Name))
+                {
+                    fields.Add(prop.Name);
+                }
+            }
+        }
+
+        return fields;
+    }
+
+    private bool IsStringOrNumericType(Type type)
+    {
+        // Manejar tipos nullable
+        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        
+        return underlyingType == typeof(string) ||
+               underlyingType == typeof(int) ||
+               underlyingType == typeof(long) ||
+               underlyingType == typeof(decimal) ||
+               underlyingType == typeof(double) ||
+               underlyingType == typeof(float) ||
+               underlyingType == typeof(short) ||
+               underlyingType == typeof(byte);
+    }
+
+    private SearchRequest BuildSearchRequest(LoadDataArgs args, List<string> searchFields)
+    {
+        // Crear base query a partir de LoadDataArgs
+        var baseQuery = new QueryRequest
+        {
+            Skip = args.Skip,
+            Take = args.Top
+        };
+
+        // Aplicar filtros de columna (si existen)
+        if (args.Filters != null && args.Filters.Any())
+        {
+            var filters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
+            if (filters.Any())
+            {
+                baseQuery.Filter = string.Join(" && ", filters);
+            }
+        }
+
+        // Aplicar ordenamiento
+        if (args.Sorts != null && args.Sorts.Any())
+        {
+            var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
+            if (sorts.Any())
+            {
+                baseQuery.OrderBy = string.Join(", ", sorts);
+            }
+        }
+
+        // Si hay BaseQuery personalizado, integrarlo
+        if (BaseQuery != null)
+        {
+            // TODO: Integrar BaseQuery con baseQuery
+            // Por ahora usamos baseQuery tal como está
+        }
+
+        // Crear SearchRequest
+        var searchRequest = new SearchRequest
+        {
+            SearchTerm = searchTerm,
+            SearchFields = searchFields.ToArray(),
+            BaseQuery = baseQuery,
+            Skip = args.Skip,
+            Take = args.Top
+        };
+
+        return searchRequest;
+    }
+
     private async Task OnSearchSubmit()
     {
         if (OnSearch.HasDelegate)
@@ -580,8 +833,17 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         }
         else
         {
-            // Búsqueda automática: recargar grid con filtro
+            // Búsqueda automática: recargar grid usando el sistema de búsqueda inteligente
+            // Esto activará LoadDataWithSearch en lugar de LoadData normal
             await FirstPage();
+        }
+    }
+
+    private async Task OnSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnSearchSubmit();
         }
     }
 
@@ -593,7 +855,26 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     {
         try
         {
-            if (OnExcelExport.HasDelegate)
+            // Primero verificar si hay callback personalizado
+            if (OnCustomExcelExport.HasDelegate)
+            {
+                var context = new ExcelExportContext<T>
+                {
+                    LastLoadDataArgs = lastLoadDataArgs,
+                    VisibleColumns = GetVisibleColumns(),
+                    CurrentEntities = entities?.ToList() ?? new List<T>(),
+                    TotalCount = totalCount,
+                    SearchTerm = searchTerm,
+                    ApiService = apiService,
+                    FileDownloadService = FileDownloadService,
+                    DefaultFileName = string.IsNullOrEmpty(ExcelFileName) 
+                        ? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+                        : ExcelFileName
+                };
+                
+                await OnCustomExcelExport.InvokeAsync(context);
+            }
+            else if (OnExcelExport.HasDelegate)
             {
                 await OnExcelExport.InvokeAsync();
             }
@@ -1254,4 +1535,24 @@ public class ColumnConfig<T>
     public bool Visible { get; set; } = true;
     public int? Order { get; set; }
     public RenderFragment<T>? Template { get; set; }
+}
+
+public class ExcelExportContext<T> where T : class
+{
+    public LoadDataArgs? LastLoadDataArgs { get; set; }
+    public List<ExcelColumnConfig> VisibleColumns { get; set; } = new();
+    public List<T> CurrentEntities { get; set; } = new();
+    public int TotalCount { get; set; }
+    public string SearchTerm { get; set; } = "";
+    public BaseApiService<T>? ApiService { get; set; }
+    public FileDownloadService? FileDownloadService { get; set; }
+    public string DefaultFileName { get; set; } = "";
+}
+
+public enum SearchOperator
+{
+    Contains,    // Default - buscar texto contenido
+    Equals,      // Búsqueda exacta
+    StartsWith,  // Comienza con
+    EndsWith     // Termina con
 }

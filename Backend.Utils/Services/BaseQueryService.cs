@@ -703,6 +703,96 @@ namespace Backend.Utils.Services
             }
         }
 
+        /// <summary>
+        /// Ejecutar búsqueda inteligente con Select personalizado
+        /// </summary>
+        public virtual async Task<List<object>> SearchSelectAsync(SearchRequest searchRequest, SessionDataDto sessionData)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                // Construir query base
+                var query = BuildSearchQuery(searchRequest, sessionData);
+
+                // Aplicar Select si está especificado en BaseQuery
+                if (!string.IsNullOrWhiteSpace(searchRequest.BaseQuery?.Select))
+                {
+                    return await query.Select(searchRequest.BaseQuery.Select).ToDynamicListAsync<object>();
+                }
+
+                // Si no hay Select, convertir T a object
+                var results = await query.ToListAsync();
+                return results.Cast<object>().ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing search select for {typeof(T).Name}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Ejecutar búsqueda inteligente con Select personalizado y paginación
+        /// </summary>
+        public virtual async Task<Shared.Models.QueryModels.PagedResult<object>> SearchSelectPagedAsync(SearchRequest searchRequest, SessionDataDto sessionData)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing paged search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+
+                // Construir query base
+                var query = BuildSearchQuery(searchRequest, sessionData);
+
+                // Obtener total count antes de aplicar paginación
+                int totalCount = await query.CountAsync();
+
+                // Aplicar paginación si se especifica
+                if (searchRequest.Skip.HasValue && searchRequest.Skip.Value > 0)
+                {
+                    query = query.Skip(searchRequest.Skip.Value);
+                }
+
+                if (searchRequest.Take.HasValue && searchRequest.Take.Value > 0)
+                {
+                    query = query.Take(searchRequest.Take.Value);
+                }
+
+                List<object> data;
+
+                // Aplicar Select si está especificado en BaseQuery
+                if (!string.IsNullOrWhiteSpace(searchRequest.BaseQuery?.Select))
+                {
+                    data = await query.Select(searchRequest.BaseQuery.Select).ToDynamicListAsync<object>();
+                }
+                else
+                {
+                    // Si no hay Select, convertir T a object
+                    var results = await query.ToListAsync();
+                    data = results.Cast<object>().ToList();
+                }
+
+                // Calcular información de paginación
+                var page = searchRequest.Skip.HasValue && searchRequest.Take.HasValue && searchRequest.Take.Value > 0
+                    ? (searchRequest.Skip.Value / searchRequest.Take.Value) + 1
+                    : 1;
+                var pageSize = searchRequest.Take ?? totalCount;
+
+                return new Shared.Models.QueryModels.PagedResult<object>
+                {
+                    Data = data,
+                    TotalCount = totalCount,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error executing paged search select for {typeof(T).Name}");
+                throw;
+            }
+        }
+
         #endregion
 
         #region Private Query Building Methods

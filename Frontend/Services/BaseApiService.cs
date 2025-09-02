@@ -196,12 +196,40 @@ namespace Frontend.Services
             try
             {
                 _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search", searchRequest);
+                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search-paged", searchRequest);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Exception executing paged search for {typeof(T).Name}");
                 return ApiResponse<PagedResult<T>>.ErrorResponse($"Exception executing paged search: {ex.Message}");
+            }
+        }
+
+        public virtual async Task<ApiResponse<List<object>>> SearchSelectAsync(SearchRequest searchRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+                return await _api.PostAsync<List<object>>($"{_baseUrl}/search-select", searchRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception executing search select for {typeof(T).Name}");
+                return ApiResponse<List<object>>.ErrorResponse($"Exception executing search select: {ex.Message}");
+            }
+        }
+
+        public virtual async Task<ApiResponse<PagedResult<object>>> SearchSelectPagedAsync(SearchRequest searchRequest)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing paged search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
+                return await _api.PostAsync<PagedResult<object>>($"{_baseUrl}/search-select-paged", searchRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception executing paged search select for {typeof(T).Name}");
+                return ApiResponse<PagedResult<object>>.ErrorResponse($"Exception executing paged search select: {ex.Message}");
             }
         }
 
