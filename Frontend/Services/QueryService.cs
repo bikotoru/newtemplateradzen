@@ -178,7 +178,7 @@ namespace Frontend.Services
             // Usar endpoint de Query paginado normal
             var request = ToQueryRequest(autoInclude);
 
-            var response = await _api.PostAsync<PagedResult<T>>($"/api/query/{_entityName}/paged", request);
+            var response = await _api.PostAsync<PagedResult<T>>($"/api/{_entityName}/paged", request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged query failed: {response.Message}");
