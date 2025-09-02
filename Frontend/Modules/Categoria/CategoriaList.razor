@@ -2,6 +2,8 @@
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base.Tables
 @using Shared.Models.Entities
+@using Frontend.Modules.Categoria.Models
+@using Radzen
 
 <PageTitle>Categorías</PageTitle>
 
@@ -9,9 +11,34 @@
                     ShowNew
                     OnNewClick="@GoToCreate">
 
+    @* Panel de configuración de vista - SOLO si hay múltiples vistas *@
+    @if (viewManager.ViewConfigurations.Count > 1)
+    {
+        <RadzenCard Class="mb-3">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenLabel Text="Vista:" Style="font-weight: 600;" />
+                
+                <RadzenDropDown Value="@currentView.DisplayName"
+                                Data="@viewManager.ViewConfigurations"
+                                TextProperty="DisplayName"
+                                ValueProperty="DisplayName"
+                                Change="@(async (args) => await OnViewChanged(args))" 
+                                Style="width: 250px;" />
+                
+                <RadzenBadge Text="@($"Vista activa: {currentView.DisplayName}")"
+                            BadgeStyle="BadgeStyle.Info" />
+                            
+                <RadzenText TextStyle="TextStyle.Caption" Class="ms-3">
+                    @($"Mostrando {currentView.ColumnConfigs?.Count ?? 0} columna(s)")
+                </RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+    }
+
     <RadzenCard>
         <EntityTable T="Categoria" 
                      @ref="entityTable"
+                     @key="@GetGridKey()"
                      ShowSearchBar="true"
                      ShowExcelExport="true"
                      ShowRefreshButton="true"
@@ -19,25 +46,14 @@
                      ShowColumnConfig="true"
                      ShowActions="true"
                      SearchPlaceholder="Buscar categorías..."
+                     BaseQuery="@currentView.QueryBuilder"
+                     ColumnConfigs="@currentView.ColumnConfigs"
+                     ForceOrderByIndex="true"
+                     EnableSelectOptimization="true"
+                     SelectOnlyVisibleColumns="true"
                      OnEdit="@HandleEdit"
                      OnDelete="@HandleDelete">
-            <Columns>
-                <RadzenDataGridColumn TItem="Categoria" Property="Nombre" Title="Nombre" />
-                <RadzenDataGridColumn TItem="Categoria" Property="Descripcion" Title="Descripción" />
-                
-                <RadzenDataGridColumn TItem="Categoria" Property="Active" Title="Estado">
-                    <Template Context="categoria">
-                        <RadzenBadge Text="@(categoria.Active ? "Activo" : "Inactivo")"
-                                     BadgeStyle="@(categoria.Active ? BadgeStyle.Success : BadgeStyle.Danger)" />
-                    </Template>
-                </RadzenDataGridColumn>
-                
-                <RadzenDataGridColumn TItem="Categoria" Property="FechaCreacion" Title="Fecha Creación">
-                    <Template Context="categoria">
-                        @categoria.FechaCreacion.ToString("dd/MM/yyyy")
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
+            @* No definimos Columns aquí para que use solo ColumnConfigs de la vista *@
         </EntityTable>
     </RadzenCard>
 

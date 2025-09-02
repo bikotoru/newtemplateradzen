@@ -156,13 +156,57 @@
                 </RadzenDataGridColumn>
             }
 
-            @if (Columns != null)
+            @if (ShouldCombineColumns())
             {
+                @* Modo híbrido: RenderFragment Columns + ColumnConfigs filtradas *@
+                @* Primero las columnas del RenderFragment *@
+                @if (Columns != null)
+                {
+                    @Columns
+                }
+                
+                @* Luego las de ColumnConfigs que NO estén en RenderFragment, ordenadas por índice *@
+                @foreach (var col in GetFinalOrderedConfigs())
+                {
+                    @if (col.Template != null)
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible">
+                            <Template Context="item">
+                                @col.Template(item)
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                    else
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible" />
+                    }
+                }
+            }
+            else if (Columns != null)
+            {
+                @* Modo clásico: Solo RenderFragment Columns *@
                 @Columns
             }
             else if (ColumnConfigs != null && ColumnConfigs.Any())
             {
-                @foreach (var col in ColumnConfigs.OrderBy(c => c.Order ?? 999))
+                @* Modo clásico: Solo ColumnConfigs ordenadas por índice *@
+                @foreach (var col in GetFinalOrderedConfigs())
                 {
                     @if (col.Template != null)
                     {

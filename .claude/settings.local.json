@@ -16,7 +16,9 @@
       "Bash(del:*)",
       "Bash(rmdir:*)",
       "Bash(rm:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)"
     ],
     "deny": []
   }

@@ -60,6 +60,36 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Parameter] public List<ColumnConfig<T>>? ColumnConfigs { get; set; }
     [Parameter] public List<string>? ExcludeProperties { get; set; } = new() { "Id", "UsuarioCreacionId", "UsuarioModificacionId" };
     [Parameter] public List<string>? IncludeProperties { get; set; }
+    
+    /// <summary>
+    /// Propiedades definidas en RenderFragment Columns que deben excluirse de ColumnConfigs
+    /// </summary>
+    [Parameter] public List<string>? RenderFragmentProperties { get; set; }
+    
+    /// <summary>
+    /// Fuerza el ordenamiento por índice Order SI O SI (true por defecto)
+    /// </summary>
+    [Parameter] public bool ForceOrderByIndex { get; set; } = true;
+    
+    /// <summary>
+    /// Combina RenderFragment Columns con ColumnConfigs (false = solo usa uno u otro)
+    /// </summary>
+    [Parameter] public bool CombineColumnsAndConfigs { get; set; } = false;
+    
+    /// <summary>
+    /// Habilita la optimización de Select para traer solo campos necesarios
+    /// </summary>
+    [Parameter] public bool EnableSelectOptimization { get; set; } = false;
+    
+    /// <summary>
+    /// Solo trae las columnas visibles cuando EnableSelectOptimization es true
+    /// </summary>
+    [Parameter] public bool SelectOnlyVisibleColumns { get; set; } = false;
+    
+    /// <summary>
+    /// Campos que siempre deben incluirse en el Select (ej: Id para operaciones)
+    /// </summary>
+    [Parameter] public List<string>? AlwaysSelectFields { get; set; } = new() { "Id" };
 
     #endregion
 
@@ -123,13 +153,6 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #endregion
 
-    #region Parameters - Select Optimization
-
-    [Parameter] public bool EnableSelectOptimization { get; set; } = true;
-    [Parameter] public bool SelectOnlyVisibleColumns { get; set; } = true;
-    [Parameter] public List<string>? AlwaysSelectFields { get; set; } = new() { "Id" };
-
-    #endregion
 
     #region Parameters - Grid Configuration
 
@@ -240,6 +263,9 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         {
             isLoading = true;
             lastLoadDataArgs = args;
+            
+            Console.WriteLine($"[DEBUG] ==> LoadData iniciado con searchTerm: '{searchTerm}'");
+            Console.WriteLine($"[DEBUG] ==> ColumnConfigs Count: {ColumnConfigs?.Count ?? 0}");
 
             // Si hay callback custom, usarlo
             if (OnLoadData.HasDelegate)
@@ -255,13 +281,17 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                 }
                 else
                 {
+                    Console.WriteLine($"[DEBUG] ==> Sin búsqueda, decidiendo ruta de optimización...");
+                    
                     // Decidir si usar optimización de Select
                     if (ShouldUseSelectOptimization())
                     {
+                        Console.WriteLine($"[DEBUG] ==> Usando optimización de Select");
                         await LoadDataWithSelectOptimization(args);
                     }
                     else
                     {
+                        Console.WriteLine($"[DEBUG] ==> Usando API normal sin optimización");
                         // Usar el servicio API normal
                         var response = BaseQuery != null 
                             ? await apiService.LoadDataAsync(args, BaseQuery)
@@ -1398,9 +1428,22 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private bool HasVisibleColumnsConfigured()
     {
-        // Solo usar optimización si tenemos configuración personalizada de columnas
-        // y no todas las columnas están visibles (indicando que el usuario hizo una selección específica)
+        // PRIORIDAD 1: Si hay ColumnConfigs, siempre usar optimización para traer solo campos necesarios
+        if (ColumnConfigs != null && ColumnConfigs.Any())
+        {
+            var visibleConfigs = ColumnConfigs.Where(c => c.Visible).ToList();
+            
+            Console.WriteLine($"[DEBUG] ColumnConfigs detectadas - Total: {ColumnConfigs.Count}, Visible: {visibleConfigs.Count}");
+            Console.WriteLine($"[DEBUG] Campos visibles: {string.Join(", ", visibleConfigs.Select(c => c.Property))}");
+            
+            // Si hay ColumnConfigs definidas, usar optimización para traer solo esos campos
+            var shouldOptimize = visibleConfigs.Any();
+            Console.WriteLine($"[DEBUG] ColumnConfigs optimization decision: {shouldOptimize}");
+            return shouldOptimize;
+        }
         
+        // PRIORIDAD 2: Solo usar optimización si tenemos configuración personalizada de columnas del grid
+        // y no todas las columnas están visibles (indicando que el usuario hizo una selección específica)
         if (grid?.ColumnsCollection != null)
         {
             var allColumns = grid.ColumnsCollection.Where(c => !string.IsNullOrEmpty(c.Property) && c.Property != "Actions").ToList();
@@ -1412,17 +1455,6 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             
             Console.WriteLine($"[DEBUG] Grid columns - Total: {allColumns.Count}, Visible: {visibleColumns.Count}, Customized: {hasCustomizedView}");
             Console.WriteLine($"[DEBUG] Columnas disponibles: {string.Join(", ", allColumns.Select(c => $"{c.Property}({c.Visible})"))}");
-            
-            return hasCustomizedView;
-        }
-
-        // Si hay ColumnConfigs, verificar si hay columnas visibles específicas
-        if (ColumnConfigs != null)
-        {
-            var visibleConfigs = ColumnConfigs.Where(c => c.Visible).ToList();
-            var hasCustomizedView = ColumnConfigs.Count > visibleConfigs.Count && visibleConfigs.Count > 0;
-            
-            Console.WriteLine($"[DEBUG] ColumnConfigs - Total: {ColumnConfigs.Count}, Visible: {visibleConfigs.Count}, Customized: {hasCustomizedView}");
             
             return hasCustomizedView;
         }
@@ -1471,8 +1503,21 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     {
         var fields = new List<string>();
 
-        // Obtener de grid si está disponible
-        if (grid?.ColumnsCollection != null)
+        // PRIORIDAD 1: Si hay ColumnConfigs definidas, usarlas
+        if (ColumnConfigs != null && ColumnConfigs.Any())
+        {
+            foreach (var config in ColumnConfigs.Where(c => c.Visible))
+            {
+                if (IsSimpleProperty(config.Property))
+                {
+                    fields.Add(config.Property);
+                }
+            }
+            
+            Console.WriteLine($"[DEBUG] Campos desde ColumnConfigs: {string.Join(", ", fields)}");
+        }
+        // PRIORIDAD 2: Si no hay ColumnConfigs, obtener del grid
+        else if (grid?.ColumnsCollection != null)
         {
             // Solo obtener las columnas que realmente están visibles y configuradas por el usuario
             var userVisibleColumns = grid.ColumnsCollection.Where(c => 
@@ -1490,19 +1535,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                 }
             }
 
-            // Debug: imprimir columnas detectadas
-            Console.WriteLine($"[DEBUG] Columnas visibles detectadas: {string.Join(", ", fields)}");
-        }
-        // Obtener de ColumnConfigs
-        else if (ColumnConfigs != null)
-        {
-            foreach (var config in ColumnConfigs.Where(c => c.Visible))
-            {
-                if (IsSimpleProperty(config.Property))
-                {
-                    fields.Add(config.Property);
-                }
-            }
+            Console.WriteLine($"[DEBUG] Campos desde Grid: {string.Join(", ", fields)}");
         }
 
         return fields.Distinct().ToList();
@@ -1514,6 +1547,67 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         var complexTypes = new[] { ".", "Usuario", "Modificado", "Creado" };
         return !complexTypes.Any(complex => propertyName.Contains(complex, StringComparison.OrdinalIgnoreCase));
     }
+
+    #endregion
+
+    #region Private Methods - Hybrid Column Management
+
+    /// <summary>
+    /// Obtiene la configuración de columnas efectiva combinando RenderFragment y ColumnConfigs
+    /// Regla: Si una propiedad está definida en RenderFragment Columns, NO se incluye desde ColumnConfigs
+    /// </summary>
+    private List<ColumnConfig<T>> GetEffectiveColumnConfigs()
+    {
+        var effectiveConfigs = new List<ColumnConfig<T>>();
+        
+        // Si no hay ColumnConfigs, retornar lista vacía
+        if (ColumnConfigs == null || !ColumnConfigs.Any())
+            return effectiveConfigs;
+            
+        // Si no hay RenderFragmentProperties definidas, retornar todas las ColumnConfigs
+        if (RenderFragmentProperties == null || !RenderFragmentProperties.Any())
+        {
+            return ColumnConfigs.ToList();
+        }
+        
+        // Filtrar ColumnConfigs excluyendo las propiedades ya definidas en RenderFragment
+        effectiveConfigs = ColumnConfigs
+            .Where(config => !RenderFragmentProperties.Contains(config.Property))
+            .ToList();
+            
+        return effectiveConfigs;
+    }
+    
+    /// <summary>
+    /// Verifica si debe usar la lógica de combinación de columnas
+    /// </summary>
+    private bool ShouldCombineColumns()
+    {
+        return CombineColumnsAndConfigs && 
+               Columns != null && 
+               ColumnConfigs != null && 
+               ColumnConfigs.Any();
+    }
+    
+    /// <summary>
+    /// Obtiene las configuraciones finales ordenadas por índice SI O SI si ForceOrderByIndex es true
+    /// </summary>
+    private List<ColumnConfig<T>> GetFinalOrderedConfigs()
+    {
+        var configs = GetEffectiveColumnConfigs();
+        
+        if (!configs.Any())
+            return configs;
+            
+        if (ForceOrderByIndex)
+        {
+            // Ordenar por Order SI O SI, asignando 999 como valor por defecto
+            return configs.OrderBy(c => c.Order ?? 999).ToList();
+        }
+        
+        return configs;
+    }
+    
 
     #endregion
 
@@ -1535,6 +1629,23 @@ public class ColumnConfig<T>
     public bool Visible { get; set; } = true;
     public int? Order { get; set; }
     public RenderFragment<T>? Template { get; set; }
+    
+    /// <summary>
+    /// Indica el origen de la columna: Auto, ColumnConfig, o RenderFragment
+    /// </summary>
+    public ColumnSourceType SourceType { get; set; } = ColumnSourceType.ColumnConfig;
+    
+    /// <summary>
+    /// Si está definida en RenderFragment Columns, se excluye de ColumnConfigs automáticamente
+    /// </summary>
+    public bool IsDefinedInRenderFragment { get; set; } = false;
+}
+
+public enum ColumnSourceType
+{
+    Auto,           // Generada automáticamente por reflexión
+    ColumnConfig,   // Definida en ColumnConfigs
+    RenderFragment  // Definida en RenderFragment Columns
 }
 
 public class ExcelExportContext<T> where T : class

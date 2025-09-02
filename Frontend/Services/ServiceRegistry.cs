@@ -15,6 +15,7 @@ public static class ServiceRegistry
         services.AddTransient<AuthHttpHandler>();
         services.AddScoped<CryptoService>();
         services.AddScoped<FileDownloadService>();
+        services.AddScoped<QueryService>();
 
         // Module Services
         services.AddScoped<CategoriaService>();

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen;
 using System.Text.Json;
+using Frontend.Components.Base.Tables;
 
 namespace Frontend.Components.Base.Dialogs;
 
@@ -136,9 +137,4 @@ public class ColumnVisibilityItem
     public ColumnSourceType ColumnType { get; set; }
 }
 
-public enum ColumnSourceType
-{
-    RenderFragment,  // Viene de <Columns>
-    ColumnConfig,    // Viene de ColumnConfigs
-    Auto            // Generado automáticamente
-}
+// Enum movido a EntityTable.razor.cs para evitar duplicación
