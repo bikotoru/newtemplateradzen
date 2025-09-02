@@ -66,6 +66,7 @@
     // Configuración del modal
     [Parameter] public string ModalWidth { get; set; } = "400px";
     [Parameter] public string ModalHeight { get; set; } = "600px";
+    [Parameter] public bool AutoHeight { get; set; } = true;
     
     // OnLoad personalizado
     [Parameter] public Func<LoadDataArgs, QueryBuilder<TEntity>?, Task<ApiResponse<PagedResult<TEntity>>>>? OnLoad { get; set; }
@@ -427,18 +428,25 @@
         // Si no, usar el comportamiento por defecto (FastCreateComponentType)
         else if (FastCreateComponentType != null)
         {
+            var dialogOptions = new DialogOptions 
+            { 
+                Width = ModalWidth,
+                Resizable = false,
+                Draggable = false,
+                Style = "max-width: 100%; max-height: 100%"
+            };
+            
+            // Solo establecer Height si AutoHeight está deshabilitado
+            if (!AutoHeight)
+            {
+                dialogOptions.Height = ModalHeight;
+            }
+
             var result = await DialogService.OpenAsync(
                 $"Crear {EntityDisplayName}",
                 FastCreateComponentType,
                 new Dictionary<string, object>(),
-                new DialogOptions 
-                { 
-                    Width = ModalWidth, 
-                    Height = ModalHeight,
-                    Resizable = false,
-                    Draggable = false,
-                    Style = "max-width: 100%; max-height: 100%"
-                });
+                dialogOptions);
 
             // Si se creó exitosamente, agregar a la lista y seleccionar
             if (result != null)
