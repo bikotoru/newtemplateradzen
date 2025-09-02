@@ -58,6 +58,16 @@
                                       title="@RefreshButtonText" />
                     }
                     
+                    @if (ShowColumnConfig)
+                    {
+                        <RadzenButton Click="@OpenColumnConfigModal"
+                                      ButtonStyle="ButtonStyle.Base"
+                                      Size="ButtonSize.ExtraSmall"
+                                      Style="padding: 6px; border-radius: 4px;"
+                                      Icon="view_column"
+                                      title="@ColumnConfigButtonText" />
+                    }
+                    
                     @if (ShowExcelExport)
                     {
                         <RadzenButton Click="@ExportToExcel"

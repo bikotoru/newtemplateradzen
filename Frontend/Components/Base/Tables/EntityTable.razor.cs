@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 using Shared.Models.Export;
@@ -6,6 +7,9 @@ using Frontend.Services;
 using Shared.Models.QueryModels;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+using System.Linq.Expressions;
+using Frontend.Components.Base.Dialogs;
 
 namespace Frontend.Components.Base.Tables;
 
@@ -14,9 +18,11 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Inject] private IServiceProvider ServiceProvider { get; set; } = null!;
     [Inject] private DialogService DialogService { get; set; } = null!;
     [Inject] private FileDownloadService FileDownloadService { get; set; } = null!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
 
     private RadzenDataGrid<T>? grid;
-    private IEnumerable<T> entities;
+    
+    private IEnumerable<T> entities = null; //SIEMPRE DEBE SER = NULL;
     private int totalCount;
     private bool isLoading = false;
     private string searchTerm = string.Empty;
@@ -28,6 +34,10 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     private int currentAutoRefreshInterval = 0; // 0 = disabled
     private int autoRefreshCountdown = 0;
     private Timer? countdownTimer;
+
+    // Column configuration variables
+    private string currentPath = "";
+    private bool hasLoadedColumnConfig = false;
 
     #region Parameters - Data Loading
 
@@ -94,6 +104,21 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #endregion
 
+    #region Parameters - Column Configuration
+
+    [Parameter] public bool ShowColumnConfig { get; set; } = false;
+    [Parameter] public string ColumnConfigButtonText { get; set; } = "Configurar Columnas";
+
+    #endregion
+
+    #region Parameters - Select Optimization
+
+    [Parameter] public bool EnableSelectOptimization { get; set; } = true;
+    [Parameter] public bool SelectOnlyVisibleColumns { get; set; } = true;
+    [Parameter] public List<string>? AlwaysSelectFields { get; set; } = new() { "Id" };
+
+    #endregion
+
     #region Parameters - Grid Configuration
 
     [Parameter] public bool AllowPaging { get; set; } = true;
@@ -110,7 +135,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #endregion
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Si se pasó un servicio como parámetro, usarlo directamente
         if (ApiService != null)
@@ -136,6 +161,17 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             {
                 apiService = ServiceProvider.GetService<BaseApiService<T>>();
             }
+        }
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasLoadedColumnConfig)
+        {
+            // Cargar configuración de columnas desde localStorage después del primer render
+            await ApplyStoredColumnConfiguration();
+            hasLoadedColumnConfig = true;
         }
     }
 
@@ -199,20 +235,28 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             }
             else if (apiService != null)
             {
-                // Usar el servicio API si está disponible
-                var response = BaseQuery != null 
-                    ? await apiService.LoadDataAsync(args, BaseQuery)
-                    : await apiService.LoadDataAsync(args);
-                
-                if (response.Success && response.Data != null)
+                // Decidir si usar optimización de Select
+                if (ShouldUseSelectOptimization())
                 {
-                    entities = response.Data.Data;
-                    totalCount = response.Data.TotalCount;
+                    await LoadDataWithSelectOptimization(args);
                 }
                 else
                 {
-                    entities = new List<T>();
-                    totalCount = 0;
+                    // Usar el servicio API normal
+                    var response = BaseQuery != null 
+                        ? await apiService.LoadDataAsync(args, BaseQuery)
+                        : await apiService.LoadDataAsync(args);
+                    
+                    if (response.Success && response.Data != null)
+                    {
+                        entities = response.Data.Data;
+                        totalCount = response.Data.TotalCount;
+                    }
+                    else
+                    {
+                        entities = new List<T>();
+                        totalCount = 0;
+                    }
                 }
             }
             else
@@ -239,6 +283,259 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task LoadDataWithSelectOptimization(LoadDataArgs args)
+    {
+        try
+        {
+            // Construir expresión de Select usando QueryBuilder y Select string
+            var selectString = BuildSelectString();
+            
+            // Usar QueryBuilder con Select manual a través de QueryRequest
+            var query = BaseQuery != null
+                ? apiService!.Query().And(BaseQuery)
+                : apiService!.Query();
+
+            // Convertir LoadDataArgs a QueryRequest y agregar Select
+            var queryRequest = ConvertLoadDataArgsToQueryRequestWithSelect(args, selectString);
+            
+            // Ejecutar query usando el endpoint select-paged
+            var response = await apiService.QuerySelectPagedAsync(queryRequest);
+            
+            if (response.Success && response.Data != null)
+            {
+                // Los datos vienen como List<object> del endpoint select
+                // Necesitamos convertirlos de vuelta a T usando reflection
+                entities = ConvertSelectResultsToEntityType(response.Data.Data);
+                totalCount = response.Data.TotalCount;
+            }
+            else
+            {
+                entities = new List<T>();
+                totalCount = 0;
+            }
+        }
+        catch (Exception)
+        {
+            // Si falla la optimización, fallback al método normal
+            var response = BaseQuery != null 
+                ? await apiService!.LoadDataAsync(args, BaseQuery)
+                : await apiService!.LoadDataAsync(args);
+            
+            if (response.Success && response.Data != null)
+            {
+                entities = response.Data.Data;
+                totalCount = response.Data.TotalCount;
+            }
+            else
+            {
+                entities = new List<T>();
+                totalCount = 0;
+            }
+        }
+    }
+
+    private QueryRequest ConvertLoadDataArgsToQueryRequestWithSelect(LoadDataArgs args, string selectString)
+    {
+        var queryRequest = new QueryRequest
+        {
+            Select = selectString,
+            Skip = args.Skip,
+            Take = args.Top
+        };
+
+        // Aplicar filtros
+        if (args.Filters != null && args.Filters.Any())
+        {
+            var filters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
+            if (filters.Any())
+            {
+                queryRequest.Filter = string.Join(" && ", filters);
+            }
+        }
+
+        // Aplicar ordenamiento
+        if (args.Sorts != null && args.Sorts.Any())
+        {
+            var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
+            if (sorts.Any())
+            {
+                queryRequest.OrderBy = string.Join(", ", sorts);
+            }
+        }
+
+        return queryRequest;
+    }
+
+    private List<T> ConvertSelectResultsToEntityType(List<object> selectResults)
+    {
+        var result = new List<T>();
+        
+        Console.WriteLine($"[DEBUG] Convirtiendo {selectResults.Count} elementos de select results");
+        
+        foreach (var item in selectResults)
+        {
+            try
+            {
+                T? entity = default;
+                
+                if (item is System.Text.Json.JsonElement jsonElement)
+                {
+                    entity = CreatePartialEntity(jsonElement);
+                }
+                else if (item is string jsonString)
+                {
+                    var jsonElem = JsonSerializer.Deserialize<JsonElement>(jsonString);
+                    entity = CreatePartialEntity(jsonElem);
+                }
+                else
+                {
+                    // Intentar serializar y deserializar el objeto
+                    var json = JsonSerializer.Serialize(item);
+                    var jsonElem = JsonSerializer.Deserialize<JsonElement>(json);
+                    entity = CreatePartialEntity(jsonElem);
+                }
+
+                if (entity != null)
+                {
+                    result.Add(entity);
+                    Console.WriteLine($"[DEBUG] Entidad convertida exitosamente");
+                }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] No se pudo convertir entidad");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] Error convirtiendo elemento: {ex.Message}");
+            }
+        }
+        
+        Console.WriteLine($"[DEBUG] Resultado final: {result.Count} entidades convertidas");
+        return result;
+    }
+
+    private T? CreatePartialEntity(JsonElement jsonElement)
+    {
+        try
+        {
+            var entity = Activator.CreateInstance<T>();
+            var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            Console.WriteLine($"[DEBUG] Creando entidad parcial para tipo {typeof(T).Name}");
+
+            foreach (var property in properties)
+            {
+                // Buscar la propiedad tanto por nombre exacto como por nombre en minúsculas (JSON camelCase)
+                var propertyFound = false;
+                JsonElement propertyValue = default;
+
+                if (jsonElement.TryGetProperty(property.Name, out propertyValue))
+                {
+                    propertyFound = true;
+                }
+                else if (jsonElement.TryGetProperty(char.ToLowerInvariant(property.Name[0]) + property.Name.Substring(1), out propertyValue))
+                {
+                    propertyFound = true;
+                }
+
+                if (propertyFound)
+                {
+                    try
+                    {
+                        object? value = null;
+
+                        // Manejar diferentes tipos de datos
+                        if (property.PropertyType == typeof(string))
+                        {
+                            value = propertyValue.GetString();
+                        }
+                        else if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
+                        {
+                            if (propertyValue.ValueKind == JsonValueKind.String && Guid.TryParse(propertyValue.GetString(), out var guid))
+                            {
+                                value = guid;
+                            }
+                        }
+                        else if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?))
+                        {
+                            if (propertyValue.ValueKind == JsonValueKind.True || propertyValue.ValueKind == JsonValueKind.False)
+                            {
+                                value = propertyValue.GetBoolean();
+                            }
+                        }
+                        else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+                        {
+                            if (propertyValue.ValueKind == JsonValueKind.String && DateTime.TryParse(propertyValue.GetString(), out var date))
+                            {
+                                value = date;
+                            }
+                        }
+                        else
+                        {
+                            // Para otros tipos, usar deserialización JSON
+                            value = JsonSerializer.Deserialize(propertyValue.GetRawText(), property.PropertyType);
+                        }
+
+                        if (value != null)
+                        {
+                            property.SetValue(entity, value);
+                            Console.WriteLine($"[DEBUG] Propiedad {property.Name} establecida con valor {value}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DEBUG] Error estableciendo propiedad {property.Name}: {ex.Message}");
+                    }
+                }
+            }
+
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Error creando entidad parcial: {ex.Message}");
+            return default(T);
+        }
+    }
+
+    private string ConvertRadzenFilterToString(FilterDescriptor filter)
+    {
+        if (filter == null || string.IsNullOrEmpty(filter.Property)) 
+            return string.Empty;
+
+        var property = filter.Property;
+        var value = filter.FilterValue?.ToString();
+        
+        return filter.FilterOperator switch
+        {
+            FilterOperator.Equals => $"{property} == \"{value}\"",
+            FilterOperator.NotEquals => $"{property} != \"{value}\"",
+            FilterOperator.Contains => $"{property}.Contains(\"{value}\")",
+            FilterOperator.DoesNotContain => $"!{property}.Contains(\"{value}\")",
+            FilterOperator.StartsWith => $"{property}.StartsWith(\"{value}\")",
+            FilterOperator.EndsWith => $"{property}.EndsWith(\"{value}\")",
+            FilterOperator.GreaterThan => $"{property} > {value}",
+            FilterOperator.GreaterThanOrEquals => $"{property} >= {value}",
+            FilterOperator.LessThan => $"{property} < {value}",
+            FilterOperator.LessThanOrEquals => $"{property} <= {value}",
+            FilterOperator.IsNull => $"{property} == null",
+            FilterOperator.IsNotNull => $"{property} != null",
+            FilterOperator.IsEmpty => $"string.IsNullOrEmpty({property})",
+            FilterOperator.IsNotEmpty => $"!string.IsNullOrEmpty({property})",
+            _ => string.Empty
+        };
+    }
+
+    private string ConvertRadzenSortToString(SortDescriptor sort)
+    {
+        if (sort == null || string.IsNullOrEmpty(sort.Property))
+            return string.Empty;
+
+        var direction = sort.SortOrder == SortOrder.Descending ? " desc" : "";
+        return $"{sort.Property}{direction}";
     }
 
     #endregion
@@ -581,12 +878,368 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         return $"Cada {result}";
     }
 
+    #endregion
+
+    #region Private Methods - Column Configuration
+
+    private async Task OpenColumnConfigModal()
+    {
+        try
+        {
+            // Construir lista de columnas disponibles
+            var columnItems = BuildColumnVisibilityItems();
+            
+            // Obtener path actual para localStorage
+            currentPath = GetCurrentPath();
+            
+            // Abrir modal usando DialogService
+            var result = await DialogService.OpenAsync<ColumnConfigDialog>("Configurar Columnas",
+                new Dictionary<string, object>
+                {
+                    { "ColumnItems", columnItems },
+                    { "CurrentPath", currentPath }
+                },
+                new DialogOptions 
+                { 
+                    Width = "500px", 
+                    Height = "600px",
+                    Resizable = true,
+                    Draggable = true
+                });
+
+            // Si se aplicaron cambios, actualizar grid
+            if (result != null && result is List<ColumnVisibilityItem>)
+            {
+                var updatedItems = (List<ColumnVisibilityItem>)result;
+                await ApplyColumnVisibility(updatedItems);
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogService.Alert($"Error abriendo configuración: {ex.Message}", "Error");
+        }
+    }
+
+    private List<ColumnVisibilityItem> BuildColumnVisibilityItems()
+    {
+        var items = new List<ColumnVisibilityItem>();
+
+        // Obtener columnas del grid si están disponibles
+        if (grid?.ColumnsCollection != null)
+        {
+            foreach (var column in grid.ColumnsCollection)
+            {
+                if (!string.IsNullOrEmpty(column.Property))
+                {
+                    items.Add(new ColumnVisibilityItem
+                    {
+                        Property = column.Property,
+                        DisplayName = column.Title ?? GetDisplayName(column.Property),
+                        IsVisible = column.Visible,
+                        ColumnType = ColumnSourceType.RenderFragment
+                    });
+                }
+            }
+        }
+        else if (ColumnConfigs != null)
+        {
+            // Si no hay grid disponible, usar ColumnConfigs
+            foreach (var config in ColumnConfigs)
+            {
+                items.Add(new ColumnVisibilityItem
+                {
+                    Property = config.Property,
+                    DisplayName = config.Title ?? GetDisplayName(config.Property),
+                    IsVisible = config.Visible,
+                    ColumnType = ColumnSourceType.ColumnConfig
+                });
+            }
+        }
+        else
+        {
+            // Auto-generadas
+            var properties = GetAutoColumns();
+            foreach (var prop in properties)
+            {
+                items.Add(new ColumnVisibilityItem
+                {
+                    Property = prop.Name,
+                    DisplayName = GetDisplayName(prop.Name),
+                    IsVisible = true,
+                    ColumnType = ColumnSourceType.Auto
+                });
+            }
+        }
+
+        return items;
+    }
+
+    private async Task ApplyColumnVisibility(List<ColumnVisibilityItem> columnItems)
+    {
+        // Aplicar cambios dependiendo del tipo de columnas
+        if (grid?.ColumnsCollection != null)
+        {
+            foreach (var column in grid.ColumnsCollection)
+            {
+                if (!string.IsNullOrEmpty(column.Property))
+                {
+                    var item = columnItems.FirstOrDefault(i => i.Property == column.Property);
+                    if (item != null)
+                    {
+                        column.Visible = item.IsVisible;
+                    }
+                }
+            }
+        }
+        else if (ColumnConfigs != null)
+        {
+            foreach (var config in ColumnConfigs)
+            {
+                var item = columnItems.FirstOrDefault(i => i.Property == config.Property);
+                if (item != null)
+                {
+                    config.Visible = item.IsVisible;
+                }
+            }
+        }
+
+        // Forzar re-render del grid
+        StateHasChanged();
+        
+        // Recargar datos con la nueva configuración de columnas
+        // Esto hace que se recalcule el Select string y se ejecute una nueva query
+        Console.WriteLine("[DEBUG] Recargando datos después de cambio de columnas");
+        await Reload();
+    }
+
+    private async Task LoadColumnConfigFromLocalStorage()
+    {
+        try
+        {
+            currentPath = GetCurrentPath();
+            if (string.IsNullOrEmpty(currentPath)) return;
+
+            var storageKey = $"column_config_{currentPath}";
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", storageKey);
+            
+            if (!string.IsNullOrEmpty(json))
+            {
+                var config = JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
+                if (config != null)
+                {
+                    // Aplicar configuración a ColumnConfigs si existe
+                    if (ColumnConfigs != null)
+                    {
+                        foreach (var columnConfig in ColumnConfigs)
+                        {
+                            if (config.TryGetValue(columnConfig.Property, out var isVisible))
+                            {
+                                columnConfig.Visible = isVisible;
+                            }
+                        }
+                    }
+                    // Para columnas RenderFragment, se aplicará después de que grid se renderice
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Si hay error cargando configuración, usar valores por defecto
+        }
+    }
+
+    private async Task ApplyStoredColumnConfiguration()
+    {
+        try
+        {
+            if (grid?.ColumnsCollection == null) return;
+
+            currentPath = GetCurrentPath();
+            var storageKey = $"column_config_{currentPath}";
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", storageKey);
+            
+            if (!string.IsNullOrEmpty(json))
+            {
+                var config = JsonSerializer.Deserialize<Dictionary<string, bool>>(json);
+                if (config != null)
+                {
+                    var hasChanges = false;
+                    
+                    foreach (var column in grid.ColumnsCollection)
+                    {
+                        if (!string.IsNullOrEmpty(column.Property) && 
+                            config.TryGetValue(column.Property, out var isVisible))
+                        {
+                            if (column.Visible != isVisible)
+                            {
+                                column.Visible = isVisible;
+                                hasChanges = true;
+                            }
+                        }
+                    }
+                    
+                    if (hasChanges)
+                    {
+                        Console.WriteLine("[DEBUG] Aplicando configuración guardada y recargando datos");
+                        StateHasChanged();
+                        
+                        // Esperar un poco para que se apliquen los cambios de visibilidad
+                        await Task.Delay(100);
+                        
+                        // Recargar datos con la nueva configuración
+                        await Reload();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Error aplicando configuración guardada: {ex.Message}");
+        }
+    }
+
+    private string GetCurrentPath()
+    {
+        // Usar el tipo T para generar una clave única por entidad
+        return typeof(T).Name.ToLower();
+    }
+
+    #endregion
+
+    #region Private Methods - Select Optimization
+
+    private bool ShouldUseSelectOptimization()
+    {
+        var shouldUse = EnableSelectOptimization && SelectOnlyVisibleColumns && HasVisibleColumnsConfigured();
+        Console.WriteLine($"[DEBUG] ShouldUseSelectOptimization: {shouldUse} (EnableSelectOptimization: {EnableSelectOptimization}, SelectOnlyVisibleColumns: {SelectOnlyVisibleColumns}, HasVisibleColumnsConfigured: {HasVisibleColumnsConfigured()})");
+        return shouldUse;
+    }
+
+    private bool HasVisibleColumnsConfigured()
+    {
+        // Solo usar optimización si tenemos configuración personalizada de columnas
+        // y no todas las columnas están visibles (indicando que el usuario hizo una selección específica)
+        
+        if (grid?.ColumnsCollection != null)
+        {
+            var allColumns = grid.ColumnsCollection.Where(c => !string.IsNullOrEmpty(c.Property) && c.Property != "Actions").ToList();
+            var visibleColumns = allColumns.Where(c => c.Visible).ToList();
+            
+            // Solo optimizar si hay columnas específicas visibles y algunas ocultas
+            // (indicando que el usuario personalizó la vista)
+            var hasCustomizedView = allColumns.Count > visibleColumns.Count && visibleColumns.Count > 0;
+            
+            Console.WriteLine($"[DEBUG] Grid columns - Total: {allColumns.Count}, Visible: {visibleColumns.Count}, Customized: {hasCustomizedView}");
+            Console.WriteLine($"[DEBUG] Columnas disponibles: {string.Join(", ", allColumns.Select(c => $"{c.Property}({c.Visible})"))}");
+            
+            return hasCustomizedView;
+        }
+
+        // Si hay ColumnConfigs, verificar si hay columnas visibles específicas
+        if (ColumnConfigs != null)
+        {
+            var visibleConfigs = ColumnConfigs.Where(c => c.Visible).ToList();
+            var hasCustomizedView = ColumnConfigs.Count > visibleConfigs.Count && visibleConfigs.Count > 0;
+            
+            Console.WriteLine($"[DEBUG] ColumnConfigs - Total: {ColumnConfigs.Count}, Visible: {visibleConfigs.Count}, Customized: {hasCustomizedView}");
+            
+            return hasCustomizedView;
+        }
+
+        // Si no hay configuración específica, no optimizar
+        Console.WriteLine("[DEBUG] No hay configuración específica de columnas");
+        return false;
+    }
+
+    private string BuildSelectString()
+    {
+        var fields = new HashSet<string>();
+
+        // Siempre incluir campos obligatorios
+        if (AlwaysSelectFields != null)
+        {
+            foreach (var field in AlwaysSelectFields)
+            {
+                fields.Add(field);
+            }
+        }
+
+        // Agregar campos de columnas visibles
+        var visibleFields = GetVisibleFieldNames();
+        foreach (var field in visibleFields)
+        {
+            fields.Add(field);
+        }
+
+        // Si no hay campos visibles (solo obligatorios), retornar select básico
+        if (visibleFields.Count == 0)
+        {
+            Console.WriteLine("[DEBUG] No hay columnas visibles específicas, usando select básico");
+            return "new { Id }";
+        }
+
+        // Construir select string
+        var fieldsStr = string.Join(", ", fields.OrderBy(f => f));
+        var selectString = $"new {{ {fieldsStr} }}";
+        
+        Console.WriteLine($"[DEBUG] Select string generado: {selectString}");
+        return selectString;
+    }
+
+    private List<string> GetVisibleFieldNames()
+    {
+        var fields = new List<string>();
+
+        // Obtener de grid si está disponible
+        if (grid?.ColumnsCollection != null)
+        {
+            // Solo obtener las columnas que realmente están visibles y configuradas por el usuario
+            var userVisibleColumns = grid.ColumnsCollection.Where(c => 
+                c.Visible && 
+                !string.IsNullOrEmpty(c.Property) && 
+                c.Property != "Actions" // Excluir columna de acciones
+            ).ToList();
+
+            foreach (var column in userVisibleColumns)
+            {
+                // Solo agregar propiedades simples (no templates complejos)
+                if (IsSimpleProperty(column.Property!))
+                {
+                    fields.Add(column.Property!);
+                }
+            }
+
+            // Debug: imprimir columnas detectadas
+            Console.WriteLine($"[DEBUG] Columnas visibles detectadas: {string.Join(", ", fields)}");
+        }
+        // Obtener de ColumnConfigs
+        else if (ColumnConfigs != null)
+        {
+            foreach (var config in ColumnConfigs.Where(c => c.Visible))
+            {
+                if (IsSimpleProperty(config.Property))
+                {
+                    fields.Add(config.Property);
+                }
+            }
+        }
+
+        return fields.Distinct().ToList();
+    }
+
+    private bool IsSimpleProperty(string propertyName)
+    {
+        // Evitar propiedades complejas o de navegación
+        var complexTypes = new[] { ".", "Usuario", "Modificado", "Creado" };
+        return !complexTypes.Any(complex => propertyName.Contains(complex, StringComparison.OrdinalIgnoreCase));
+    }
+
+    #endregion
+
     public void Dispose()
     {
         StopAutoRefresh();
     }
-
-    #endregion
 }
 
 public class ColumnConfig<T>

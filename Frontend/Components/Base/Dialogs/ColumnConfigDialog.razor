@@ -1,0 +1,184 @@
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenStack Gap="1rem">
+    <RadzenText TextStyle="TextStyle.Body2" Class="text-muted mb-3">
+        Selecciona qué columnas deseas mostrar u ocultar en la tabla:
+    </RadzenText>
+
+    <div class="column-list-container">
+        @foreach (var item in ColumnItems)
+        {
+            <RadzenCard class="@GetColumnItemClass(item)">
+                <RadzenRow class="align-items-center">
+                    <RadzenColumn Size="2">
+                        <RadzenCheckBox @bind-Value="item.IsVisible" 
+                                       Change="@((bool value) => OnColumnVisibilityChanged(item))" 
+                                       class="column-checkbox" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="10">
+                        <div class="column-info">
+                            <RadzenText TextStyle="TextStyle.Body1" class="column-title">
+                                @item.DisplayName
+                            </RadzenText>
+                            @if (!string.IsNullOrEmpty(item.Property) && item.Property != item.DisplayName)
+                            {
+                                <RadzenText TextStyle="TextStyle.Caption" Class="text-muted column-property">
+                                    @item.Property
+                                </RadzenText>
+                            }
+                            <div class="column-type-badge">
+                                <RadzenBadge Text="@GetColumnTypeBadge(item.ColumnType)" 
+                                           BadgeStyle="@GetColumnTypeBadgeStyle(item.ColumnType)"
+                                           Variant="Variant.Text" 
+                                           class="column-type-indicator" />
+                            </div>
+                        </div>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+        }
+    </div>
+    
+    <RadzenCard class="quick-actions">
+        <RadzenText TextStyle="TextStyle.Caption" Class="text-muted mb-2">
+            Acciones rápidas:
+        </RadzenText>
+        <RadzenRow>
+            <RadzenColumn Size="6">
+                <RadzenButton Text="Mostrar Todas" 
+                             ButtonStyle="ButtonStyle.Secondary" 
+                             Size="ButtonSize.Small"
+                             Icon="visibility"
+                             Click="@ShowAllColumns"
+                             class="w-100" />
+            </RadzenColumn>
+            <RadzenColumn Size="6">
+                <RadzenButton Text="Ocultar Todas" 
+                             ButtonStyle="ButtonStyle.Light" 
+                             Size="ButtonSize.Small"
+                             Icon="visibility_off"
+                             Click="@HideAllColumns"
+                             class="w-100" />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+    
+    <div class="dialog-actions">
+        <RadzenButton Text="Cancelar" 
+                     ButtonStyle="ButtonStyle.Light" 
+                     Size="ButtonSize.Medium"
+                     Icon="close"
+                     Click="@Cancel"
+                     class="cancel-btn" />
+        <RadzenButton Text="Aplicar Cambios" 
+                     ButtonStyle="ButtonStyle.Primary" 
+                     Size="ButtonSize.Medium"
+                     Icon="check"
+                     Click="@ApplyChanges"
+                     class="apply-btn" />
+    </div>
+</RadzenStack>
+
+<style>
+    .column-list-container {
+        max-height: 350px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .column-item {
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        border: 1px solid var(--rz-border-color, #dee2e6);
+    }
+
+    .column-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+
+    .column-visible {
+        background: rgba(25, 135, 84, 0.05);
+        border-color: rgba(25, 135, 84, 0.2);
+    }
+
+    .column-hidden {
+        background: rgba(220, 53, 69, 0.05);
+        border-color: rgba(220, 53, 69, 0.2);
+        opacity: 0.7;
+    }
+
+    .column-checkbox {
+        transform: scale(1.1);
+    }
+
+    .column-info {
+        position: relative;
+    }
+
+    .column-title {
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .column-property {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+    }
+
+    .column-type-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+
+    .column-type-indicator {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+
+    .quick-actions {
+        background: rgba(108, 117, 125, 0.05);
+        padding: 15px;
+        border: 1px solid rgba(108, 117, 125, 0.1);
+    }
+
+    .dialog-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--rz-border-color, #dee2e6);
+    }
+
+    .cancel-btn {
+        min-width: 120px;
+    }
+
+    .apply-btn {
+        min-width: 140px;
+    }
+
+    /* Scrollbar personalizada */
+    .column-list-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .column-list-container::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+        border-radius: 3px;
+    }
+
+    .column-list-container::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.2);
+        border-radius: 3px;
+    }
+
+    .column-list-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(0,0,0,0.3);
+    }
+</style>
