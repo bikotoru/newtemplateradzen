@@ -41,17 +41,4 @@ namespace Frontend.Modules.Categoria
         
     }
 
-    #region DTOs
-
-    public class CategoriaResumen
-    {
-        public Guid Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }
-        public string CreadorNombre { get; set; } = string.Empty;
-        public DateTime FechaCreacion { get; set; }
-        public bool Activa { get; set; }
-    }
-
-    #endregion
 }
