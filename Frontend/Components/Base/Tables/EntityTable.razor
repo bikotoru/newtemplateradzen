@@ -6,46 +6,68 @@
 @using Shared.Models.QueryModels
 
 <div class="entity-table-container">
-    @if (ShowSearchBar || ShowExcelExport || ShowRefreshButton || ShowAutoRefresh)
+    @if (HasViewSelector() || ShowSearchBar || ShowExcelExport || ShowRefreshButton || ShowAutoRefresh)
     {
-        <RadzenRow class="mb-3">
-            @if (ShowSearchBar)
+        <RadzenRow class="mb-3" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+            @* BLOQUE 1: Selector de Vista (4 columnas, pegado a la izquierda) *@
+            @if (HasViewSelector())
             {
-                <RadzenColumn SizeLG="@GetSearchColumnSize()" SizeMD="@GetSearchColumnSize()" SizeSM="@GetSearchColumnSize()">
-                    <RadzenFormField>
-                        <ChildContent>
-                            <RadzenTextBox @oninput=@(async arg => { searchTerm = arg.Value is null ? "" : arg.Value.ToString(); })
-                                           Placeholder="@SearchPlaceholder"
-                                           @onkeypress="@OnSearchKeyPress" />
-                        </ChildContent>
-                        <End>
-                            <RadzenButton Icon="search"
-                                          Click="@OnSearchSubmit"
-                                          Variant="Variant.Text"
-                                          Size="ButtonSize.Small" />
-                        </End>
+                <RadzenColumn SizeLG="4" SizeMD="5" SizeSM="12" Class="d-flex pe-2">
+                    <RadzenFormField Text="Vista" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDropDown Value="@GetCurrentViewDisplayName()"
+                                        Data="@ViewConfigurations"
+                                        TextProperty="@ViewDisplayNameProperty"
+                                        ValueProperty="@ViewDisplayNameProperty"
+                                        Change="@OnViewChangedInternal"
+                                        />
                     </RadzenFormField>
-                    
-                    @if (ShowSearchFieldsInput)
-                    {
-                        <RadzenFormField class="mt-2">
-                            <ChildContent>
-                                <RadzenTextBox @bind-Value="currentSearchFieldsInput"
-                                               Placeholder="Campos de búsqueda (ej: Nombre,Descripcion)"
-                                               Style="font-size: 12px;" />
-                            </ChildContent>
-                            <End>
-                                <RadzenText TextStyle="TextStyle.Caption" Class="text-muted">
-                                    Campos
-                                </RadzenText>
-                            </End>
-                        </RadzenFormField>
-                    }
                 </RadzenColumn>
             }
             
-            <RadzenColumn SizeLG="@GetButtonsColumnSize()" SizeMD="@GetButtonsColumnSize()" SizeSM="@GetButtonsColumnSize()">
-                <div class="d-flex gap-2 justify-content-end">
+            @* BLOQUE 2: Buscador + Botones (8 columnas, pegado a la derecha) *@
+            <RadzenColumn SizeLG="@GetMainContentColumnSize()" SizeMD="@GetMainContentColumnSizeMD()" SizeSM="12" Class="ps-2">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" 
+                             JustifyContent="JustifyContent.End" Style="width: 100%;">
+                    
+                    @* Buscador pegado a los botones *@
+                    @if (ShowSearchBar)
+                    {
+                        <div style="flex-shrink: 0;">
+                            <RadzenFormField Style="margin-bottom: 10px">
+                                <ChildContent>
+                                    <RadzenTextBox @oninput=@(async arg => { searchTerm = arg.Value is null ? "" : arg.Value.ToString(); })
+                                                   Placeholder="@SearchPlaceholder"
+                                                   @onkeypress="@OnSearchKeyPress" 
+                                                   Style="width: 100%;" />
+                                </ChildContent>
+                                <End>
+                                    <RadzenButton Icon="search"
+                                                  Click="@OnSearchSubmit"
+                                                  Variant="Variant.Text"
+                                                  Size="ButtonSize.Small" />
+                                </End>
+                            </RadzenFormField>
+                            
+                            @if (ShowSearchFieldsInput)
+                            {
+                                <RadzenFormField class="mt-2">
+                                    <ChildContent>
+                                        <RadzenTextBox @bind-Value="currentSearchFieldsInput"
+                                                       Placeholder="Campos de búsqueda (ej: Nombre,Descripcion)"
+                                                       Style="font-size: 12px; width: 100%;" />
+                                    </ChildContent>
+                                    <End>
+                                        <RadzenText TextStyle="TextStyle.Caption" Class="text-muted">
+                                            Campos
+                                        </RadzenText>
+                                    </End>
+                                </RadzenFormField>
+                            }
+                        </div>
+                    }
+                    
+                    @* Botones (lado derecho del bloque) *@
+                    <div class="d-flex gap-2 justify-content-end" style="flex-shrink: 0;">
                     @if (ShowAutoRefresh)
                     {
                         <RadzenSplitButton Click="@(async (item) => await OnSplitButtonClick(item, "AutoRefresh"))"
@@ -93,7 +115,8 @@
                                       IconColor="green"
                                       title="@ExcelButtonText" />
                     }
-                </div>
+                    </div>
+                </RadzenStack>
             </RadzenColumn>
         </RadzenRow>
     }
@@ -142,7 +165,7 @@
                                               ButtonStyle="@EditButtonStyle"
                                               Size="ButtonSize.Small"
                                               Click="@(() => HandleEdit(item))"
-                                              class="me-1" />
+                                              class="me-1" Style="margin-right: 10px" />
                             }
                             @if (ShowDeleteButton)
                             {

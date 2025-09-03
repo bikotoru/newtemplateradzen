@@ -11,30 +11,6 @@
                     ShowNew
                     OnNewClick="@GoToCreate">
 
-    @* Panel de configuración de vista - SOLO si hay múltiples vistas *@
-    @if (viewManager.ViewConfigurations.Count > 1)
-    {
-        <RadzenCard Class="mb-3">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
-                <RadzenLabel Text="Vista:" Style="font-weight: 600;" />
-                
-                <RadzenDropDown Value="@currentView.DisplayName"
-                                Data="@viewManager.ViewConfigurations"
-                                TextProperty="DisplayName"
-                                ValueProperty="DisplayName"
-                                Change="@(async (args) => await OnViewChanged(args))" 
-                                Style="width: 250px;" />
-                
-                <RadzenBadge Text="@($"Vista activa: {currentView.DisplayName}")"
-                            BadgeStyle="BadgeStyle.Info" />
-                            
-                <RadzenText TextStyle="TextStyle.Caption" Class="ms-3">
-                    @($"Mostrando {currentView.ColumnConfigs?.Count ?? 0} columna(s)")
-                </RadzenText>
-            </RadzenStack>
-        </RadzenCard>
-    }
-
     <RadzenCard>
         <EntityTable T="Categoria" 
                      @ref="entityTable"
@@ -51,6 +27,10 @@
                      ForceOrderByIndex="true"
                      EnableSelectOptimization="true"
                      SelectOnlyVisibleColumns="true"
+                     ViewConfigurations="@ViewConfigurationsAsObjects"
+                     CurrentView="@currentView"
+                     OnViewChanged="@OnViewChanged"
+                     ViewDisplayNameProperty="DisplayName"
                      OnEdit="@HandleEdit"
                      OnDelete="@HandleDelete">
             @* No definimos Columns aquí para que use solo ColumnConfigs de la vista *@

@@ -19,6 +19,9 @@ public partial class CategoriaList : ComponentBase
     private CategoriaViewManager viewManager = null!;
     private CategoriaViewConfig currentView = null!;
     
+    // Propiedad para EntityTable
+    private List<object> ViewConfigurationsAsObjects => viewManager?.ViewConfigurations?.Cast<object>().ToList() ?? new List<object>();
+    
     protected override void OnInitialized()
     {
         viewManager = new CategoriaViewManager(QueryService);

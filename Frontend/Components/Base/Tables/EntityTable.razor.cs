@@ -93,6 +93,30 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #endregion
 
+    #region Parameters - View Management
+
+    /// <summary>
+    /// Lista de configuraciones de vista disponibles
+    /// </summary>
+    [Parameter] public List<object>? ViewConfigurations { get; set; }
+    
+    /// <summary>
+    /// Vista actualmente seleccionada
+    /// </summary>
+    [Parameter] public object? CurrentView { get; set; }
+    
+    /// <summary>
+    /// Callback cuando cambia la vista seleccionada
+    /// </summary>
+    [Parameter] public EventCallback<object> OnViewChanged { get; set; }
+    
+    /// <summary>
+    /// Propiedad para obtener el DisplayName de la vista
+    /// </summary>
+    [Parameter] public string ViewDisplayNameProperty { get; set; } = "DisplayName";
+
+    #endregion
+
     #region Parameters - Actions
 
     [Parameter] public bool ShowActions { get; set; } = true;
@@ -969,12 +993,18 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private int GetSearchColumnSize()
     {
-        // Calcular el tamaño de la columna de búsqueda basado en cuántos botones se muestran
-        var buttonCount = (ShowRefreshButton ? 1 : 0) + (ShowAutoRefresh ? 1 : 0) + (ShowExcelExport ? 1 : 0);
+        // Ajustar tamaño considerando vista y botones
+        if (HasViewSelector())
+        {
+            return 6; // Espacio medio cuando hay vista
+        }
+        
+        // Sin vista, calcular basado en botones
+        var buttonCount = (ShowRefreshButton ? 1 : 0) + (ShowAutoRefresh ? 1 : 0) + (ShowExcelExport ? 1 : 0) + (ShowColumnConfig ? 1 : 0);
         return buttonCount switch
         {
             0 => 12,
-            1 => 10,
+            1 => 10, 
             2 => 8,
             3 => 6,
             _ => 6
@@ -983,7 +1013,16 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private int GetButtonsColumnSize()
     {
-        return 12 - (ShowSearchBar ? GetSearchColumnSize() : 0);
+        // Ajustar tamaño según elementos presentes
+        if (HasViewSelector() && ShowSearchBar)
+        {
+            return 3; // Mínimo cuando hay vista y búsqueda
+        }
+        else if (HasViewSelector() || ShowSearchBar)
+        {
+            return 4; // Medio cuando hay uno u otro
+        }
+        return 12; // Toda la fila cuando solo hay botones
     }
 
     #endregion
@@ -1617,6 +1656,42 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         return configs;
     }
     
+
+    #endregion
+
+    #region Private Methods - View Management
+
+    private bool HasViewSelector()
+    {
+        return ViewConfigurations != null && ViewConfigurations.Count > 1;
+    }
+
+    private string GetCurrentViewDisplayName()
+    {
+        if (CurrentView == null) return "";
+        
+        var property = CurrentView.GetType().GetProperty(ViewDisplayNameProperty);
+        return property?.GetValue(CurrentView)?.ToString() ?? "";
+    }
+
+    private async Task OnViewChangedInternal(object args)
+    {
+        if (OnViewChanged.HasDelegate)
+        {
+            await OnViewChanged.InvokeAsync(args);
+        }
+    }
+
+
+    private int GetMainContentColumnSize()
+    {
+        return HasViewSelector() ? 8 : 12;
+    }
+
+    private int GetMainContentColumnSizeMD()
+    {
+        return HasViewSelector() ? 7 : 12;
+    }
 
     #endregion
 
