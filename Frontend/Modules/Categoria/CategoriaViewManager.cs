@@ -45,7 +45,19 @@ namespace Frontend.Modules.Categoria
                         Visible = true,
                         Order = 1
                     },
+                  
                     new ColumnConfig<Shared.Models.Entities.Categoria>
+                    {
+                        Property = "Active",
+                        Title = "Estado",
+                        Width = "120px",
+                        Sortable = true,
+                        Filterable = false,
+                        TextAlign = TextAlign.Center,
+                        Visible = true,
+                        Order = 3
+                    },
+                      new ColumnConfig<Shared.Models.Entities.Categoria>
                     {
                         Property = "Descripcion",
                         Title = "Descripción",
@@ -56,17 +68,6 @@ namespace Frontend.Modules.Categoria
                         Visible = true,
                         Order = 2
                     },
-                    new ColumnConfig<Shared.Models.Entities.Categoria>
-                    {
-                        Property = "Active",
-                        Title = "Estado",
-                        Width = "100px",
-                        Sortable = true,
-                        Filterable = true,
-                        TextAlign = TextAlign.Center,
-                        Visible = true,
-                        Order = 3
-                    }
                 }
             });
 
@@ -126,6 +127,17 @@ namespace Frontend.Modules.Categoria
                     },
                     new ColumnConfig<Shared.Models.Entities.Categoria>
                     {
+                        Property = "Active",
+                        Title = "Estado",
+                        Width = "120px",
+                        Sortable = true,
+                        Filterable = false,
+                        TextAlign = TextAlign.Center,
+                        Visible = true,
+                        Order = 3
+                    },
+                    new ColumnConfig<Shared.Models.Entities.Categoria>
+                    {
                         Property = "FechaCreacion",
                         Title = "Creado",
                         Width = "120px",
@@ -133,7 +145,7 @@ namespace Frontend.Modules.Categoria
                         Filterable = true,
                         TextAlign = TextAlign.Center,
                         Visible = true,
-                        Order = 3
+                        Order = 4
                     }
                 }
             });

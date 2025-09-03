@@ -31,9 +31,25 @@
                      CurrentView="@currentView"
                      OnViewChanged="@OnViewChanged"
                      ViewDisplayNameProperty="DisplayName"
+                     CombineColumnsAndConfigs="true"
+                     RenderFragmentProperties="@(new List<string> { "Active" })"
                      OnEdit="@HandleEdit"
                      OnDelete="@HandleDelete">
-            @* No definimos Columns aquí para que use solo ColumnConfigs de la vista *@
+            
+            <Columns>
+                <RadzenDataGridColumn TItem="Categoria" Property="Active" Title="Estado" Width="120px" Sortable="true" Filterable="false">
+                    <Template Context="categoria">
+                        @if (categoria.Active)
+                        {
+                            <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Activo" />
+                        }
+                        else
+                        {
+                            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Inactivo" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
         </EntityTable>
     </RadzenCard>
 

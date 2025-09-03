@@ -181,15 +181,48 @@
 
             @if (ShouldCombineColumns())
             {
-                @* Modo híbrido: RenderFragment Columns + ColumnConfigs filtradas *@
-                @* Primero las columnas del RenderFragment *@
+                @* Modo híbrido: Renderiza columnas en orden correcto *@
+                @* Primero las columnas nativas hasta antes de Active *@
+                @foreach (var col in ColumnConfigs.Where(c => c.Order < 3).OrderBy(c => c.Order ?? 999))
+                {
+                    @if (col.Template != null)
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible">
+                            <Template Context="item">
+                                @col.Template(item)
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                    else
+                    {
+                        <RadzenDataGridColumn TItem="T"
+                                              Property="@col.Property"
+                                              Title="@col.Title"
+                                              Width="@col.Width"
+                                              Sortable="@col.Sortable"
+                                              Filterable="@col.Filterable"
+                                              TextAlign="@col.TextAlign"
+                                              Frozen="@col.Frozen"
+                                              Visible="@col.Visible" />
+                    }
+                }
+                
+                @* Luego las columnas personalizadas (Active con orden 3) *@
                 @if (Columns != null)
                 {
                     @Columns
                 }
                 
-                @* Luego las de ColumnConfigs que NO estén en RenderFragment, ordenadas por índice *@
-                @foreach (var col in GetFinalOrderedConfigs())
+                @* Finalmente las columnas nativas después de Active *@
+                @foreach (var col in ColumnConfigs.Where(c => c.Order > 3).OrderBy(c => c.Order ?? 999))
                 {
                     @if (col.Template != null)
                     {
