@@ -130,6 +130,10 @@
                     AllowPaging="@AllowPaging"
                     AllowSorting="@AllowSorting"
                     AllowFiltering="@AllowFiltering"
+                    FilterMode="FilterMode.Advanced"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    LogicalFilterOperator="LogicalFilterOperator.And"
+                    FilterDelay="500"
                     AllowColumnResize="@AllowColumnResize"
                     PageSize="@PageSize"
                     PageSizeOptions="@PageSizeOptions"
@@ -138,7 +142,6 @@
                     EmptyText="@EmptyText"
                     Style="@Style"
                     IsLoading="@isLoading"
-                    IsBusy="@isLoading"
                     ColumnWidth="@ColumnWidth">
 
         <Columns>
@@ -195,7 +198,9 @@
                                               Filterable="@col.Filterable"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
-                                              Visible="@col.Visible">
+                                              Visible="@col.Visible"
+                                              FilterValue="@col.FilterValue"
+                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)">
                             <Template Context="item">
                                 @col.Template(item)
                             </Template>
@@ -211,7 +216,9 @@
                                               Filterable="@col.Filterable"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
-                                              Visible="@col.Visible" />
+                                              Visible="@col.Visible"
+                                              FilterValue="@col.FilterValue"
+                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)" />
                     }
                 }
             }
@@ -243,6 +250,11 @@
     /* Responsive styles para mejor layout en móvil */
     .search-container {
         min-width: 250px;
+    }
+    
+    /* Fix para el icono de filtro que se superpone */
+    .notranslate.rzi.rz-grid-filter-icon {
+        margin-left: -25px !important;
     }
     
     @@media (max-width: 767px) {

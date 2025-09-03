@@ -894,7 +894,7 @@ namespace Backend.Utils.Services
                 if (!string.IsNullOrEmpty(searchConditions))
                 {
                     // La búsqueda se combina con AND al BaseQuery existente
-                    query = query.Where(searchConditions);
+                    query = query.Where(searchConditions, searchRequest.SearchTerm.ToLower());
                 }
             }
 
@@ -938,33 +938,36 @@ namespace Backend.Utils.Services
             // Si no se especifican campos, usar campos de texto por defecto
             var fieldsToSearch = searchFields?.Any() == true ? searchFields : GetDefaultSearchFields(properties);
 
+            // Escapar caracteres especiales en el término de búsqueda
+            var escapedSearchTerm = searchTerm.Replace("\"", "\\\"").Replace("'", "\\'");
+
             foreach (var fieldName in fieldsToSearch)
             {
                 var property = properties.FirstOrDefault(p => p.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
                 if (property == null) continue;
 
                 // Determinar el tipo de búsqueda según el tipo de propiedad
-                if (property.PropertyType == typeof(string) || property.PropertyType == typeof(string))
+                if (property.PropertyType == typeof(string))
                 {
-                    // Para strings: contains case-insensitive
-                    conditions.Add($"{property.Name}.ToLower().Contains(\"{searchTerm.ToLower()}\")");
+                    // Para strings: contains case-insensitive con null check - usando @0 parameter
+                    conditions.Add($"({property.Name} != null && {property.Name}.ToLower().Contains(@0))");
                 }
                 else if (IsNumericType(property.PropertyType))
                 {
-                    // Para números: convertir a string y buscar parcialmente (para folios como 16 → 1601, 1602)
-                    conditions.Add($"{property.Name}.ToString().Contains(\"{searchTerm}\")");
+                    // Para números: convertir a string y buscar parcialmente
+                    if (decimal.TryParse(searchTerm, out _))
+                    {
+                        conditions.Add($"{property.Name}.ToString().Contains(@0)");
+                    }
                 }
                 else if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
                 {
-                    // Para fechas: intentar parsear y comparar
-                    if (DateTime.TryParse(searchTerm, out var dateValue))
-                    {
-                        conditions.Add($"{property.Name}.Date == DateTime.Parse(\"{dateValue:yyyy-MM-dd}\").Date");
-                    }
+                    // Para fechas: buscar por string representation para mayor flexibilidad
+                    conditions.Add($"({property.Name} != null && {property.Name}.ToString().Contains(@0))");
                 }
             }
 
-            return conditions.Any() ? string.Join(" || ", conditions) : string.Empty;
+            return conditions.Any() ? $"({string.Join(" || ", conditions)})" : string.Empty;
         }
 
         private string[] GetDefaultSearchFields(PropertyInfo[] properties)

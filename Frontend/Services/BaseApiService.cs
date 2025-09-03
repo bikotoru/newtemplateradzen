@@ -281,9 +281,10 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation($"LoadData for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
+                _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
                 
                 var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, null);
+                _logger.LogInformation($"Using QueryPagedAsync with Filter: '{queryRequest.Filter ?? "null"}'");
                 return await QueryPagedAsync(queryRequest);
             }
             catch (Exception ex)
@@ -467,7 +468,10 @@ namespace Frontend.Services
                 }
             }
 
-            if (!string.IsNullOrEmpty(args.Filter))
+            // Only use args.Filter as search if there are no column filters (args.Filters)
+            // RadzenDataGrid puts LINQ expressions in args.Filter when column filters are used
+            bool hasColumnFilters = args.Filters != null && args.Filters.Any();
+            if (!string.IsNullOrEmpty(args.Filter) && !hasColumnFilters)
             {
                 query = query.Search(args.Filter);
                 
@@ -479,6 +483,10 @@ namespace Frontend.Services
                 {
                     _logger.LogInformation($"String search fields will be applied via SearchRequest: {string.Join(", ", stringSearchFields)}");
                 }
+            }
+            else if (!string.IsNullOrEmpty(args.Filter) && hasColumnFilters)
+            {
+                _logger.LogDebug($"Ignoring args.Filter (LINQ expression) because column filters are present: {args.Filter}");
             }
 
             if (args.Skip.HasValue)
@@ -537,26 +545,138 @@ namespace Frontend.Services
                 return string.Empty;
 
             var property = filter.Property;
-            var value = filter.FilterValue?.ToString();
+            var value = filter.FilterValue?.ToString() ?? "";
+            
+            // Para strings, usar comparaciones case-insensitive con null check
+            // Para números y booleans, usar comparación directa
+            var propertyType = typeof(T).GetProperty(property)?.PropertyType;
+            bool isString = propertyType == typeof(string);
+            bool isNumeric = IsNumericType(propertyType);
             
             return filter.FilterOperator switch
             {
-                FilterOperator.Equals => $"{property} == \"{value}\"",
-                FilterOperator.NotEquals => $"{property} != \"{value}\"",
-                FilterOperator.Contains => $"{property}.Contains(\"{value}\")",
-                FilterOperator.DoesNotContain => $"!{property}.Contains(\"{value}\")",
-                FilterOperator.StartsWith => $"{property}.StartsWith(\"{value}\")",
-                FilterOperator.EndsWith => $"{property}.EndsWith(\"{value}\")",
-                FilterOperator.GreaterThan => $"{property} > {value}",
-                FilterOperator.GreaterThanOrEquals => $"{property} >= {value}",
-                FilterOperator.LessThan => $"{property} < {value}",
-                FilterOperator.LessThanOrEquals => $"{property} <= {value}",
+                FilterOperator.Equals when isString => $"({property} != null && {property}.ToLower() == \"{value.ToLower()}\")",
+                FilterOperator.Equals => $"{property} == {(isNumeric ? value : $"\"{value}\"")}",
+                
+                FilterOperator.NotEquals when isString => $"({property} == null || {property}.ToLower() != \"{value.ToLower()}\")",
+                FilterOperator.NotEquals => $"{property} != {(isNumeric ? value : $"\"{value}\"")}",
+                
+                FilterOperator.Contains => $"({property} != null && {property}.ToLower().Contains(\"{value.ToLower()}\"))",
+                FilterOperator.DoesNotContain => $"({property} == null || !{property}.ToLower().Contains(\"{value.ToLower()}\"))",
+                FilterOperator.StartsWith => $"({property} != null && {property}.ToLower().StartsWith(\"{value.ToLower()}\"))",
+                FilterOperator.EndsWith => $"({property} != null && {property}.ToLower().EndsWith(\"{value.ToLower()}\"))",
+                
+                FilterOperator.GreaterThan => $"{property} > {(isNumeric ? value : $"\"{value}\"")}",
+                FilterOperator.GreaterThanOrEquals => $"{property} >= {(isNumeric ? value : $"\"{value}\"")}",
+                FilterOperator.LessThan => $"{property} < {(isNumeric ? value : $"\"{value}\"")}",
+                FilterOperator.LessThanOrEquals => $"{property} <= {(isNumeric ? value : $"\"{value}\"")}",
+                
                 FilterOperator.IsNull => $"{property} == null",
                 FilterOperator.IsNotNull => $"{property} != null",
                 FilterOperator.IsEmpty => $"string.IsNullOrEmpty({property})",
                 FilterOperator.IsNotEmpty => $"!string.IsNullOrEmpty({property})",
                 _ => string.Empty
             };
+        }
+        
+        private bool IsNumericType(Type? type)
+        {
+            if (type == null) return false;
+            return type == typeof(int) || type == typeof(int?) ||
+                   type == typeof(long) || type == typeof(long?) ||
+                   type == typeof(decimal) || type == typeof(decimal?) ||
+                   type == typeof(double) || type == typeof(double?) ||
+                   type == typeof(float) || type == typeof(float?);
+        }
+
+        private Expression<Func<T, bool>> CreateFilterExpression(FilterDescriptor filter)
+        {
+            var parameter = Expression.Parameter(typeof(T), "x");
+            var property = Expression.Property(parameter, filter.Property);
+            
+            var propertyType = typeof(T).GetProperty(filter.Property)?.PropertyType;
+            bool isString = propertyType == typeof(string);
+            bool isNumeric = IsNumericType(propertyType);
+            
+            var value = filter.FilterValue?.ToString() ?? "";
+            var constantValue = Expression.Constant(isNumeric ? 
+                (object?)Convert.ChangeType(value, propertyType!) : value);
+
+            Expression comparison = filter.FilterOperator switch
+            {
+                FilterOperator.Equals when isString => CreateStringEqualsExpression(property, value),
+                FilterOperator.Equals => Expression.Equal(property, constantValue),
+                
+                FilterOperator.NotEquals when isString => CreateStringNotEqualsExpression(property, value),
+                FilterOperator.NotEquals => Expression.NotEqual(property, constantValue),
+                
+                FilterOperator.Contains => CreateStringContainsExpression(property, value),
+                FilterOperator.DoesNotContain => CreateStringNotContainsExpression(property, value),
+                FilterOperator.StartsWith => CreateStringStartsWithExpression(property, value),
+                FilterOperator.EndsWith => CreateStringEndsWithExpression(property, value),
+                
+                FilterOperator.GreaterThan => Expression.GreaterThan(property, constantValue),
+                FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(property, constantValue),
+                FilterOperator.LessThan => Expression.LessThan(property, constantValue),
+                FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(property, constantValue),
+                
+                FilterOperator.IsNull => Expression.Equal(property, Expression.Constant(null)),
+                FilterOperator.IsNotNull => Expression.NotEqual(property, Expression.Constant(null)),
+                FilterOperator.IsEmpty => Expression.Call(null, typeof(string).GetMethod("IsNullOrEmpty")!, property),
+                FilterOperator.IsNotEmpty => Expression.Not(Expression.Call(null, typeof(string).GetMethod("IsNullOrEmpty")!, property)),
+                
+                _ => Expression.Equal(property, constantValue)
+            };
+
+            return Expression.Lambda<Func<T, bool>>(comparison, parameter);
+        }
+
+        private Expression CreateStringEqualsExpression(Expression property, string value)
+        {
+            var nullCheck = Expression.NotEqual(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var equals = Expression.Equal(toLower, Expression.Constant(value.ToLower()));
+            return Expression.AndAlso(nullCheck, equals);
+        }
+
+        private Expression CreateStringNotEqualsExpression(Expression property, string value)
+        {
+            var isNull = Expression.Equal(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var notEquals = Expression.NotEqual(toLower, Expression.Constant(value.ToLower()));
+            return Expression.OrElse(isNull, notEquals);
+        }
+
+        private Expression CreateStringContainsExpression(Expression property, string value)
+        {
+            var nullCheck = Expression.NotEqual(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var contains = Expression.Call(toLower, "Contains", null, Expression.Constant(value.ToLower()));
+            return Expression.AndAlso(nullCheck, contains);
+        }
+
+        private Expression CreateStringNotContainsExpression(Expression property, string value)
+        {
+            var isNull = Expression.Equal(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var notContains = Expression.Not(Expression.Call(toLower, "Contains", null, Expression.Constant(value.ToLower())));
+            return Expression.OrElse(isNull, notContains);
+        }
+
+        private Expression CreateStringStartsWithExpression(Expression property, string value)
+        {
+            var nullCheck = Expression.NotEqual(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var startsWith = Expression.Call(toLower, "StartsWith", null, Expression.Constant(value.ToLower()));
+            return Expression.AndAlso(nullCheck, startsWith);
+        }
+
+        private Expression CreateStringEndsWithExpression(Expression property, string value)
+        {
+            var nullCheck = Expression.NotEqual(property, Expression.Constant(null));
+            var toLower = Expression.Call(property, "ToLower", null);
+            var endsWith = Expression.Call(toLower, "EndsWith", null, Expression.Constant(value.ToLower()));
+            return Expression.AndAlso(nullCheck, endsWith);
         }
 
         private string ConvertRadzenSortToString(SortDescriptor sort)
