@@ -178,7 +178,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Parameter] public bool AllowPaging { get; set; } = true;
     [Parameter] public bool AllowSorting { get; set; } = true;
     [Parameter] public bool AllowFiltering { get; set; } = true;
-    [Parameter] public bool AllowColumnResize { get; set; } = true;
+    [Parameter] public bool AllowColumnResize { get; set; } = false;
     [Parameter] public int PageSize { get; set; } = 10;
     [Parameter] public int[] PageSizeOptions { get; set; } = { 10, 20, 50, 100, 1000 };
     [Parameter] public bool ShowPagingSummary { get; set; } = true;
@@ -1679,6 +1679,46 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     private int GetMainContentColumnSizeMD()
     {
         return HasViewSelector() ? 7 : 12;
+    }
+    
+    private string GetViewSelectorClass()
+    {
+        // En móvil: padding bottom para separar de la siguiente fila
+        return "d-flex pe-2 mb-sm-3 mb-md-0";
+    }
+    
+    private string GetMainContentClass()
+    {
+        // En móvil: sin padding left, en desktop mantener padding
+        return "ps-lg-2 ps-md-2 ps-sm-0";
+    }
+    
+    private Orientation GetStackOrientation()
+    {
+        // En móvil: vertical para mejor layout, en desktop: horizontal
+        return Orientation.Horizontal; // Siempre horizontal, pero con Wrap habilitado
+    }
+    
+    private AlignItems GetStackAlignment()
+    {
+        return AlignItems.Center;
+    }
+    
+    private JustifyContent GetStackJustification()
+    {
+        return JustifyContent.End;
+    }
+    
+    private string GetSearchContainerClass()
+    {
+        // En móvil: ancho completo, en desktop: shrink
+        return "search-container w-100 w-md-auto";
+    }
+    
+    private string GetButtonsContainerClass()
+    {
+        // En móvil: centrado y ancho completo, en desktop: pegado a la derecha
+        return "d-flex gap-2 justify-content-center justify-content-md-end w-100 w-md-auto mt-2 mt-md-0";
     }
     
     private bool AreColumnConfigsEqual(List<ColumnConfig<T>>? list1, List<ColumnConfig<T>>? list2)

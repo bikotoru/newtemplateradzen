@@ -8,11 +8,12 @@
 <div class="entity-table-container">
     @if (HasViewSelector() || ShowSearchBar || ShowExcelExport || ShowRefreshButton || ShowAutoRefresh)
     {
+        @* Responsive layout: en móvil cada sección ocupará toda la fila *@
         <RadzenRow class="mb-3" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
-            @* BLOQUE 1: Selector de Vista (4 columnas, pegado a la izquierda) *@
+            @* BLOQUE 1: Selector de Vista *@
             @if (HasViewSelector())
             {
-                <RadzenColumn SizeLG="4" SizeMD="5" SizeSM="12" Class="d-flex pe-2">
+                <RadzenColumn SizeLG="4" SizeMD="5" SizeSM="12" SizeXS="12" Class="@GetViewSelectorClass()">
                     <RadzenFormField Text="Vista" Variant="Variant.Outlined" Style="width: 100%;">
                         <RadzenDropDown Value="@CurrentView"
                                         Data="@ViewConfigurations"
@@ -23,16 +24,17 @@
                 </RadzenColumn>
             }
             
-            @* BLOQUE 2: Buscador + Botones (8 columnas, pegado a la derecha) *@
-            <RadzenColumn SizeLG="@GetMainContentColumnSize()" SizeMD="@GetMainContentColumnSizeMD()" SizeSM="12" Class="ps-2">
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" 
-                             JustifyContent="JustifyContent.End" Style="width: 100%;">
+            @* BLOQUE 2: Buscador + Botones *@
+            <RadzenColumn SizeLG="@GetMainContentColumnSize()" SizeMD="@GetMainContentColumnSizeMD()" SizeSM="12" SizeXS="12" Class="@GetMainContentClass()">
+                @* Layout responsivo: Horizontal en desktop, vertical en móvil *@
+                <RadzenStack Orientation="@GetStackOrientation()" AlignItems="@GetStackAlignment()" Gap="0.5rem" 
+                             JustifyContent="@GetStackJustification()" Style="width: 100%;" Wrap="FlexWrap.Wrap">
                     
-                    @* Buscador pegado a los botones *@
+                    @* Buscador *@
                     @if (ShowSearchBar)
                     {
-                        <div style="flex-shrink: 0;">
-                            <RadzenFormField Style="margin-bottom: 10px">
+                        <div class="@GetSearchContainerClass()">
+                            <RadzenFormField Style="margin-top: 10px; width: 100%;">
                                 <ChildContent>
                                     <RadzenTextBox @oninput=@(async arg => { searchTerm = arg.Value is null ? "" : arg.Value.ToString(); })
                                                    Placeholder="@SearchPlaceholder"
@@ -49,7 +51,7 @@
                             
                             @if (ShowSearchFieldsInput)
                             {
-                                <RadzenFormField class="mt-2">
+                                <RadzenFormField class="mt-2" Style="width: 100%;">
                                     <ChildContent>
                                         <RadzenTextBox @bind-Value="currentSearchFieldsInput"
                                                        Placeholder="Campos de búsqueda (ej: Nombre,Descripcion)"
@@ -65,8 +67,8 @@
                         </div>
                     }
                     
-                    @* Botones (lado derecho del bloque) *@
-                    <div class="d-flex gap-2 justify-content-end" style="flex-shrink: 0;">
+                    @* Botones *@
+                    <div class="@GetButtonsContainerClass()">
                     @if (ShowAutoRefresh)
                     {
                         <RadzenSplitButton Click="@(async (item) => await OnSplitButtonClick(item, "AutoRefresh"))"
@@ -236,5 +238,35 @@
     .entity-table-container {
         width: 100%;
         position: relative;
+    }
+    
+    /* Responsive styles para mejor layout en móvil */
+    .search-container {
+        min-width: 250px;
+    }
+    
+    @@media (max-width: 767px) {
+        .search-container {
+            min-width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        /* En móvil, el buscador toma todo el ancho */
+        .search-container .rz-formfield {
+            width: 100%;
+        }
+        
+        /* Botones centrados en móvil */
+        .entity-table-container .gap-2 {
+            flex-wrap: wrap;
+            justify-content: center !important;
+        }
+    }
+    
+    @@media (min-width: 768px) {
+        /* En desktop, mantener el layout original */
+        .search-container {
+            flex-shrink: 0;
+        }
     }
 </style>
