@@ -40,13 +40,15 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     // Column configuration variables
     private string currentPath = "";
     private bool hasLoadedColumnConfig = false;
+    
+    // Para detectar cambios en parámetros importantes
+    private List<ColumnConfig<T>>? _previousColumnConfigs;
+    private QueryBuilder<T>? _previousBaseQuery;
 
     // Search variables
     private List<string>? effectiveSearchFields;
     private string currentSearchFieldsInput = "";
     
-    // Column detection variables
-    private HashSet<string> detectedCustomColumnProperties = new HashSet<string>();
 
     #region Parameters - Data Loading
 
@@ -65,19 +67,9 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Parameter] public List<string>? IncludeProperties { get; set; }
     
     /// <summary>
-    /// Propiedades definidas en RenderFragment Columns que deben excluirse de ColumnConfigs
-    /// </summary>
-    [Parameter] public List<string>? RenderFragmentProperties { get; set; }
-    
-    /// <summary>
     /// Fuerza el ordenamiento por índice Order SI O SI (true por defecto)
     /// </summary>
     [Parameter] public bool ForceOrderByIndex { get; set; } = true;
-    
-    /// <summary>
-    /// Combina RenderFragment Columns con ColumnConfigs (false = solo usa uno u otro)
-    /// </summary>
-    [Parameter] public bool CombineColumnsAndConfigs { get; set; } = false;
     
     /// <summary>
     /// Habilita la optimización de Select para traer solo campos necesarios
@@ -227,13 +219,48 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        // Detectar si cambiaron los parámetros importantes que requieren recarga
+        var columnConfigsChanged = !AreColumnConfigsEqual(_previousColumnConfigs, ColumnConfigs);
+        var baseQueryChanged = _previousBaseQuery != BaseQuery;
+        
+        Console.WriteLine($"[EntityTable] OnParametersSetAsync ejecutado:");
+        Console.WriteLine($"[EntityTable]   hasLoadedColumnConfig: {hasLoadedColumnConfig}");
+        Console.WriteLine($"[EntityTable]   grid != null: {grid != null}");
+        Console.WriteLine($"[EntityTable]   columnConfigsChanged: {columnConfigsChanged}");
+        Console.WriteLine($"[EntityTable]   baseQueryChanged: {baseQueryChanged}");
+        Console.WriteLine($"[EntityTable]   ColumnConfigs count: {ColumnConfigs?.Count ?? 0}");
+        Console.WriteLine($"[EntityTable]   _previousColumnConfigs count: {_previousColumnConfigs?.Count ?? 0}");
+        
+        if (ColumnConfigs != null)
+        {
+            Console.WriteLine("[EntityTable]   ColumnConfigs actuales:");
+            foreach (var col in ColumnConfigs)
+            {
+                Console.WriteLine($"[EntityTable]     - {col.Property} ({col.Title}) - Visible: {col.Visible}, Order: {col.Order}");
+            }
+        }
+        
+        if (hasLoadedColumnConfig && grid != null && (columnConfigsChanged || baseQueryChanged))
+        {
+            Console.WriteLine("[EntityTable] ¡Cambios detectados! Ejecutando Reload()");
+            await Reload();
+        }
+        else
+        {
+            Console.WriteLine("[EntityTable] No hay cambios o condiciones no cumplen para reload");
+        }
+        
+        // Actualizar referencias previas
+        _previousColumnConfigs = ColumnConfigs?.ToList();
+        _previousBaseQuery = BaseQuery;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !hasLoadedColumnConfig)
         {
-            // Detectar columnas personalizadas definidas en RenderFragment <Columns>
-            DetectCustomColumnProperties();
-            
             // Cargar configuración de columnas desde localStorage después del primer render
             await ApplyStoredColumnConfiguration();
             hasLoadedColumnConfig = true;
@@ -293,6 +320,15 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         Console.WriteLine($"[DEBUG] ==> LoadData INICIO #{callId} con searchTerm: '{searchTerm}'");
         Console.WriteLine($"[DEBUG] ==> #{callId} ColumnConfigs Count: {ColumnConfigs?.Count ?? 0}");
         Console.WriteLine($"[DEBUG] ==> #{callId} isLoading: {isLoading}");
+        
+        if (ColumnConfigs != null)
+        {
+            Console.WriteLine($"[DEBUG] ==> #{callId} ColumnConfigs en LoadData:");
+            foreach (var col in ColumnConfigs.OrderBy(c => c.Order ?? 999))
+            {
+                Console.WriteLine($"[DEBUG] ==> #{callId}   - {col.Property} ({col.Title}) - Visible: {col.Visible}, Order: {col.Order}");
+            }
+        }
         
         if (isLoading)
         {
@@ -1302,8 +1338,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                     {
                         Property = column.Property,
                         DisplayName = column.Title ?? GetDisplayName(column.Property),
-                        IsVisible = column.Visible,
-                        ColumnType = ColumnSourceType.RenderFragment
+                        IsVisible = column.Visible
                     });
                 }
             }
@@ -1317,8 +1352,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                 {
                     Property = config.Property,
                     DisplayName = config.Title ?? GetDisplayName(config.Property),
-                    IsVisible = config.Visible,
-                    ColumnType = ColumnSourceType.ColumnConfig
+                    IsVisible = config.Visible
                 });
             }
         }
@@ -1332,8 +1366,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                 {
                     Property = prop.Name,
                     DisplayName = GetDisplayName(prop.Name),
-                    IsVisible = true,
-                    ColumnType = ColumnSourceType.Auto
+                    IsVisible = true
                 });
             }
         }
@@ -1606,152 +1639,6 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     #endregion
 
-    #region Private Methods - Hybrid Column Management
-
-    /// <summary>
-    /// Detecta automáticamente qué columnas están definidas en RenderFragment Columns
-    /// al inspeccionar las columnas del grid después del render
-    /// </summary>
-    private void DetectCustomColumnProperties()
-    {
-        detectedCustomColumnProperties.Clear();
-        
-        if (grid?.ColumnsCollection == null) return;
-
-        foreach (var column in grid.ColumnsCollection)
-        {
-            if (string.IsNullOrWhiteSpace(column.Property)) continue;
-
-            // Detectar si es una columna "personalizada" basándose en:
-            // 1. Tipo de columna diferente al genérico
-            // 2. Tiene templates definidos
-            // 3. Es una columna especializada de Radzen
-            if (IsCustomColumn(column))
-            {
-                detectedCustomColumnProperties.Add(column.Property);
-                Console.WriteLine($"[DEBUG] Detectada columna personalizada: {column.Property} (Tipo: {column.GetType().Name})");
-            }
-        }
-        
-        Console.WriteLine($"[DEBUG] Total columnas personalizadas detectadas: {detectedCustomColumnProperties.Count}");
-    }
-    
-    /// <summary>
-    /// Verifica si una columna es "personalizada" (definida en RenderFragment Columns)
-    /// basándose en su tipo y propiedades
-    /// </summary>
-    private bool IsCustomColumn(object column)
-    {
-        var columnType = column.GetType();
-        var typeName = columnType.Name;
-        
-        // 1. Columnas especiales de Radzen (por nombre de tipo)
-        if (typeName.Contains("DropDown", StringComparison.OrdinalIgnoreCase) ||
-            typeName.Contains("Template", StringComparison.OrdinalIgnoreCase) ||
-            typeName.Contains("Numeric", StringComparison.OrdinalIgnoreCase) ||
-            typeName.Contains("Date", StringComparison.OrdinalIgnoreCase) ||
-            typeName.Contains("Boolean", StringComparison.OrdinalIgnoreCase) ||
-            typeName.Contains("Link", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        // 2. Columnas con templates definidos (usar reflexión para acceder a las propiedades)
-        try
-        {
-            var templateProp = columnType.GetProperty("Template");
-            var filterTemplateProp = columnType.GetProperty("FilterTemplate");
-            var editTemplateProp = columnType.GetProperty("EditTemplate");
-            
-            if ((templateProp?.GetValue(column) != null) ||
-                (filterTemplateProp?.GetValue(column) != null) ||
-                (editTemplateProp?.GetValue(column) != null))
-            {
-                return true;
-            }
-        }
-        catch
-        {
-            // Si hay error accediendo a las propiedades, continuar con otros métodos
-        }
-
-        // 3. Si no es el tipo base genérico estándar (esto es más estricto)
-        // Comentado por ahora para evitar falsos positivos
-        // if (columnType != typeof(RadzenDataGridColumn<T>))
-        // {
-        //     return true;
-        // }
-
-        return false;
-    }
-    
-    /// <summary>
-    /// Verifica si hay una columna personalizada detectada para la propiedad dada
-    /// </summary>
-    private bool HasCustomColumnForProperty(string property)
-    {
-        return detectedCustomColumnProperties.Contains(property);
-    }
-
-    /// <summary>
-    /// Obtiene la configuración de columnas efectiva combinando RenderFragment y ColumnConfigs
-    /// Regla: Si una propiedad está definida en RenderFragment Columns, NO se incluye desde ColumnConfigs
-    /// </summary>
-    private List<ColumnConfig<T>> GetEffectiveColumnConfigs()
-    {
-        var effectiveConfigs = new List<ColumnConfig<T>>();
-        
-        // Si no hay ColumnConfigs, retornar lista vacía
-        if (ColumnConfigs == null || !ColumnConfigs.Any())
-            return effectiveConfigs;
-            
-        // Si no hay RenderFragmentProperties definidas, retornar todas las ColumnConfigs
-        if (RenderFragmentProperties == null || !RenderFragmentProperties.Any())
-        {
-            return ColumnConfigs.ToList();
-        }
-        
-        // Filtrar ColumnConfigs excluyendo las propiedades ya definidas en RenderFragment
-        effectiveConfigs = ColumnConfigs
-            .Where(config => !RenderFragmentProperties.Contains(config.Property))
-            .ToList();
-            
-        return effectiveConfigs;
-    }
-    
-    /// <summary>
-    /// Verifica si debe usar la lógica de combinación de columnas
-    /// </summary>
-    private bool ShouldCombineColumns()
-    {
-        return CombineColumnsAndConfigs && 
-               Columns != null && 
-               ColumnConfigs != null && 
-               ColumnConfigs.Any();
-    }
-    
-    /// <summary>
-    /// Obtiene las configuraciones finales ordenadas por índice SI O SI si ForceOrderByIndex es true
-    /// </summary>
-    private List<ColumnConfig<T>> GetFinalOrderedConfigs()
-    {
-        var configs = GetEffectiveColumnConfigs();
-        
-        if (!configs.Any())
-            return configs;
-            
-        if (ForceOrderByIndex)
-        {
-            // Ordenar por Order SI O SI, asignando 999 como valor por defecto
-            return configs.OrderBy(c => c.Order ?? 999).ToList();
-        }
-        
-        return configs;
-    }
-    
-
-    #endregion
-
     #region Private Methods - View Management
 
     private bool HasViewSelector()
@@ -1769,9 +1656,17 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private async Task OnViewChangedInternal(object args)
     {
+        Console.WriteLine($"[EntityTable] OnViewChangedInternal llamado con args: {args?.GetType().Name}");
+        Console.WriteLine($"[EntityTable] OnViewChanged.HasDelegate: {OnViewChanged.HasDelegate}");
+        
         if (OnViewChanged.HasDelegate && args is IViewConfiguration<T> viewConfig)
         {
+            Console.WriteLine($"[EntityTable] Invocando OnViewChanged con vista: {viewConfig.DisplayName}");
             await OnViewChanged.InvokeAsync(viewConfig);
+        }
+        else
+        {
+            Console.WriteLine($"[EntityTable] ERROR: No se puede invocar OnViewChanged. HasDelegate: {OnViewChanged.HasDelegate}, args es IViewConfiguration: {args is IViewConfiguration<T>}");
         }
     }
 
@@ -1784,6 +1679,29 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     private int GetMainContentColumnSizeMD()
     {
         return HasViewSelector() ? 7 : 12;
+    }
+    
+    private bool AreColumnConfigsEqual(List<ColumnConfig<T>>? list1, List<ColumnConfig<T>>? list2)
+    {
+        if (list1 == null && list2 == null) return true;
+        if (list1 == null || list2 == null) return false;
+        if (list1.Count != list2.Count) return false;
+        
+        for (int i = 0; i < list1.Count; i++)
+        {
+            var col1 = list1[i];
+            var col2 = list2[i];
+            
+            if (col1.Property != col2.Property ||
+                col1.Title != col2.Title ||
+                col1.Visible != col2.Visible ||
+                col1.Order != col2.Order)
+            {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     #endregion
@@ -1806,24 +1724,8 @@ public class ColumnConfig<T>
     public bool Visible { get; set; } = true;
     public int? Order { get; set; }
     public RenderFragment<T>? Template { get; set; }
-    
-    /// <summary>
-    /// Indica el origen de la columna: Auto, ColumnConfig, o RenderFragment
-    /// </summary>
-    public ColumnSourceType SourceType { get; set; } = ColumnSourceType.ColumnConfig;
-    
-    /// <summary>
-    /// Si está definida en RenderFragment Columns, se excluye de ColumnConfigs automáticamente
-    /// </summary>
-    public bool IsDefinedInRenderFragment { get; set; } = false;
 }
 
-public enum ColumnSourceType
-{
-    Auto,           // Generada automáticamente por reflexión
-    ColumnConfig,   // Definida en ColumnConfigs
-    RenderFragment  // Definida en RenderFragment Columns
-}
 
 public class ExcelExportContext<T> where T : class
 {
@@ -1871,8 +1773,7 @@ public class ViewConfiguration<T> : IViewConfiguration<T> where T : class
     public QueryBuilder<T>? QueryBuilder { get; set; }
 
     /// <summary>
-    /// Configuración de columnas que se mostrarán SOLO si no están definidas en el RenderFragment Columns
-    /// Las columnas se ordenarán por su índice Order SI O SI
+    /// Configuración de columnas que se mostrarán ordenadas por su índice Order
     /// </summary>
     public List<ColumnConfig<T>>? ColumnConfigs { get; set; }
 

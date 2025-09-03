@@ -14,10 +14,9 @@
             {
                 <RadzenColumn SizeLG="4" SizeMD="5" SizeSM="12" Class="d-flex pe-2">
                     <RadzenFormField Text="Vista" Variant="Variant.Outlined" Style="width: 100%;">
-                        <RadzenDropDown Value="@GetCurrentViewDisplayName()"
+                        <RadzenDropDown Value="@CurrentView"
                                         Data="@ViewConfigurations"
                                         TextProperty="@ViewDisplayNameProperty"
-                                        ValueProperty="@ViewDisplayNameProperty"
                                         Change="@OnViewChangedInternal"
                                         />
                     </RadzenFormField>
@@ -179,18 +178,11 @@
                 </RadzenDataGridColumn>
             }
 
-            @if (ShouldCombineColumns())
+            @if (ColumnConfigs != null && ColumnConfigs.Any())
             {
-                @* Modo híbrido: Renderiza TODAS las columnas en el orden definido por ColumnConfigs *@
+                @* Renderizar columnas desde ColumnConfigs (ordenadas por Order) *@
                 @foreach (var col in ColumnConfigs.OrderBy(c => c.Order ?? 999))
                 {
-                    @* Si esta columna tiene renderizado personalizado en Columns, no renderizarla aquí *@
-                    @if (RenderFragmentProperties?.Contains(col.Property) == true || HasCustomColumnForProperty(col.Property))
-                    {
-                        @* Esta columna se renderizará desde Columns en el orden correcto *@
-                        continue;
-                    }
-                    
                     @if (col.Template != null)
                     {
                         <RadzenDataGridColumn TItem="T"
@@ -219,53 +211,12 @@
                                               Frozen="@col.Frozen"
                                               Visible="@col.Visible" />
                     }
-                }
-                
-                @* Ahora renderizar las columnas personalizadas *@
-                @if (Columns != null)
-                {
-                    @Columns
                 }
             }
             else if (Columns != null)
             {
-                @* Modo clásico: Solo RenderFragment Columns *@
+                @* Fallback: RenderFragment Columns si no hay ColumnConfigs *@
                 @Columns
-            }
-            else if (ColumnConfigs != null && ColumnConfigs.Any())
-            {
-                @* Modo clásico: Solo ColumnConfigs ordenadas por índice *@
-                @foreach (var col in GetFinalOrderedConfigs())
-                {
-                    @if (col.Template != null)
-                    {
-                        <RadzenDataGridColumn TItem="T"
-                                              Property="@col.Property"
-                                              Title="@col.Title"
-                                              Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
-                                              TextAlign="@col.TextAlign"
-                                              Frozen="@col.Frozen"
-                                              Visible="@col.Visible">
-                            <Template Context="item">
-                                @col.Template(item)
-                            </Template>
-                        </RadzenDataGridColumn>
-                    }
-                    else
-                    {
-                        <RadzenDataGridColumn TItem="T"
-                                              Property="@col.Property"
-                                              Title="@col.Title"
-                                              Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
-                                              TextAlign="@col.TextAlign"
-                                              Frozen="@col.Frozen"
-                                              Visible="@col.Visible" />
-                    }
-                }
             }
             else
             {

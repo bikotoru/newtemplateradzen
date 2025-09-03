@@ -23,8 +23,28 @@ public partial class CategoriaList : ComponentBase
     
     protected override void OnInitialized()
     {
+        Console.WriteLine("[CategoriaList] OnInitialized iniciado");
+        
         viewManager = new CategoriaViewManager(QueryService);
         currentView = viewManager.GetDefaultView();
+        
+        Console.WriteLine($"[CategoriaList] ViewManager creado con {viewManager.ViewConfigurations.Count} vistas:");
+        foreach (var view in viewManager.ViewConfigurations)
+        {
+            Console.WriteLine($"[CategoriaList]   Vista: {view.DisplayName} - {view.ColumnConfigs?.Count ?? 0} columnas");
+        }
+        
+        Console.WriteLine($"[CategoriaList] Vista por defecto: {currentView?.DisplayName}");
+        Console.WriteLine($"[CategoriaList] Vista por defecto tiene {currentView?.ColumnConfigs?.Count ?? 0} columnas:");
+        
+        if (currentView?.ColumnConfigs != null)
+        {
+            foreach (var col in currentView.ColumnConfigs)
+            {
+                Console.WriteLine($"[CategoriaList]   - {col.Property} ({col.Title}) - Visible: {col.Visible}, Order: {col.Order}");
+            }
+        }
+        
         base.OnInitialized();
     }
 
@@ -53,12 +73,32 @@ public partial class CategoriaList : ComponentBase
     
     private async Task OnViewChanged(IViewConfiguration<CategoriaEntity> selectedView)
     {
+        Console.WriteLine($"[CategoriaList] OnViewChanged llamado con vista: {selectedView?.DisplayName}");
+        Console.WriteLine($"[CategoriaList] Vista anterior: {currentView?.DisplayName}");
+        
         if (selectedView is ViewConfiguration<CategoriaEntity> viewConfig)
         {
+            var previousView = currentView?.DisplayName;
             currentView = viewConfig;
+            
+            Console.WriteLine($"[CategoriaList] Vista cambiada de '{previousView}' a '{currentView.DisplayName}'");
+            Console.WriteLine($"[CategoriaList] Nueva vista tiene {currentView.ColumnConfigs?.Count ?? 0} columnas:");
+            
+            if (currentView.ColumnConfigs != null)
+            {
+                foreach (var col in currentView.ColumnConfigs)
+                {
+                    Console.WriteLine($"[CategoriaList]   - {col.Property} ({col.Title}) - Visible: {col.Visible}, Order: {col.Order}");
+                }
+            }
             
             // Forzar reconstrucción completa del grid
             await InvokeAsync(StateHasChanged);
+            Console.WriteLine("[CategoriaList] StateHasChanged ejecutado");
+        }
+        else
+        {
+            Console.WriteLine("[CategoriaList] ERROR: selectedView no es ViewConfiguration<CategoriaEntity>");
         }
     }
     

@@ -1,6 +1,8 @@
 using Frontend.Components.Base.Tables;
 using Frontend.Services;
 using Radzen;
+using Radzen.Blazor;
+using Microsoft.AspNetCore.Components.Rendering;
 
 namespace Frontend.Modules.Categoria
 {
@@ -54,7 +56,24 @@ namespace Frontend.Modules.Categoria
                         Filterable = false,
                         TextAlign = TextAlign.Center,
                         Visible = true,
-                        Order = 3
+                        Order = 3,
+                        Template = categoria => builder =>
+                        {
+                            if (categoria.Active)
+                            {
+                                builder.OpenComponent<RadzenBadge>(0);
+                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Success);
+                                builder.AddAttribute(2, "Text", "Activo");
+                                builder.CloseComponent();
+                            }
+                            else
+                            {
+                                builder.OpenComponent<RadzenBadge>(0);
+                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Danger);
+                                builder.AddAttribute(2, "Text", "Inactivo");
+                                builder.CloseComponent();
+                            }
+                        }
                     },
                       new ColumnConfig<Shared.Models.Entities.Categoria>
                     {
@@ -133,7 +152,24 @@ namespace Frontend.Modules.Categoria
                         Filterable = false,
                         TextAlign = TextAlign.Center,
                         Visible = true,
-                        Order = 3
+                        Order = 3,
+                        Template = categoria => builder =>
+                        {
+                            if (categoria.Active)
+                            {
+                                builder.OpenComponent<RadzenBadge>(0);
+                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Success);
+                                builder.AddAttribute(2, "Text", "Activo");
+                                builder.CloseComponent();
+                            }
+                            else
+                            {
+                                builder.OpenComponent<RadzenBadge>(0);
+                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Danger);
+                                builder.AddAttribute(2, "Text", "Inactivo");
+                                builder.CloseComponent();
+                            }
+                        }
                     },
                     new ColumnConfig<Shared.Models.Entities.Categoria>
                     {

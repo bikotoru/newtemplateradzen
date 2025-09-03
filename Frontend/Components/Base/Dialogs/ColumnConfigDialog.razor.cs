@@ -23,8 +23,7 @@ public partial class ColumnConfigDialog : ComponentBase
         {
             Property = item.Property,
             DisplayName = item.DisplayName,
-            IsVisible = item.IsVisible,
-            ColumnType = item.ColumnType
+            IsVisible = item.IsVisible
         }).ToList();
     }
 
@@ -99,27 +98,6 @@ public partial class ColumnConfigDialog : ComponentBase
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", storageKey, json);
     }
 
-    private string GetColumnTypeBadge(ColumnSourceType columnType)
-    {
-        return columnType switch
-        {
-            ColumnSourceType.RenderFragment => "",
-            ColumnSourceType.ColumnConfig => "Config",
-            ColumnSourceType.Auto => "Auto",
-            _ => "Unknown"
-        };
-    }
-
-    private BadgeStyle GetColumnTypeBadgeStyle(ColumnSourceType columnType)
-    {
-        return columnType switch
-        {
-            ColumnSourceType.RenderFragment => BadgeStyle.Info,
-            ColumnSourceType.ColumnConfig => BadgeStyle.Secondary,
-            ColumnSourceType.Auto => BadgeStyle.Light,
-            _ => BadgeStyle.Light
-        };
-    }
 
     private string GetColumnItemClass(ColumnVisibilityItem item)
     {
@@ -134,7 +112,4 @@ public class ColumnVisibilityItem
     public string Property { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public bool IsVisible { get; set; } = true;
-    public ColumnSourceType ColumnType { get; set; }
 }
-
-// Enum movido a EntityTable.razor.cs para evitar duplicación

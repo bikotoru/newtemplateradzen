@@ -27,18 +27,6 @@
                                     @item.Property
                                 </RadzenText>
                             }
-                            @{
-                                var badgeText = GetColumnTypeBadge(item.ColumnType);
-                            }
-                            @if (!string.IsNullOrEmpty(badgeText))
-                            {
-                                <div class="column-type-badge">
-                                    <RadzenBadge Text="@badgeText" 
-                                               BadgeStyle="@GetColumnTypeBadgeStyle(item.ColumnType)"
-                                               Variant="Variant.Text" 
-                                               class="column-type-indicator" />
-                                </div>
-                            }
                         </div>
                     </RadzenColumn>
                 </RadzenRow>
