@@ -2,7 +2,6 @@
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base.Tables
 @using Shared.Models.Entities
-@using Frontend.Modules.Categoria.Models
 @using Radzen
 
 <PageTitle>Categorías</PageTitle>
@@ -27,12 +26,11 @@
                      ForceOrderByIndex="true"
                      EnableSelectOptimization="true"
                      SelectOnlyVisibleColumns="true"
-                     ViewConfigurations="@ViewConfigurationsAsObjects"
+                     ViewConfigurations="@ViewConfigurationsTyped"
                      CurrentView="@currentView"
                      OnViewChanged="@OnViewChanged"
                      ViewDisplayNameProperty="DisplayName"
                      CombineColumnsAndConfigs="true"
-                     RenderFragmentProperties="@(new List<string> { "Active" })"
                      OnEdit="@HandleEdit"
                      OnDelete="@HandleDelete">
             

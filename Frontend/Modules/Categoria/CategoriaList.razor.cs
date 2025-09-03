@@ -3,7 +3,6 @@ using Frontend.Components.Base.Tables;
 using Shared.Models.Entities;
 using Frontend.Services;
 using Radzen;
-using Frontend.Modules.Categoria.Models;
 using CategoriaEntity = Shared.Models.Entities.Categoria;
 
 namespace Frontend.Modules.Categoria;
@@ -17,10 +16,10 @@ public partial class CategoriaList : ComponentBase
 
     private EntityTable<CategoriaEntity>? entityTable;
     private CategoriaViewManager viewManager = null!;
-    private CategoriaViewConfig currentView = null!;
+    private ViewConfiguration<CategoriaEntity> currentView = null!;
     
-    // Propiedad para EntityTable
-    private List<object> ViewConfigurationsAsObjects => viewManager?.ViewConfigurations?.Cast<object>().ToList() ?? new List<object>();
+    // Propiedad para EntityTable - ahora es type-safe
+    private List<IViewConfiguration<CategoriaEntity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<CategoriaEntity>>().ToList();
     
     protected override void OnInitialized()
     {
@@ -52,15 +51,11 @@ public partial class CategoriaList : ComponentBase
         }
     }
     
-    private async Task OnViewChanged(object args)
+    private async Task OnViewChanged(IViewConfiguration<CategoriaEntity> selectedView)
     {
-        var viewName = args?.ToString();
-        if (string.IsNullOrEmpty(viewName)) return;
-        
-        var selectedView = viewManager.GetViewByName(viewName);
-        if (selectedView != null)
+        if (selectedView is ViewConfiguration<CategoriaEntity> viewConfig)
         {
-            currentView = selectedView;
+            currentView = viewConfig;
             
             // Forzar reconstrucción completa del grid
             await InvokeAsync(StateHasChanged);

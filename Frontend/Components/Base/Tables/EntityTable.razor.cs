@@ -44,6 +44,9 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     // Search variables
     private List<string>? effectiveSearchFields;
     private string currentSearchFieldsInput = "";
+    
+    // Column detection variables
+    private HashSet<string> detectedCustomColumnProperties = new HashSet<string>();
 
     #region Parameters - Data Loading
 
@@ -98,17 +101,17 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     /// <summary>
     /// Lista de configuraciones de vista disponibles
     /// </summary>
-    [Parameter] public List<object>? ViewConfigurations { get; set; }
+    [Parameter] public List<IViewConfiguration<T>>? ViewConfigurations { get; set; }
     
     /// <summary>
     /// Vista actualmente seleccionada
     /// </summary>
-    [Parameter] public object? CurrentView { get; set; }
+    [Parameter] public IViewConfiguration<T>? CurrentView { get; set; }
     
     /// <summary>
     /// Callback cuando cambia la vista seleccionada
     /// </summary>
-    [Parameter] public EventCallback<object> OnViewChanged { get; set; }
+    [Parameter] public EventCallback<IViewConfiguration<T>> OnViewChanged { get; set; }
     
     /// <summary>
     /// Propiedad para obtener el DisplayName de la vista
@@ -228,6 +231,9 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     {
         if (firstRender && !hasLoadedColumnConfig)
         {
+            // Detectar columnas personalizadas definidas en RenderFragment <Columns>
+            DetectCustomColumnProperties();
+            
             // Cargar configuración de columnas desde localStorage después del primer render
             await ApplyStoredColumnConfiguration();
             hasLoadedColumnConfig = true;
@@ -354,6 +360,8 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
             {
                 await OnAfterLoadData.InvokeAsync(args);
             }
+
+            var test = grid.ColumnsCollection;
         }
         catch (Exception ex)
         {
@@ -1601,6 +1609,91 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     #region Private Methods - Hybrid Column Management
 
     /// <summary>
+    /// Detecta automáticamente qué columnas están definidas en RenderFragment Columns
+    /// al inspeccionar las columnas del grid después del render
+    /// </summary>
+    private void DetectCustomColumnProperties()
+    {
+        detectedCustomColumnProperties.Clear();
+        
+        if (grid?.ColumnsCollection == null) return;
+
+        foreach (var column in grid.ColumnsCollection)
+        {
+            if (string.IsNullOrWhiteSpace(column.Property)) continue;
+
+            // Detectar si es una columna "personalizada" basándose en:
+            // 1. Tipo de columna diferente al genérico
+            // 2. Tiene templates definidos
+            // 3. Es una columna especializada de Radzen
+            if (IsCustomColumn(column))
+            {
+                detectedCustomColumnProperties.Add(column.Property);
+                Console.WriteLine($"[DEBUG] Detectada columna personalizada: {column.Property} (Tipo: {column.GetType().Name})");
+            }
+        }
+        
+        Console.WriteLine($"[DEBUG] Total columnas personalizadas detectadas: {detectedCustomColumnProperties.Count}");
+    }
+    
+    /// <summary>
+    /// Verifica si una columna es "personalizada" (definida en RenderFragment Columns)
+    /// basándose en su tipo y propiedades
+    /// </summary>
+    private bool IsCustomColumn(object column)
+    {
+        var columnType = column.GetType();
+        var typeName = columnType.Name;
+        
+        // 1. Columnas especiales de Radzen (por nombre de tipo)
+        if (typeName.Contains("DropDown", StringComparison.OrdinalIgnoreCase) ||
+            typeName.Contains("Template", StringComparison.OrdinalIgnoreCase) ||
+            typeName.Contains("Numeric", StringComparison.OrdinalIgnoreCase) ||
+            typeName.Contains("Date", StringComparison.OrdinalIgnoreCase) ||
+            typeName.Contains("Boolean", StringComparison.OrdinalIgnoreCase) ||
+            typeName.Contains("Link", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // 2. Columnas con templates definidos (usar reflexión para acceder a las propiedades)
+        try
+        {
+            var templateProp = columnType.GetProperty("Template");
+            var filterTemplateProp = columnType.GetProperty("FilterTemplate");
+            var editTemplateProp = columnType.GetProperty("EditTemplate");
+            
+            if ((templateProp?.GetValue(column) != null) ||
+                (filterTemplateProp?.GetValue(column) != null) ||
+                (editTemplateProp?.GetValue(column) != null))
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            // Si hay error accediendo a las propiedades, continuar con otros métodos
+        }
+
+        // 3. Si no es el tipo base genérico estándar (esto es más estricto)
+        // Comentado por ahora para evitar falsos positivos
+        // if (columnType != typeof(RadzenDataGridColumn<T>))
+        // {
+        //     return true;
+        // }
+
+        return false;
+    }
+    
+    /// <summary>
+    /// Verifica si hay una columna personalizada detectada para la propiedad dada
+    /// </summary>
+    private bool HasCustomColumnForProperty(string property)
+    {
+        return detectedCustomColumnProperties.Contains(property);
+    }
+
+    /// <summary>
     /// Obtiene la configuración de columnas efectiva combinando RenderFragment y ColumnConfigs
     /// Regla: Si una propiedad está definida en RenderFragment Columns, NO se incluye desde ColumnConfigs
     /// </summary>
@@ -1676,9 +1769,9 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     private async Task OnViewChangedInternal(object args)
     {
-        if (OnViewChanged.HasDelegate)
+        if (OnViewChanged.HasDelegate && args is IViewConfiguration<T> viewConfig)
         {
-            await OnViewChanged.InvokeAsync(args);
+            await OnViewChanged.InvokeAsync(viewConfig);
         }
     }
 
@@ -1750,4 +1843,49 @@ public enum SearchOperator
     Equals,      // Búsqueda exacta
     StartsWith,  // Comienza con
     EndsWith     // Termina con
+}
+
+/// <summary>
+/// Interfaz base para configuraciones de vista type-safe
+/// </summary>
+public interface IViewConfiguration<T> where T : class
+{
+    string DisplayName { get; set; }
+    QueryBuilder<T>? QueryBuilder { get; set; }
+    List<ColumnConfig<T>>? ColumnConfigs { get; set; }
+}
+
+/// <summary>
+/// Implementación base genérica para configuraciones de vista
+/// </summary>
+public class ViewConfiguration<T> : IViewConfiguration<T> where T : class
+{
+    /// <summary>
+    /// Nombre descriptivo de la vista/configuración
+    /// </summary>
+    public string DisplayName { get; set; } = "";
+
+    /// <summary>
+    /// QueryBuilder que define la consulta base con Select incluido
+    /// </summary>
+    public QueryBuilder<T>? QueryBuilder { get; set; }
+
+    /// <summary>
+    /// Configuración de columnas que se mostrarán SOLO si no están definidas en el RenderFragment Columns
+    /// Las columnas se ordenarán por su índice Order SI O SI
+    /// </summary>
+    public List<ColumnConfig<T>>? ColumnConfigs { get; set; }
+
+    public ViewConfiguration()
+    {
+        // QueryBuilder se inicializará cuando se tenga acceso al API service
+        QueryBuilder = null!;
+    }
+
+    public ViewConfiguration(string displayName, QueryBuilder<T>? queryBuilder, List<ColumnConfig<T>>? columnConfigs = null)
+    {
+        DisplayName = displayName;
+        QueryBuilder = queryBuilder;
+        ColumnConfigs = columnConfigs;
+    }
 }

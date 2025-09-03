@@ -1,6 +1,5 @@
 using Frontend.Components.Base.Tables;
 using Frontend.Services;
-using Frontend.Modules.Categoria.Models;
 using Radzen;
 
 namespace Frontend.Modules.Categoria
@@ -10,7 +9,7 @@ namespace Frontend.Modules.Categoria
         /// <summary>
         /// Lista de configuraciones de vista predefinidas
         /// </summary>
-        public List<CategoriaViewConfig> ViewConfigurations { get; private set; } = new();
+        public List<ViewConfiguration<Shared.Models.Entities.Categoria>> ViewConfigurations { get; private set; } = new();
         
         private readonly QueryService? _queryService;
 
@@ -26,7 +25,7 @@ namespace Frontend.Modules.Categoria
         private void InitializeDefaultViews()
         {
             // Vista completa por defecto
-            ViewConfigurations.Add(new CategoriaViewConfig
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
                 DisplayName = "Vista Completa",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
@@ -72,7 +71,7 @@ namespace Frontend.Modules.Categoria
             });
 
             // Vista compacta solo con nombre
-            ViewConfigurations.Add(new CategoriaViewConfig
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
                 DisplayName = "Vista Compacta",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
@@ -95,7 +94,7 @@ namespace Frontend.Modules.Categoria
             });
 
             // Vista solo activos con descripción
-            ViewConfigurations.Add(new CategoriaViewConfig
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
                 DisplayName = "Solo Activos Detallado",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
@@ -151,7 +150,7 @@ namespace Frontend.Modules.Categoria
             });
 
             // Vista personalizada adicional para demostrar el selector
-            ViewConfigurations.Add(new CategoriaViewConfig
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
                 DisplayName = "Solo Nombres",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
@@ -174,7 +173,7 @@ namespace Frontend.Modules.Categoria
             });
             
             // Vista con todas las columnas incluyendo fechas
-            ViewConfigurations.Add(new CategoriaViewConfig
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
                 DisplayName = "Vista Administrativa",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
@@ -241,7 +240,7 @@ namespace Frontend.Modules.Categoria
         /// <summary>
         /// Obtiene una configuración por nombre
         /// </summary>
-        public CategoriaViewConfig? GetViewByName(string displayName)
+        public ViewConfiguration<Shared.Models.Entities.Categoria>? GetViewByName(string displayName)
         {
             return ViewConfigurations.FirstOrDefault(v => v.DisplayName == displayName);
         }
@@ -249,9 +248,9 @@ namespace Frontend.Modules.Categoria
         /// <summary>
         /// Obtiene la vista por defecto
         /// </summary>
-        public CategoriaViewConfig GetDefaultView()
+        public ViewConfiguration<Shared.Models.Entities.Categoria> GetDefaultView()
         {
-            return ViewConfigurations.FirstOrDefault() ?? new CategoriaViewConfig("Default", _queryService?.For<Shared.Models.Entities.Categoria>() ?? null!);
+            return ViewConfigurations.FirstOrDefault() ?? new ViewConfiguration<Shared.Models.Entities.Categoria>("Default", _queryService?.For<Shared.Models.Entities.Categoria>() ?? null!);
         }
     }
 }

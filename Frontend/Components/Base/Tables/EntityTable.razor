@@ -181,10 +181,16 @@
 
             @if (ShouldCombineColumns())
             {
-                @* Modo híbrido: Renderiza columnas en orden correcto *@
-                @* Primero las columnas nativas hasta antes de Active *@
-                @foreach (var col in ColumnConfigs.Where(c => c.Order < 3).OrderBy(c => c.Order ?? 999))
+                @* Modo híbrido: Renderiza TODAS las columnas en el orden definido por ColumnConfigs *@
+                @foreach (var col in ColumnConfigs.OrderBy(c => c.Order ?? 999))
                 {
+                    @* Si esta columna tiene renderizado personalizado en Columns, no renderizarla aquí *@
+                    @if (RenderFragmentProperties?.Contains(col.Property) == true || HasCustomColumnForProperty(col.Property))
+                    {
+                        @* Esta columna se renderizará desde Columns en el orden correcto *@
+                        continue;
+                    }
+                    
                     @if (col.Template != null)
                     {
                         <RadzenDataGridColumn TItem="T"
@@ -215,43 +221,10 @@
                     }
                 }
                 
-                @* Luego las columnas personalizadas (Active con orden 3) *@
+                @* Ahora renderizar las columnas personalizadas *@
                 @if (Columns != null)
                 {
                     @Columns
-                }
-                
-                @* Finalmente las columnas nativas después de Active *@
-                @foreach (var col in ColumnConfigs.Where(c => c.Order > 3).OrderBy(c => c.Order ?? 999))
-                {
-                    @if (col.Template != null)
-                    {
-                        <RadzenDataGridColumn TItem="T"
-                                              Property="@col.Property"
-                                              Title="@col.Title"
-                                              Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
-                                              TextAlign="@col.TextAlign"
-                                              Frozen="@col.Frozen"
-                                              Visible="@col.Visible">
-                            <Template Context="item">
-                                @col.Template(item)
-                            </Template>
-                        </RadzenDataGridColumn>
-                    }
-                    else
-                    {
-                        <RadzenDataGridColumn TItem="T"
-                                              Property="@col.Property"
-                                              Title="@col.Title"
-                                              Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
-                                              TextAlign="@col.TextAlign"
-                                              Frozen="@col.Frozen"
-                                              Visible="@col.Visible" />
-                    }
                 }
             }
             else if (Columns != null)
