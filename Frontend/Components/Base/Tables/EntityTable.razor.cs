@@ -48,6 +48,10 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     // Search variables
     private List<string>? effectiveSearchFields;
     private string currentSearchFieldsInput = "";
+    
+    // Hybrid filters variables
+    private readonly Dictionary<string, (DateTime timestamp, object data)> filterCache = new();
+    private readonly SemaphoreSlim cacheSemaphore = new(1, 1);
 
     #region Parameters - Data Loading
 
@@ -154,6 +158,35 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     [Parameter] public string EmptyText { get; set; } = "No se encontraron registros";
     [Parameter] public string Style { get; set; } = "min-height: 440px";
     [Parameter] public string? ColumnWidth { get; set; }
+
+    #endregion
+
+    #region Parameters - Hybrid Filters
+
+    /// <summary>
+    /// Modo de filtro por defecto del grid
+    /// </summary>
+    [Parameter] public FilterMode DefaultFilterMode { get; set; } = FilterMode.Advanced;
+    
+    /// <summary>
+    /// Habilita el sistema de filtros híbridos (permite configurar FilterMode por columna)
+    /// </summary>
+    [Parameter] public bool EnableHybridFilters { get; set; } = false;
+    
+    /// <summary>
+    /// Callback para cargar datos de filtros de checkbox. Si no se proporciona, se auto-generan usando el ApiService
+    /// </summary>
+    [Parameter] public EventCallback<DataGridLoadColumnFilterDataEventArgs<T>> OnLoadColumnFilterData { get; set; }
+    
+    /// <summary>
+    /// Habilita cache de valores únicos para mejorar performance de checkbox filters
+    /// </summary>
+    [Parameter] public bool EnableFilterCache { get; set; } = true;
+    
+    /// <summary>
+    /// Tiempo de vida del cache de filtros (por defecto 5 minutos)
+    /// </summary>
+    [Parameter] public TimeSpan FilterCacheTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
     #endregion
 
@@ -298,5 +331,6 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     public void Dispose()
     {
         StopAutoRefresh();
+        cacheSemaphore?.Dispose();
     }
 }

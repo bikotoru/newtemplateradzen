@@ -1,0 +1,190 @@
+@page "/demo/hybrid-filters"
+@using Frontend.Components.Base.Tables
+@using Frontend.Modules.Categoria
+@using Shared.Models.Entities
+@using Radzen
+
+<PageTitle>🚀 Demo: Filtros Híbridos</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H1">
+        🔥 Demo: Filtros Híbridos de EntityTable
+    </RadzenText>
+    
+    <RadzenAlert AlertStyle="AlertStyle.Info" ShowIcon="true">
+        <RadzenText>
+            Esta página demuestra las nuevas capacidades de <strong>filtros híbridos</strong> en EntityTable.
+            Puedes alternar entre filtros tradicionales y checkbox filters por columna.
+        </RadzenText>
+    </RadzenAlert>
+
+    <!-- Toggle para cambiar modo -->
+    <RadzenCard class="rz-p-4">
+        <RadzenRow AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenColumn Size="12" SizeMD="6">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenText>
+                        <strong>Modo de Filtros:</strong>
+                    </RadzenText>
+                    <RadzenSwitch @bind-Value="@useHybridFilters" Name="hybridToggle" />
+                    <RadzenText>
+                        @(useHybridFilters ? "Híbridos (CheckBox + Tradicionales)" : "Solo Tradicionales")
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="6">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenButton Text="Limpiar Cache" 
+                                  Click="@ClearCache" 
+                                  ButtonStyle="ButtonStyle.Secondary" 
+                                  Size="ButtonSize.Small" 
+                                  Icon="delete_sweep" />
+                    <RadzenButton Text="Estadísticas Cache" 
+                                  Click="@ShowCacheStats" 
+                                  ButtonStyle="ButtonStyle.Info" 
+                                  Size="ButtonSize.Small" 
+                                  Icon="info" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+
+    <!-- Tabla con filtros híbridos -->
+    <RadzenCard>
+        <RadzenCardHeader>
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2">
+                📊 Tabla de Categorías
+            </RadzenText>
+        </RadzenCardHeader>
+        
+        <EntityTable T="Categoria" 
+                     @ref="entityTable"
+                     @key="@GetTableKey()"
+                     ShowSearchBar="true"
+                     ShowExcelExport="true"
+                     ShowRefreshButton="true"
+                     ShowColumnConfig="true"
+                     ShowActions="false"
+                     SearchPlaceholder="Buscar categorías..."
+                     ColumnConfigs="@GetCurrentColumnConfigs()"
+                     
+                     @*🔥 CONFIGURACIÓN DE FILTROS HÍBRIDOS*@
+                     EnableHybridFilters="@useHybridFilters"
+                     DefaultFilterMode="@(useHybridFilters ? FilterMode.CheckBoxList : FilterMode.Advanced)"
+                     EnableFilterCache="true"
+                     FilterCacheTimeout="TimeSpan.FromMinutes(3)"
+                     OnLoadColumnFilterData="@HandleFilterData"
+                     
+                     PageSize="10">
+        </EntityTable>
+    </RadzenCard>
+
+    <!-- Información técnica -->
+    <RadzenCard>
+        <RadzenCardHeader>
+            <RadzenText TextStyle="TextStyle.H6">
+                ℹ️ Información Técnica
+            </RadzenText>
+        </RadzenCardHeader>
+        
+        <RadzenTabs>
+            <Tabs>
+                <RadzenTabsItem Text="Configuración Actual">
+                    <div class="rz-p-4">
+                        <RadzenAlert AlertStyle="AlertStyle.Success" ShowIcon="true" class="rz-mb-3">
+                            <strong>Modo Activo:</strong> @(useHybridFilters ? "Filtros Híbridos" : "Filtros Tradicionales")
+                        </RadzenAlert>
+                        
+                        <RadzenText TextStyle="TextStyle.Subtitle1">Configuración de Columnas:</RadzenText>
+                        <ul>
+                            @foreach (var col in GetCurrentColumnConfigs())
+                            {
+                                <li>
+                                    <strong>@col.Title</strong> (@col.Property): 
+                                    @if (useHybridFilters && col.UseCheckBoxFilter)
+                                    {
+                                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="CheckBox Filter" />
+                                    }
+                                    else
+                                    {
+                                        <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Traditional Filter" />
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </RadzenTabsItem>
+                
+                <RadzenTabsItem Text="Cómo Funciona">
+                    <div class="rz-p-4">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-3">
+                            🔧 Funcionamiento de los Filtros Híbridos:
+                        </RadzenText>
+                        
+                        <RadzenStack Gap="1rem">
+                            <RadzenCard Variant="Variant.Outlined">
+                                <RadzenText TextStyle="TextStyle.Subtitle2">✅ CheckBox Filters</RadzenText>
+                                <ul>
+                                    <li><strong>Estado (bool):</strong> Muestra "Activo" e "Inactivo" como opciones</li>
+                                    <li><strong>Nombre (string):</strong> Lista todos los valores únicos existentes</li>
+                                    <li><strong>Organización (relación):</strong> Carga entidades relacionadas</li>
+                                </ul>
+                            </RadzenCard>
+                            
+                            <RadzenCard Variant="Variant.Outlined">
+                                <RadzenText TextStyle="TextStyle.Subtitle2">🔍 Traditional Filters</RadzenText>
+                                <ul>
+                                    <li><strong>Descripción:</strong> Input de texto libre (contains, starts with, etc.)</li>
+                                    <li><strong>Fechas:</strong> Filtros de rango (&gt;, &lt;, =, between)</li>
+                                </ul>
+                            </RadzenCard>
+                            
+                            <RadzenCard Variant="Variant.Outlined">
+                                <RadzenText TextStyle="TextStyle.Subtitle2">⚡ Performance Features</RadzenText>
+                                <ul>
+                                    <li><strong>Cache:</strong> Valores únicos se cachean por 3 minutos</li>
+                                    <li><strong>Lazy Loading:</strong> Datos se cargan solo al abrir filtros</li>
+                                    <li><strong>Virtualización:</strong> Listas grandes se virtualizan</li>
+                                </ul>
+                            </RadzenCard>
+                        </RadzenStack>
+                    </div>
+                </RadzenTabsItem>
+                
+                <RadzenTabsItem Text="Código">
+                    <div class="rz-p-4">
+                        <RadzenText TextStyle="TextStyle.Subtitle1">📄 Configuración de Ejemplo:</RadzenText>
+                        <pre><code>
+new ColumnConfig&lt;Categoria&gt;
+{
+    Property = nameof(Categoria.Active),
+    Title = "Estado",
+    UseCheckBoxFilter = true, // ← Habilita checkbox filter
+    CheckboxFilterOptions = new CheckboxFilterConfig
+    {
+        MaxItems = 2,
+        EnableSearch = false,
+        CacheTimeout = TimeSpan.FromMinutes(10)
+    }
+}
+                        </code></pre>
+                    </div>
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+    </RadzenCard>
+</RadzenStack>
+
+<style>
+    pre {
+        background-color: var(--rz-base-100);
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+    }
+    
+    code {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 14px;
+    }
+</style>

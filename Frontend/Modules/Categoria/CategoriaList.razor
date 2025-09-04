@@ -10,7 +10,84 @@
                     ShowNew
                     OnNewClick="@GoToCreate">
 
+    @* 🔥 PANEL DE CONTROL PARA FILTROS HÍBRIDOS *@
+    <RadzenCard class="@GetCardCssClass()">
+        <RadzenCardHeader>
+            <RadzenText TextStyle="TextStyle.Subtitle1">
+                🎛️ Configuración de Filtros
+            </RadzenText>
+        </RadzenCardHeader>
+        
+        <RadzenRow AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenSwitch @bind-Value="@enableHybridFilters" 
+                                  Name="hybridToggle"
+                                  Change="@OnHybridFiltersToggled" />
+                    <RadzenText>
+                        <strong>Filtros Híbridos</strong>
+                    </RadzenText>
+                    <RadzenBadge BadgeStyle="@(enableHybridFilters ? BadgeStyle.Success : BadgeStyle.Secondary)"
+                                 Text="@(enableHybridFilters ? "ON" : "OFF")" />
+                </RadzenStack>
+            </RadzenColumn>
+            
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenText>
+                        <strong>Modo Default:</strong>
+                    </RadzenText>
+                    <RadzenDropDown @bind-Value="@defaultFilterMode" 
+                                    Data="@filterModeOptions"
+                                    TextProperty="Text" 
+                                    ValueProperty="Value"
+                                    Change="@OnFilterModeChanged"
+                                    Style="width: 180px;" />
+                </RadzenStack>
+            </RadzenColumn>
+            
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenButton Text="Limpiar Cache" 
+                                  Click="@ClearFilterCache" 
+                                  ButtonStyle="ButtonStyle.Light" 
+                                  Size="ButtonSize.Small" 
+                                  Icon="delete_sweep"
+                                  Disabled="@(!enableHybridFilters)" />
+                    <RadzenButton Text="Estadísticas" 
+                                  Click="@ShowCacheStats" 
+                                  ButtonStyle="ButtonStyle.Info" 
+                                  Size="ButtonSize.Small" 
+                                  Icon="analytics"
+                                  Disabled="@(!enableHybridFilters)" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+        
+        @if (enableHybridFilters)
+        {
+            <RadzenRow class="rz-mt-3">
+                <RadzenColumn Size="12">
+                    <RadzenAlert AlertStyle="AlertStyle.Info" ShowIcon="true" AllowClose="false">
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            <strong>Configuración actual:</strong>
+                            @foreach (var col in GetCurrentColumnConfigs().Where(c => c.UseCheckBoxFilter))
+                            {
+                                <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@($"{col.Title}: CheckBox")" class="rz-me-2" />
+                            }
+                            @foreach (var col in GetCurrentColumnConfigs().Where(c => !c.UseCheckBoxFilter))
+                            {
+                                <RadzenBadge BadgeStyle="BadgeStyle.Secondary" Text="@($"{col.Title}: Traditional")" class="rz-me-2" />
+                            }
+                        </RadzenText>
+                    </RadzenAlert>
+                </RadzenColumn>
+            </RadzenRow>
+        }
+    </RadzenCard>
+
     <RadzenCard>
+        @* 🔥 EntityTable con Filtros Híbridos Configurados 🔥 *@
         <EntityTable T="Categoria" 
                      @ref="entityTable"
                      @key="@GetGridKey()"
@@ -22,7 +99,7 @@
                      ShowActions="true"
                      SearchPlaceholder="Buscar categorías..."
                      BaseQuery="@currentView.QueryBuilder"
-                     ColumnConfigs="@currentView.ColumnConfigs"
+                     ColumnConfigs="@GetCurrentColumnConfigs()"
                      ForceOrderByIndex="true"
                      EnableSelectOptimization="true"
                      SelectOnlyVisibleColumns="true"
@@ -31,9 +108,48 @@
                      OnViewChanged="@OnViewChanged"
                      ViewDisplayNameProperty="DisplayName"
                      OnEdit="@HandleEdit"
-                     OnDelete="@HandleDelete">
+                     OnDelete="@HandleDelete"
+                     
+                     EnableHybridFilters="@enableHybridFilters"
+                     DefaultFilterMode="@defaultFilterMode"
+                     EnableFilterCache="@enableHybridFilters"
+                     FilterCacheTimeout="TimeSpan.FromMinutes(5)"
+                     OnLoadColumnFilterData="@HandleCustomFilterData">
         </EntityTable>
     </RadzenCard>
 
 </PageWithCommandBar>
+
+<style>
+    /* 🎨 Estilos para el panel de control de filtros híbridos */
+    .rz-card .rz-card-header {
+        border-bottom: 1px solid var(--rz-border-color);
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .rz-badge.rz-me-2 {
+        margin-right: 0.5rem !important;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Destacar cuando los filtros híbridos están activos */
+    .hybrid-filters-active {
+        border-left: 4px solid var(--rz-success);
+    }
+    
+    /* Animación suave para cambios */
+    .rz-card {
+        transition: all 0.3s ease;
+    }
+    
+    /* Mejorar la apariencia de los controles */
+    .rz-switch {
+        vertical-align: middle;
+    }
+    
+    .rz-dropdown {
+        min-width: 150px;
+    }
+</style>
 

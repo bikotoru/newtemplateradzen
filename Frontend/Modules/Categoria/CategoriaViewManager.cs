@@ -271,6 +271,15 @@ namespace Frontend.Modules.Categoria
                     }
                 }
             });
+
+            // 🔥 NUEVA VISTA CON FILTROS HÍBRIDOS
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
+            {
+                DisplayName = "🚀 Vista con Filtros Híbridos",
+                QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
+                    .OrderBy(c => c.Nombre) ?? null!,
+                ColumnConfigs = CategoriaConfig.HybridFilters.GetHybridFilterColumns()
+            });
         }
 
         /// <summary>
@@ -282,11 +291,14 @@ namespace Frontend.Modules.Categoria
         }
 
         /// <summary>
-        /// Obtiene la vista por defecto
+        /// Obtiene la vista por defecto (ahora usa filtros híbridos)
         /// </summary>
         public ViewConfiguration<Shared.Models.Entities.Categoria> GetDefaultView()
         {
-            return ViewConfigurations.FirstOrDefault() ?? new ViewConfiguration<Shared.Models.Entities.Categoria>("Default", _queryService?.For<Shared.Models.Entities.Categoria>() ?? null!);
+            // Usar la vista con filtros híbridos como default
+            return ViewConfigurations.FirstOrDefault(v => v.DisplayName.Contains("Filtros Híbridos")) 
+                   ?? ViewConfigurations.FirstOrDefault() 
+                   ?? new ViewConfiguration<Shared.Models.Entities.Categoria>("Default", _queryService?.For<Shared.Models.Entities.Categoria>() ?? null!);
         }
     }
 }

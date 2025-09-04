@@ -20,6 +20,34 @@ public class ColumnConfig<T>
     
     public object? FilterValue { get; set; }
     public FilterOperator? FilterOperator { get; set; }
+    
+    // 🔥 NUEVAS PROPIEDADES PARA FILTROS HÍBRIDOS
+    /// <summary>
+    /// Indica si esta columna debe usar checkbox filter (FilterMode.CheckBoxList) en lugar del filtro tradicional
+    /// </summary>
+    public bool UseCheckBoxFilter { get; set; } = false;
+    
+    /// <summary>
+    /// FilterMode específico para esta columna. Si es null, usa el FilterMode global del grid
+    /// </summary>
+    public FilterMode? ColumnFilterMode { get; set; } = null;
+    
+    /// <summary>
+    /// Para propiedades relacionadas, especifica qué propiedad usar para mostrar en el filtro
+    /// Ejemplo: Para "Category.Name", RelatedDisplayProperty sería "Name"
+    /// </summary>
+    public string? RelatedDisplayProperty { get; set; }
+    
+    /// <summary>
+    /// Para propiedades relacionadas, especifica la entidad relacionada
+    /// Ejemplo: Para "Category.Name", RelatedEntityProperty sería "Category"
+    /// </summary>
+    public string? RelatedEntityProperty { get; set; }
+    
+    /// <summary>
+    /// Configuración específica para checkbox filters
+    /// </summary>
+    public CheckboxFilterConfig? CheckboxFilterOptions { get; set; }
 }
 
 public class ExcelExportContext<T> where T : class
@@ -66,4 +94,45 @@ public class ViewConfiguration<T> : IViewConfiguration<T> where T : class
         QueryBuilder = queryBuilder;
         ColumnConfigs = columnConfigs;
     }
+}
+
+/// <summary>
+/// Configuración específica para filtros de checkbox
+/// </summary>
+public class CheckboxFilterConfig
+{
+    /// <summary>
+    /// Tiempo de caché para valores únicos (para mejorar performance)
+    /// </summary>
+    public TimeSpan CacheTimeout { get; set; } = TimeSpan.FromMinutes(5);
+    
+    /// <summary>
+    /// Máximo número de items a mostrar en el filtro
+    /// </summary>
+    public int MaxItems { get; set; } = 100;
+    
+    /// <summary>
+    /// Habilita búsqueda dentro del filtro de checkbox
+    /// </summary>
+    public bool EnableSearch { get; set; } = true;
+    
+    /// <summary>
+    /// Carga valores solo cuando se abre el filtro (lazy loading)
+    /// </summary>
+    public bool LoadOnDemand { get; set; } = true;
+    
+    /// <summary>
+    /// Habilita virtualización para listas grandes
+    /// </summary>
+    public bool EnableVirtualization { get; set; } = true;
+    
+    /// <summary>
+    /// Incluye valores null/empty en la lista de checkboxes
+    /// </summary>
+    public bool IncludeNullValues { get; set; } = true;
+    
+    /// <summary>
+    /// Texto a mostrar para valores null
+    /// </summary>
+    public string NullValueText { get; set; } = "(Vacío)";
 }
