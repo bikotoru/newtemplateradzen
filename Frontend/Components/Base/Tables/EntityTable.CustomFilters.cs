@@ -11,6 +11,7 @@ public partial class EntityTable<T>
     #region Custom Filter Methods
 
     private Dictionary<string, CustomFilterResult> activeCustomFilters = new();
+    private Dictionary<string, SortOrder> activeSorts = new();
 
     private async Task OpenCustomFilter(string fieldName, Type dataType)
     {
@@ -48,33 +49,29 @@ public partial class EntityTable<T>
             {
                 activeCustomFilters.Remove(filterResult.FieldName);
             }
-            
-            // Limpiar filtro en el grid
-            if (grid?.ColumnsCollection != null)
-            {
-                var column = grid.ColumnsCollection.FirstOrDefault(c => c.Property == filterResult.FieldName);
-                if (column != null)
-                {
-                    column.FilterValue = null;
-                    column.FilterOperator = FilterOperator.Contains;
-                }
-            }
         }
         else if (!string.IsNullOrEmpty(filterResult.Operator))
         {
             // Aplicar filtro
             activeCustomFilters[filterResult.FieldName] = filterResult;
+        }
+
+        // Aplicar todos los filtros activos al lastLoadDataArgs
+        if (lastLoadDataArgs != null)
+        {
+            var filterDescriptors = new List<FilterDescriptor>();
             
-            // Aplicar filtro en el grid
-            if (grid?.ColumnsCollection != null)
+            foreach (var activeFilter in activeCustomFilters.Values)
             {
-                var column = grid.ColumnsCollection.FirstOrDefault(c => c.Property == filterResult.FieldName);
-                if (column != null)
+                filterDescriptors.Add(new FilterDescriptor
                 {
-                    column.FilterValue = filterResult.Value;
-                    column.FilterOperator = ConvertStringToFilterOperator(filterResult.Operator);
-                }
+                    Property = activeFilter.FieldName,
+                    FilterValue = activeFilter.Value,
+                    FilterOperator = ConvertStringToFilterOperator(activeFilter.Operator!)
+                });
             }
+            
+            lastLoadDataArgs.Filters = filterDescriptors;
         }
 
         // Recargar datos
@@ -108,6 +105,63 @@ public partial class EntityTable<T>
     {
         var property = typeof(T).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
         return property?.PropertyType ?? typeof(string);
+    }
+
+    private bool IsFilterActive(string propertyName)
+    {
+        return activeCustomFilters.ContainsKey(propertyName);
+    }
+
+    private bool IsSortActive(string propertyName)
+    {
+        return activeSorts.ContainsKey(propertyName);
+    }
+
+    private string GetSortIcon(string propertyName)
+    {
+        if (activeSorts.ContainsKey(propertyName))
+        {
+            return activeSorts[propertyName] == SortOrder.Ascending ? "keyboard_arrow_up" : "keyboard_arrow_down";
+        }
+        return "sort";
+    }
+
+    private string GetSortTitle(string propertyName)
+    {
+        if (activeSorts.ContainsKey(propertyName))
+        {
+            var direction = activeSorts[propertyName] == SortOrder.Ascending ? "ascendente" : "descendente";
+            return $"Ordenado {direction} - clic para cambiar";
+        }
+        return "Ordenar";
+    }
+
+    private async Task ToggleSort(string propertyName)
+    {
+        // Determinar el nuevo orden (toggle entre Ascending, Descending)
+        var newSortOrder = SortOrder.Ascending;
+        if (activeSorts.ContainsKey(propertyName))
+        {
+            newSortOrder = activeSorts[propertyName] == SortOrder.Ascending ? SortOrder.Descending : SortOrder.Ascending;
+        }
+        
+        // Limpiar todos los otros sorts (solo un sort a la vez)
+        activeSorts.Clear();
+        activeSorts[propertyName] = newSortOrder;
+        
+        // Aplicar sort al lastLoadDataArgs
+        if (lastLoadDataArgs != null)
+        {
+            lastLoadDataArgs.Sorts = new List<SortDescriptor>
+            {
+                new SortDescriptor { Property = propertyName, SortOrder = newSortOrder }
+            };
+            
+            // Forzar recarga
+            await Reload();
+        }
+        
+        StateHasChanged();
     }
 
     #endregion

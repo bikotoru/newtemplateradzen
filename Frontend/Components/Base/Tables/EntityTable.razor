@@ -216,47 +216,65 @@
                     {
                         <RadzenDataGridColumn TItem="T"
                                               Property="@col.Property"
-                                              Title="@col.Title"
                                               Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
+                                              Sortable="false"
+                                              Filterable="false"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
-                                              Visible="@col.Visible"
-                                              FilterValue="@col.FilterValue"
-                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)">
+                                              Visible="@col.Visible">
+                            <HeaderTemplate>
+                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <RadzenButton Icon="filter_alt" 
+                                                      Size="ButtonSize.ExtraSmall" 
+                                                      ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                      Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                                      Title="Filtro personalizado"
+                                                      Style="padding: 1px 3px;" />
+                                        <span>@col.Title</span>
+                                    </div>
+                                    <RadzenButton Icon="@GetSortIcon(col.Property)" 
+                                                  Size="ButtonSize.ExtraSmall" 
+                                                  ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
+                                                  Click="@(() => ToggleSort(col.Property))" 
+                                                  Title="@GetSortTitle(col.Property)"
+                                                  Style="padding: 1px 3px;" />
+                                </div>
+                            </HeaderTemplate>
                             <Template Context="item">
                                 @col.Template(item)
                             </Template>
-                            <FilterTemplate>
-                                <RadzenButton Icon="filter_list" 
-                                              Size="ButtonSize.Small" 
-                                              ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
-                                              Title="Filtro personalizado" />
-                            </FilterTemplate>
                         </RadzenDataGridColumn>
                     }
                     else
                     {
                         <RadzenDataGridColumn TItem="T"
                                               Property="@col.Property"
-                                              Title="@col.Title"
                                               Width="@col.Width"
-                                              Sortable="@col.Sortable"
-                                              Filterable="@col.Filterable"
+                                              Sortable="false"
+                                              Filterable="false"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
-                                              Visible="@col.Visible"
-                                              FilterValue="@col.FilterValue"
-                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)">
-                            <FilterTemplate>
-                                <RadzenButton Icon="filter_list" 
-                                              Size="ButtonSize.Small" 
-                                              ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
-                                              Title="Filtro personalizado" />
-                            </FilterTemplate>
+                                              Visible="@col.Visible">
+                            <HeaderTemplate>
+                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <RadzenButton Icon="filter_alt" 
+                                                      Size="ButtonSize.ExtraSmall" 
+                                                      ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                      Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                                      Title="Filtro personalizado"
+                                                      Style="padding: 1px 3px;" />
+                                        <span>@col.Title</span>
+                                    </div>
+                                    <RadzenButton Icon="@GetSortIcon(col.Property)" 
+                                                  Size="ButtonSize.ExtraSmall" 
+                                                  ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
+                                                  Click="@(() => ToggleSort(col.Property))" 
+                                                  Title="@GetSortTitle(col.Property)"
+                                                  Style="padding: 1px 3px;" />
+                                </div>
+                            </HeaderTemplate>
                         </RadzenDataGridColumn>
                     }
                 }
@@ -273,14 +291,27 @@
                 {
                     <RadzenDataGridColumn TItem="T"
                                           Property="@prop.Name"
-                                          Title="@GetDisplayName(prop.Name)">
-                        <FilterTemplate>
-                            <RadzenButton Icon="filter_list" 
-                                          Size="ButtonSize.Small" 
-                                          ButtonStyle="ButtonStyle.Light"
-                                          Click="@(() => OpenCustomFilter(prop.Name, prop.PropertyType))" 
-                                          Title="Filtro personalizado" />
-                        </FilterTemplate>
+                                          Sortable="false"
+                                          Filterable="false">
+                        <HeaderTemplate>
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <RadzenButton Icon="filter_alt" 
+                                                  Size="ButtonSize.ExtraSmall" 
+                                                  ButtonStyle="@(IsFilterActive(prop.Name) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                  Click="@(() => OpenCustomFilter(prop.Name, prop.PropertyType))" 
+                                                  Title="Filtro personalizado"
+                                                  Style="padding: 1px 3px;" />
+                                    <span>@GetDisplayName(prop.Name)</span>
+                                </div>
+                                <RadzenButton Icon="@GetSortIcon(prop.Name)" 
+                                              Size="ButtonSize.ExtraSmall" 
+                                              ButtonStyle="@(IsSortActive(prop.Name) ? ButtonStyle.Secondary : ButtonStyle.Light)"
+                                              Click="@(() => ToggleSort(prop.Name))" 
+                                              Title="@GetSortTitle(prop.Name)"
+                                              Style="padding: 1px 3px;" />
+                            </div>
+                        </HeaderTemplate>
                     </RadzenDataGridColumn>
                 }
             }
