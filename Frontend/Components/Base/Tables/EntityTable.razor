@@ -224,20 +224,26 @@
                             <HeaderTemplate>
                                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                                     <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <RadzenButton Icon="filter_alt" 
-                                                      Size="ButtonSize.ExtraSmall" 
-                                                      ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                                      Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
-                                                      Title="Filtro personalizado"
-                                                      Style="padding: 1px 3px;" />
+                                        @if (col.Filterable)
+                                        {
+                                            <RadzenButton Icon="filter_alt" 
+                                                          Size="ButtonSize.ExtraSmall" 
+                                                          ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                          Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                                          Title="Filtro personalizado"
+                                                          Style="padding: 1px 3px; margin-right: 5px;" />
+                                        }
                                         <span>@col.Title</span>
                                     </div>
-                                    <RadzenButton Icon="@GetSortIcon(col.Property)" 
-                                                  Size="ButtonSize.ExtraSmall" 
-                                                  ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => ToggleSort(col.Property))" 
-                                                  Title="@GetSortTitle(col.Property)"
-                                                  Style="padding: 1px 3px;" />
+                                    @if (col.Sortable)
+                                    {
+                                        <RadzenButton Icon="@GetSortIcon(col.Property)" 
+                                                      Size="ButtonSize.ExtraSmall" 
+                                                      ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
+                                                      Click="@(() => ToggleSort(col.Property))" 
+                                                      Title="@GetSortTitle(col.Property)"
+                                                      Style="padding: 1px 3px; margin-left: 5px;" />
+                                    }
                                 </div>
                             </HeaderTemplate>
                             <Template Context="item">
@@ -258,20 +264,26 @@
                             <HeaderTemplate>
                                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                                     <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <RadzenButton Icon="filter_alt" 
-                                                      Size="ButtonSize.ExtraSmall" 
-                                                      ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                                      Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
-                                                      Title="Filtro personalizado"
-                                                      Style="padding: 1px 3px;" />
+                                        @if (col.Filterable)
+                                        {
+                                            <RadzenButton Icon="filter_alt" 
+                                                          Size="ButtonSize.ExtraSmall" 
+                                                          ButtonStyle="@(IsFilterActive(col.Property) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                          Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                                          Title="Filtro personalizado"
+                                                          Style="padding: 1px 3px; margin-right: 5px;" />
+                                        }
                                         <span>@col.Title</span>
                                     </div>
-                                    <RadzenButton Icon="@GetSortIcon(col.Property)" 
-                                                  Size="ButtonSize.ExtraSmall" 
-                                                  ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => ToggleSort(col.Property))" 
-                                                  Title="@GetSortTitle(col.Property)"
-                                                  Style="padding: 1px 3px;" />
+                                    @if (col.Sortable)
+                                    {
+                                        <RadzenButton Icon="@GetSortIcon(col.Property)" 
+                                                      Size="ButtonSize.ExtraSmall" 
+                                                      ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
+                                                      Click="@(() => ToggleSort(col.Property))" 
+                                                      Title="@GetSortTitle(col.Property)"
+                                                      Style="padding: 1px 3px; margin-left: 5px;" />
+                                    }
                                 </div>
                             </HeaderTemplate>
                         </RadzenDataGridColumn>
@@ -300,7 +312,7 @@
                                                   ButtonStyle="@(IsFilterActive(prop.Name) ? ButtonStyle.Primary : ButtonStyle.Light)"
                                                   Click="@(() => OpenCustomFilter(prop.Name, prop.PropertyType))" 
                                                   Title="Filtro personalizado"
-                                                  Style="padding: 1px 3px;" />
+                                                  Style="padding: 1px 3px; margin-right: 5px;" />
                                     <span>@GetDisplayName(prop.Name)</span>
                                 </div>
                                 <RadzenButton Icon="@GetSortIcon(prop.Name)" 
@@ -308,7 +320,7 @@
                                               ButtonStyle="@(IsSortActive(prop.Name) ? ButtonStyle.Secondary : ButtonStyle.Light)"
                                               Click="@(() => ToggleSort(prop.Name))" 
                                               Title="@GetSortTitle(prop.Name)"
-                                              Style="padding: 1px 3px;" />
+                                              Style="padding: 1px 3px; margin-left: 5px;" />
                             </div>
                         </HeaderTemplate>
                     </RadzenDataGridColumn>
