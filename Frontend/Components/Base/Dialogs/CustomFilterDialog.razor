@@ -25,11 +25,8 @@
                 @if (selectedOperator == "Equals" || selectedOperator == "NotEquals")
                 {
                     @* Lookup Component *@
-                    @{
-                        var lookupComponentType = typeof(Lookup<,>).MakeGenericType(FilterLookup.EntityType, typeof(Guid?));
-                    }
                     <div style="margin-top: 10px;">
-                        <DynamicComponent Type="@lookupComponentType"
+                        <DynamicComponent Type="@GetLookupComponentType()"
                                           Parameters="@GetLookupParameters()" />
                     </div>
                 }

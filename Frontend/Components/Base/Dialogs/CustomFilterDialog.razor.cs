@@ -295,4 +295,10 @@ public partial class CustomFilterDialog : ComponentBase
         }
         StateHasChanged();
     }
+
+    private Type? GetLookupComponentType()
+    {
+        if (FilterLookup == null) return null;
+        return typeof(Frontend.Components.Base.Lookup<,>).MakeGenericType(FilterLookup.EntityType, typeof(Guid?));
+    }
 }

@@ -122,7 +122,7 @@ public class FilterLookup<T> : IFilterLookup where T : class
         {
             if (!string.IsNullOrEmpty(searchTerm) && SearchColumns.Any())
             {
-                var searchRequest = new Shared.Models.Requests.SearchRequest
+                var searchRequest = new Shared.Models.QueryModels.SearchRequest
                 {
                     SearchTerm = searchTerm,
                     SearchFields = SearchColumns,
@@ -165,18 +165,32 @@ public class FilterLookup<T> : IFilterLookup where T : class
             {
                 // Búsqueda simple en los campos especificados
                 var searchLower = searchTerm.ToLower();
-                query = query.Where(item =>
-                    SearchColumns.Any(column =>
+                var filteredList = new List<T>();
+                
+                foreach (var item in query)
+                {
+                    bool matches = false;
+                    foreach (var column in SearchColumns)
                     {
                         var property = typeof(T).GetProperty(column);
                         if (property != null)
                         {
-                            var value = property.GetValue(item)?.ToString()?.ToLower();
-                            return !string.IsNullOrEmpty(value) && value.Contains(searchLower);
+                            var propertyValue = property.GetValue(item);
+                            var stringValue = propertyValue != null ? propertyValue.ToString() : null;
+                            var value = stringValue != null ? stringValue.ToLower() : null;
+                            if (!string.IsNullOrEmpty(value) && value.Contains(searchLower))
+                            {
+                                matches = true;
+                                break;
+                            }
                         }
-                        return false;
-                    })
-                );
+                    }
+                    if (matches)
+                    {
+                        filteredList.Add(item);
+                    }
+                }
+                query = filteredList.AsQueryable();
             }
 
             totalCount = query.Count();
@@ -210,7 +224,8 @@ public class FilterLookup<T> : IFilterLookup where T : class
             var property = typeof(T).GetProperty(column.Property);
             if (property != null)
             {
-                var value = property.GetValue(item)?.ToString();
+                var propertyValue = property.GetValue(item);
+                var value = propertyValue != null ? propertyValue.ToString() : null;
                 if (!string.IsNullOrEmpty(value))
                 {
                     displayParts.Add(value);
@@ -218,7 +233,7 @@ public class FilterLookup<T> : IFilterLookup where T : class
             }
         }
 
-        return displayParts.Any() ? string.Join(" - ", displayParts) : item.ToString() ?? "";
+        return displayParts.Any() ? string.Join(" - ", displayParts) : (item.ToString() ?? "");
     }
 
     /// <summary>
