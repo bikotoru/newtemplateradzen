@@ -130,7 +130,7 @@
                     AllowPaging="@AllowPaging"
                     AllowSorting="@AllowSorting"
                     AllowFiltering="@AllowFiltering"
-                    FilterMode="FilterMode.Advanced"
+                    FilterMode="FilterMode.Simple"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     LogicalFilterOperator="LogicalFilterOperator.And"
                     FilterDelay="500"
@@ -143,6 +143,25 @@
                     Style="@Style"
                     IsLoading="@isLoading"
                     ColumnWidth="@ColumnWidth"
+                    AndOperatorText="Y"
+                    OrOperatorText="O"
+                    EqualsText="Igual a"
+                    NotEqualsText="No es igual a"
+                    LessThanText="Menor que"
+                    LessThanOrEqualsText="Menor que o igual"
+                    GreaterThanText="Mayor que"
+                    GreaterThanOrEqualsText="Mayor que o igual"
+                    IsNullText="Es nulo"
+                    IsNotNullText="No es nulo"
+                    ContainsText="Contiene"
+                    DoesNotContainText="No contiene"
+                    StartsWithText="Inicia con"
+                    EndsWithText="Termina con"
+                    ClearFilterText="Limpiar"
+                    ApplyFilterText="Aplicar"
+                    FilterText="Filtrar"
+                    PageSizeText="Items por página"
+                    PagingSummaryFormat="Páginas {0} de {1} ({2} items)"
                     
                     
                     
@@ -209,6 +228,13 @@
                             <Template Context="item">
                                 @col.Template(item)
                             </Template>
+                            <FilterTemplate>
+                                <RadzenButton Icon="filter_list" 
+                                              Size="ButtonSize.Small" 
+                                              ButtonStyle="ButtonStyle.Light"
+                                              Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                              Title="Filtro personalizado" />
+                            </FilterTemplate>
                         </RadzenDataGridColumn>
                     }
                     else
@@ -223,7 +249,15 @@
                                               Frozen="@col.Frozen"
                                               Visible="@col.Visible"
                                               FilterValue="@col.FilterValue"
-                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)" />
+                                              FilterOperator="@(col.FilterOperator ?? FilterOperator.Contains)">
+                            <FilterTemplate>
+                                <RadzenButton Icon="filter_list" 
+                                              Size="ButtonSize.Small" 
+                                              ButtonStyle="ButtonStyle.Light"
+                                              Click="@(() => OpenCustomFilter(col.Property, GetPropertyType(col.Property)))" 
+                                              Title="Filtro personalizado" />
+                            </FilterTemplate>
+                        </RadzenDataGridColumn>
                     }
                 }
             }
@@ -239,7 +273,15 @@
                 {
                     <RadzenDataGridColumn TItem="T"
                                           Property="@prop.Name"
-                                          Title="@GetDisplayName(prop.Name)" />
+                                          Title="@GetDisplayName(prop.Name)">
+                        <FilterTemplate>
+                            <RadzenButton Icon="filter_list" 
+                                          Size="ButtonSize.Small" 
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@(() => OpenCustomFilter(prop.Name, prop.PropertyType))" 
+                                          Title="Filtro personalizado" />
+                        </FilterTemplate>
+                    </RadzenDataGridColumn>
                 }
             }
         </Columns>

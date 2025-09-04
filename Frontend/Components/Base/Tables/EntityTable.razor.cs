@@ -220,44 +220,13 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !hasLoadedColumnConfig)
         {
-            ConfigureSpanishTexts();
-            
-            if (!hasLoadedColumnConfig)
-            {
-                await ApplyStoredColumnConfiguration();
-                hasLoadedColumnConfig = true;
-            }
+            await ApplyStoredColumnConfiguration();
+            hasLoadedColumnConfig = true;
         }
     }
 
-    private void ConfigureSpanishTexts()
-    {
-        if (grid != null)
-        {
-            grid.AndOperatorText = "Y";
-            grid.OrOperatorText = "O";
-            grid.EqualsText = "Igual a";
-            grid.NotEqualsText = "No es igual a";
-            grid.LessThanText = "Menor que";
-            grid.LessThanOrEqualsText = "Menor que o igual";
-            grid.GreaterThanText = "Mayor que";
-            grid.GreaterThanOrEqualsText = "Mayor que o igual";
-            grid.IsNullText = "Es nulo";
-            grid.IsNotNullText = "No es nulo";
-            grid.ContainsText = "Contiene";
-            grid.DoesNotContainText = "No contiene";
-            grid.StartsWithText = "Inicia con";
-            grid.EndsWithText = "Termina con";
-            grid.ClearFilterText = "Limpiar";
-            grid.ApplyFilterText = "Aplicar";
-            grid.FilterText = "Filtrar";
-            grid.PageSizeText = "Items por página";
-            grid.PagingSummaryFormat = "Páginas {0} de {1} ({2} items)";
-            grid.EmptyText = "No se encontraron registros";
-        }
-    }
 
     #region Public Methods
 
