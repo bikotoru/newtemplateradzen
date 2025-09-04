@@ -197,7 +197,6 @@ public partial class EntityTable<T>
         }
 
         StateHasChanged();
-        Console.WriteLine("[DEBUG] Recargando datos después de cambio de columnas");
         await Reload();
     }
 
@@ -266,7 +265,6 @@ public partial class EntityTable<T>
                     
                     if (hasChanges)
                     {
-                        Console.WriteLine("[DEBUG] Aplicando configuración guardada y recargando datos");
                         StateHasChanged();
                         
                         await Task.Delay(100);
@@ -277,7 +275,7 @@ public partial class EntityTable<T>
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DEBUG] Error aplicando configuración guardada: {ex.Message}");
+            // Log error silently
         }
     }
 

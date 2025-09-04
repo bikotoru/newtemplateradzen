@@ -10,6 +10,7 @@ public partial class CustomFilterDialog : ComponentBase
     [Inject] private DialogService dialogService { get; set; } = null!;
 
     [Parameter] public string FieldName { get; set; } = "";
+    [Parameter] public string? DisplayName { get; set; }
     [Parameter] public Type DataType { get; set; } = typeof(string);
     [Parameter] public object? CurrentFilterValue { get; set; }
     [Parameter] public string? CurrentFilterOperator { get; set; }

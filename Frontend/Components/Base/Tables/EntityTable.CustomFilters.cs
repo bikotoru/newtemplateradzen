@@ -17,11 +17,15 @@ public partial class EntityTable<T>
     {
 
         var currentFilter = activeCustomFilters.ContainsKey(fieldName) ? activeCustomFilters[fieldName] : null;
+        
+        // Obtener el DisplayName del ColumnConfig o del RadzenDataGrid
+        var displayName = GetColumnDisplayName(fieldName);
 
         var result = await DialogService.OpenAsync<CustomFilterDialog>("Filtro Personalizado",
             new Dictionary<string, object>
             {
                 { "FieldName", fieldName },
+                { "DisplayName", displayName },
                 { "DataType", dataType },
                 { "CurrentFilterValue", currentFilter?.Value },
                 { "CurrentFilterOperator", currentFilter?.Operator }
@@ -202,6 +206,32 @@ public partial class EntityTable<T>
         // Recargar con filtros y sorts custom
         await ReloadWithCustomFiltersAndSorts();
         StateHasChanged();
+    }
+
+    private string GetColumnDisplayName(string fieldName)
+    {
+        // Primero intentar obtener del ColumnConfigs
+        if (ColumnConfigs != null)
+        {
+            var columnConfig = ColumnConfigs.FirstOrDefault(c => c.Property == fieldName);
+            if (columnConfig != null && !string.IsNullOrEmpty(columnConfig.Title))
+            {
+                return columnConfig.Title;
+            }
+        }
+        
+        // Luego intentar obtener del RadzenDataGrid
+        if (grid?.ColumnsCollection != null)
+        {
+            var column = grid.ColumnsCollection.FirstOrDefault(c => c.Property == fieldName);
+            if (column != null && !string.IsNullOrEmpty(column.Title))
+            {
+                return column.Title;
+            }
+        }
+        
+        // Fallback al método GetDisplayName
+        return GetDisplayName(fieldName);
     }
 
     #endregion

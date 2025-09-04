@@ -52,7 +52,7 @@ namespace Frontend.Modules.Categoria
                         Property = "Active",
                         Title = "Estado",
                         Width = "120px",
-                        Sortable = true,
+                        Sortable = false,
                         Filterable = true,
                         TextAlign = TextAlign.Center,
                         Visible = true,
@@ -81,7 +81,7 @@ namespace Frontend.Modules.Categoria
                         Title = "Descripción",
                         Width = "300px",
                         Sortable = true,
-                        Filterable = true,
+                        Filterable = false,
                         TextAlign = TextAlign.Left,
                         Visible = true,
                         Order = 2

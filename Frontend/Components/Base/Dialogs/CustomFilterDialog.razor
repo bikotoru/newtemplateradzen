@@ -5,7 +5,7 @@
 <RadzenStack Gap="1rem">
     <RadzenCard Style="padding: 1rem;">
         <RadzenText TextStyle="TextStyle.H6" Style="margin-bottom: 0.5rem;">
-            Filtrar campo: @FieldName
+            Filtrar campo: @(DisplayName ?? FieldName)
         </RadzenText>
         <RadzenText TextStyle="TextStyle.Caption" Style="margin-bottom: 1rem;" Class="text-muted">
             Tipo de dato: @DataTypeName
@@ -99,12 +99,15 @@
     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
         <RadzenButton Text="Cancelar" 
                       ButtonStyle="ButtonStyle.Light" 
-                      Click="@(() => dialogService.Close(null))" />
+                      Click="@(() => dialogService.Close(null))"
+                      Style="margin: 10px;" />
         <RadzenButton Text="Limpiar Filtro" 
                       ButtonStyle="ButtonStyle.Warning" 
-                      Click="@ClearFilter" />
+                      Click="@ClearFilter"
+                      Style="margin: 10px;" />
         <RadzenButton Text="Aplicar Filtro" 
                       ButtonStyle="ButtonStyle.Primary" 
-                      Click="@ApplyFilter" />
+                      Click="@ApplyFilter"
+                      Style="margin: 10px;" />
     </RadzenStack>
 </RadzenStack>
