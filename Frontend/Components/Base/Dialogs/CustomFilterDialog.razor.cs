@@ -27,6 +27,11 @@ public partial class CustomFilterDialog : ComponentBase
         {
             selectedOperator = CurrentFilterOperator;
         }
+        else
+        {
+            // Por defecto usar "Contains" para strings, "Equals" para otros tipos
+            selectedOperator = DataType == typeof(string) ? "Contains" : "Equals";
+        }
 
         if (CurrentFilterValue != null)
         {

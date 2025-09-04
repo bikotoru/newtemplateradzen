@@ -15,7 +15,6 @@ public partial class EntityTable<T>
 
     private async Task OpenCustomFilter(string fieldName, Type dataType)
     {
-        Console.WriteLine($"[CUSTOM FILTERS] Abriendo filtro custom para {fieldName} (tipo: {dataType.Name})");
 
         var currentFilter = activeCustomFilters.ContainsKey(fieldName) ? activeCustomFilters[fieldName] : null;
 
@@ -29,23 +28,19 @@ public partial class EntityTable<T>
             },
             new DialogOptions
             {
-                Width = "400px",
+                Width = "600px",
                 Height = "auto",
                 Resizable = false,
-                Draggable = true
+                Draggable = true,
+                ShowTitle = false,
+                ShowClose = false,
+                Style = "max-width: 100%"
             });
-
-        Console.WriteLine($"[CUSTOM FILTERS] Resultado del diálogo: {result?.GetType().Name ?? "null"}");
 
         if (result != null && result is CustomFilterResult)
         {
             var filterResult = (CustomFilterResult)result;
-            Console.WriteLine($"[CUSTOM FILTERS] Aplicando resultado: {filterResult.FieldName} = {filterResult.Value} ({filterResult.Operator})");
             await ApplyCustomFilter(filterResult);
-        }
-        else
-        {
-            Console.WriteLine("[CUSTOM FILTERS] Diálogo cancelado o sin resultado");
         }
     }
 
@@ -71,12 +66,9 @@ public partial class EntityTable<T>
     }
     private LoadDataArgs SetLoadData(LoadDataArgs args)
     {
-        Console.WriteLine($"[CUSTOM FILTERS] SetLoadData interceptando args...");
-        
         // Aplicar filtros custom
         if (activeCustomFilters.Any())
         {
-            Console.WriteLine($"[CUSTOM FILTERS] ✓ Aplicando {activeCustomFilters.Count} filtros custom a args.Filters");
             args.Filters = new List<FilterDescriptor>();
             
             foreach (var filter in activeCustomFilters)
@@ -87,19 +79,13 @@ public partial class EntityTable<T>
                     FilterOperator = ConvertStringToFilterOperator(filter.Value.Operator!),
                     FilterValue = filter.Value.Value
                 });
-                Console.WriteLine($"[CUSTOM FILTERS] ✓ Filtro agregado: {filter.Key} = {filter.Value.Value} ({filter.Value.Operator})");
             }
-        }
-        else
-        {
-            Console.WriteLine($"[CUSTOM FILTERS] - Sin filtros custom activos");
         }
         
         // Aplicar sorts custom
         if (activeSorts.Any())
         {
             var sortProperty = activeSorts.First();
-            Console.WriteLine($"[CUSTOM FILTERS] ✓ Aplicando sort custom: {sortProperty.Key} = {sortProperty.Value}");
             
             args.Sorts = new List<SortDescriptor>
             {
@@ -111,11 +97,6 @@ public partial class EntityTable<T>
             };
 
             args.OrderBy = $"{sortProperty.Key} {(sortProperty.Value == SortOrder.Descending ? "desc" : "asc")}";
-            Console.WriteLine($"[CUSTOM FILTERS] ✓ OrderBy configurado: '{args.OrderBy}'");
-        }
-        else
-        {
-            Console.WriteLine($"[CUSTOM FILTERS] - Sin sorts activos");
         }
 
         return args;
@@ -124,23 +105,17 @@ public partial class EntityTable<T>
     {
         if (grid == null)
         {
-            Console.WriteLine("[CUSTOM FILTERS] ERROR: Grid es null");
             return;
         }
-
-        Console.WriteLine($"[CUSTOM FILTERS] Recargando grid...");
-        Console.WriteLine($"[CUSTOM FILTERS] Filtros activos: {activeCustomFilters.Count}");
-        Console.WriteLine($"[CUSTOM FILTERS] Sorts activos: {activeSorts.Count}");
 
         try
         {
             // SetLoadData se encargará de aplicar filtros y sorts a los args
             await grid.Reload();
-            Console.WriteLine("[CUSTOM FILTERS] ✓ Recarga completada exitosamente");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CUSTOM FILTERS] ✗ ERROR: {ex.Message}");
+            // Log error to proper logging system if needed
         }
     }
 
@@ -207,16 +182,11 @@ public partial class EntityTable<T>
 
     private async Task ToggleSort(string propertyName)
     {
-        Console.WriteLine($"[CUSTOM FILTERS] ► ToggleSort LLAMADO con propertyName: '{propertyName ?? "NULL"}'");
-
         // Validar que el propertyName no esté vacío
         if (string.IsNullOrEmpty(propertyName))
         {
-            Console.WriteLine("[CUSTOM FILTERS] ✗ No se puede ordenar: propertyName está vacío");
             return;
         }
-
-        Console.WriteLine($"[CUSTOM FILTERS] Toggle sort para {propertyName}");
 
         // Determinar el nuevo orden (toggle entre Ascending, Descending)
         var newSortOrder = SortOrder.Ascending;
@@ -228,8 +198,6 @@ public partial class EntityTable<T>
         // Limpiar todos los otros sorts (solo un sort a la vez)
         activeSorts.Clear();
         activeSorts[propertyName] = newSortOrder;
-
-        Console.WriteLine($"[CUSTOM FILTERS] Sort configurado: {propertyName} = {newSortOrder}");
 
         // Recargar con filtros y sorts custom
         await ReloadWithCustomFiltersAndSorts();

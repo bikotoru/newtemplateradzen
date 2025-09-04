@@ -128,9 +128,8 @@
                     Count="@totalCount"
                     LoadData="@LoadData"
                     AllowPaging="@AllowPaging"
-                    AllowSorting="@AllowSorting"
-                    AllowFiltering="@AllowFiltering"
-                    FilterMode="FilterMode.Simple"
+                    AllowSorting="false"
+                    AllowFiltering="false"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     LogicalFilterOperator="LogicalFilterOperator.And"
                     FilterDelay="500"
@@ -236,7 +235,7 @@
                                     <RadzenButton Icon="@GetSortIcon(col.Property)" 
                                                   Size="ButtonSize.ExtraSmall" 
                                                   ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => { Console.WriteLine($"[DEBUG] Sort button clicked for: {col.Property}"); _ = ToggleSort(col.Property); })" 
+                                                  Click="@(() => ToggleSort(col.Property))" 
                                                   Title="@GetSortTitle(col.Property)"
                                                   Style="padding: 1px 3px;" />
                                 </div>
@@ -270,7 +269,7 @@
                                     <RadzenButton Icon="@GetSortIcon(col.Property)" 
                                                   Size="ButtonSize.ExtraSmall" 
                                                   ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => { Console.WriteLine($"[DEBUG] Sort button clicked for: {col.Property}"); _ = ToggleSort(col.Property); })" 
+                                                  Click="@(() => ToggleSort(col.Property))" 
                                                   Title="@GetSortTitle(col.Property)"
                                                   Style="padding: 1px 3px;" />
                                 </div>
