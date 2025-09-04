@@ -1,6 +1,7 @@
 @using Radzen
 @using Radzen.Blazor
 @using System.Reflection
+@using Frontend.Models
 
 <RadzenStack Gap="1rem">
     <RadzenCard Style="padding: 1rem;">
@@ -11,7 +12,30 @@
             Tipo de dato: @DataTypeName
         </RadzenText>
         
-        @if (DataType == typeof(string))
+        @if (FilterLookup != null)
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetLookupOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator == "Equals" || selectedOperator == "NotEquals")
+                {
+                    @* Lookup Component *@
+                    @{
+                        var lookupComponentType = typeof(Lookup<,>).MakeGenericType(FilterLookup.EntityType, typeof(Guid?));
+                    }
+                    <div style="margin-top: 10px;">
+                        <DynamicComponent Type="@lookupComponentType"
+                                          Parameters="@GetLookupParameters()" />
+                    </div>
+                }
+            </RadzenStack>
+        }
+        else if (DataType == typeof(string))
         {
             <RadzenStack Gap="0.5rem">
                 <RadzenDropDown @bind-Value="selectedOperator" 

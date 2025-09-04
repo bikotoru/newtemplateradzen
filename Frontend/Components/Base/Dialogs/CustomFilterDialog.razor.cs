@@ -14,12 +14,14 @@ public partial class CustomFilterDialog : ComponentBase
     [Parameter] public Type DataType { get; set; } = typeof(string);
     [Parameter] public object? CurrentFilterValue { get; set; }
     [Parameter] public string? CurrentFilterOperator { get; set; }
+    [Parameter] public IFilterLookup? FilterLookup { get; set; }
 
     private string selectedOperator = "";
     private string filterValue = "";
     private decimal? numericValue;
     private bool? boolValue;
     private DateTime? dateValue;
+    private object? selectedLookupItem;
 
     protected override void OnInitialized()
     {
@@ -206,6 +208,17 @@ public partial class CustomFilterDialog : ComponentBase
                 finalValue = dateValue;
             }
         }
+        
+        // Para FilterLookup, usar el valor seleccionado
+        if (FilterLookup != null && (selectedOperator == "Equals" || selectedOperator == "NotEquals"))
+        {
+            if (selectedLookupItem == null)
+            {
+                await dialogService.Alert("Seleccione un elemento", "Error");
+                return;
+            }
+            finalValue = FilterLookup.GetValue(selectedLookupItem);
+        }
 
         var result = new CustomFilterResult
         {
@@ -230,5 +243,56 @@ public partial class CustomFilterDialog : ComponentBase
         };
 
         dialogService.Close(result);
+    }
+
+    private List<dynamic> GetLookupOperators()
+    {
+        return new List<dynamic>
+        {
+            new { Text = "Igual a", Value = "Equals" },
+            new { Text = "No es igual a", Value = "NotEquals" },
+            new { Text = "Es nulo", Value = "IsNull" },
+            new { Text = "No es nulo", Value = "IsNotNull" }
+        };
+    }
+
+    private Dictionary<string, object> GetLookupParameters()
+    {
+        if (FilterLookup == null) return new Dictionary<string, object>();
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Value", selectedLookupItem != null ? FilterLookup.GetValue(selectedLookupItem) : null },
+            { "ValueChanged", EventCallback.Factory.Create<object?>(this, OnLookupValueChanged) },
+            { "Service", FilterLookup.ApiService! },
+            { "DisplayProperty", FilterLookup.DisplayProperty },
+            { "ValueProperty", FilterLookup.ValueProperty },
+            { "Placeholder", "Seleccionar..." },
+            { "AllowClear", true }
+        };
+
+        // Agregar columnas personalizadas si están configuradas
+        if (FilterLookup.DisplayColumns?.Any() == true)
+        {
+            // TODO: Generar ColumnsTemplate dinámicamente basado en DisplayColumns
+        }
+
+        return parameters;
+    }
+
+    private async Task OnLookupValueChanged(object? value)
+    {
+        if (FilterLookup != null && value != null)
+        {
+            // Buscar el item completo basado en el valor
+            var items = await FilterLookup.LoadDataAsync(null, 0, 100);
+            selectedLookupItem = items.FirstOrDefault(item => 
+                FilterLookup.GetValue(item)?.Equals(value) == true);
+        }
+        else
+        {
+            selectedLookupItem = null;
+        }
+        StateHasChanged();
     }
 }

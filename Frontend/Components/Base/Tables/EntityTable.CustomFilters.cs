@@ -20,6 +20,9 @@ public partial class EntityTable<T>
         
         // Obtener el DisplayName del ColumnConfig o del RadzenDataGrid
         var displayName = GetColumnDisplayName(fieldName);
+        
+        // Obtener el FilterLookup si existe
+        var filterLookup = GetColumnFilterLookup(fieldName);
 
         var result = await DialogService.OpenAsync<CustomFilterDialog>("Filtro Personalizado",
             new Dictionary<string, object>
@@ -28,7 +31,8 @@ public partial class EntityTable<T>
                 { "DisplayName", displayName },
                 { "DataType", dataType },
                 { "CurrentFilterValue", currentFilter?.Value },
-                { "CurrentFilterOperator", currentFilter?.Operator }
+                { "CurrentFilterOperator", currentFilter?.Operator },
+                { "FilterLookup", filterLookup }
             },
             new DialogOptions
             {
@@ -232,6 +236,18 @@ public partial class EntityTable<T>
         
         // Fallback al método GetDisplayName
         return GetDisplayName(fieldName);
+    }
+
+    private IFilterLookup? GetColumnFilterLookup(string fieldName)
+    {
+        // Buscar en ColumnConfigs
+        if (ColumnConfigs != null)
+        {
+            var columnConfig = ColumnConfigs.FirstOrDefault(c => c.Property == fieldName);
+            return columnConfig?.FilterLookup;
+        }
+        
+        return null;
     }
 
     #endregion

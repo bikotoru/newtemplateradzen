@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Radzen;
 using Shared.Models.Export;
 using Frontend.Services;
+using Frontend.Models;
 
 namespace Frontend.Components.Base.Tables;
 
@@ -20,6 +21,21 @@ public class ColumnConfig<T>
     
     public object? FilterValue { get; set; }
     public FilterOperator? FilterOperator { get; set; }
+    
+    /// <summary>
+    /// Configuración de lookup para filtros de relaciones
+    /// </summary>
+    public IFilterLookup? FilterLookup { get; set; }
+    
+    /// <summary>
+    /// Indica si esta columna representa una relación
+    /// </summary>
+    public bool IsRelationship { get; set; } = false;
+    
+    /// <summary>
+    /// Nombre de la propiedad de navegación relacionada (ej: "Categoria" para "CategoriaId")
+    /// </summary>
+    public string? RelationshipProperty { get; set; }
 }
 
 public class ExcelExportContext<T> where T : class
