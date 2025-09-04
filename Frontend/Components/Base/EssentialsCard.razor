@@ -1,37 +1,37 @@
 @inject IJSRuntime JSRuntime
+    <div class="essentials-card">
+        <div class="card-header" @onclick="ToggleCollapsed">
+            <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
+            @if (!string.IsNullOrEmpty(Icon))
+            {
+                <RadzenIcon Icon="@Icon" Style="@($"margin-right: 8px; font-size: 14px;" + (!string.IsNullOrEmpty(IconColor) ? $" color: {IconColor};" : ""))" />
+            }
+            <span class="header-title">@Title</span>
+            @if (ShowHeaderTemplate && HeaderTemplate != null)
+            {
+                <div class="header-template">
+                    @HeaderTemplate
+                </div>
+            }
+        </div>
 
-<div class="essentials-card">
-    <div class="card-header" @onclick="ToggleCollapsed">
-        <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
-        @if (!string.IsNullOrEmpty(Icon))
-        {
-            <RadzenIcon Icon="@Icon" Style="@($"margin-right: 8px; font-size: 14px;" + (!string.IsNullOrEmpty(IconColor) ? $" color: {IconColor};" : ""))" />
-        }
-        <span class="header-title">@Title</span>
-        @if (ShowHeaderTemplate && HeaderTemplate != null)
-        {
-            <div class="header-template">
-                @HeaderTemplate
-            </div>
-        }
+        <div class="card-content @(_isCollapsed ? "collapsed" : "")">
+            @if (ShowEssentials && EssentialsTemplate != null)
+            {
+                <div class="essentials-section">
+                    @EssentialsTemplate
+                </div>
+            }
+
+            @if (ChildContent != null)
+            {
+                <div class="@(ShowEssentials && EssentialsTemplate != null ? "form-section" : "")">
+                    @ChildContent
+                </div>
+            }
+        </div>
     </div>
-    
-    <div class="card-content @(_isCollapsed ? "collapsed" : "")">
-        @if (ShowEssentials && EssentialsTemplate != null)
-        {
-            <div class="essentials-section">
-                @EssentialsTemplate
-            </div>
-        }
-        
-        @if (ChildContent != null)
-        {
-            <div class="@(ShowEssentials && EssentialsTemplate != null ? "form-section" : "")">
-                @ChildContent
-            </div>
-        }
-    </div>
-</div>
+
 
 @code {
     [Parameter] public string Title { get; set; } = "Detalles";

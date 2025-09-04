@@ -2,12 +2,14 @@
 @page "/categoria/formulario/{Id:guid}"
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base
+@using Frontend.Components.Validation
 @using Shared.Models.Entities
 
-<PageTitle>Categoría - Formulario</PageTitle>
+<PageTitle>@(isEditMode ? $"Editar Categoría - {entity.Nombre}" : "Nueva Categoría")</PageTitle>
 
 <PageWithCommandBar BackPath="/categoria/list" 
                     ShowSave
+                    SaveText="@(isEditMode ? "Actualizar" : "Crear Categoría")"
                     OnSaveClick="@SaveForm">
 
     <div class="full-width-tabs">
@@ -18,34 +20,48 @@
                     <RadzenRow JustifyContent="JustifyContent.Center">
                         <RadzenColumn SizeLG="4" SizeMD="6" SizeSM="12">
                             
-                            <EssentialsCard Title="Información Básica" 
-                                           Icon="info" 
+                            <EssentialsCard Title="@(isEditMode ? "Editar Categoría" : "Nueva Categoría")" 
+                                           Icon="@(isEditMode ? "edit" : "add")" 
                                            IconColor="#0078d4"
-                                           ShowEssentials="true">
-                                
+                                            ShowEssentials=@(entity.Id != Guid.Empty)>
+                             
                                 <EssentialsTemplate>
                                     <EssentialsGrid>
                                         <EssentialsItem Label="Estado" Value="@(entity.Active ? "Activo" : "Inactivo")" />
-                                        <EssentialsItem Label="Tipo" Value="Categoría" />
                                         <EssentialsItem Label="Creado" Value="@(entity.FechaCreacion.ToString("dd/MM/yyyy"))" />
                                         <EssentialsItem Label="ID" Value="@entity.Id.ToString()" />
                                     </EssentialsGrid>
                                 </EssentialsTemplate>
                                 
                                 <ChildContent>
-                                    <RadzenStack Gap="1rem">
-                                        <RadzenFormField Text="Nombre">
-                                            <RadzenTextBox @bind-Value="entity.Nombre" Placeholder="Ingrese el nombre de la categoría" />
-                                        </RadzenFormField>
+                                    <FormValidator Entity="entity" Rules="@GetValidationRules()">
                                         
-                                        <RadzenFormField Text="Descripción">
-                                            <RadzenTextArea @bind-Value="entity.Descripcion" Placeholder="Ingrese la descripción" />
-                                        </RadzenFormField>
+                                        <RadzenStack Gap="1rem">
+                                            
+                                            <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+                                                <RadzenFormField Text="Nombre" Style="width: 100%">
+                                                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                                                                   Value="@entity.Nombre"
+                                                                   Placeholder="Ingrese el nombre de la categoría" />
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                            
+                                            <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
+                                                <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
+                                                    <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
+                                                                    Value="@entity.Descripcion"
+                                                                    Placeholder="Ingrese la descripción (opcional)" 
+                                                                    Rows="3" />
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                            
+                                            <RadzenFormField Text="Activo">
+                                                <RadzenCheckBox @bind-Value="entity.Active" />
+                                            </RadzenFormField>
+                                            
+                                        </RadzenStack>
                                         
-                                        <RadzenFormField Text="Activo">
-                                            <RadzenCheckBox @bind-Value="entity.Active" />
-                                        </RadzenFormField>
-                                    </RadzenStack>
+                                    </FormValidator>
                                 </ChildContent>
                             </EssentialsCard>
                             
@@ -57,19 +73,6 @@
         </CrmTabs>
     </div>
 
-    @if (!string.IsNullOrEmpty(mensaje))
-    {
-        <div class="alert alert-success">
-            <strong>✅ @mensaje</strong>
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-error">
-            <strong>❌ Error:</strong> @errorMessage
-        </div>
-    }
 
 </PageWithCommandBar>
 
@@ -87,30 +90,6 @@
         padding: 2rem 1rem;
     }
 
-    .alert {
-        padding: 12px;
-        border-radius: 4px;
-        margin: 1rem auto;
-        max-width: 600px;
-        text-align: center;
-        position: fixed;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-    }
-
-    .alert-success {
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-    }
-
-    .alert-error {
-        background: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-    }
 
     @@media (max-width: 768px) {
         .scrollable-content {

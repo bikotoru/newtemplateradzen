@@ -1,0 +1,46 @@
+@using Frontend.Services.Validation
+@implements IDisposable
+
+<!-- FormValidator es simplemente un container que proporciona ValidationContext -->
+<CascadingValue Value="@ValidationContext" Name="ValidationContext">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public object Entity { get; set; } = null!;
+    [Parameter] public FormValidationRules Rules { get; set; } = new();
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+    
+    private ValidationContext ValidationContext = new();
+    
+    protected override void OnInitialized()
+    {
+        ValidationContext.Initialize(Entity, Rules);
+    }
+    
+    protected override void OnParametersSet()
+    {
+        if (ValidationContext != null && Entity != null && Rules != null)
+        {
+            ValidationContext.Initialize(Entity, Rules);
+        }
+    }
+    
+    public async Task<bool> ValidateAllAsync()
+    {
+        return await ValidationContext.ValidateAllAsync();
+    }
+    
+    public List<string> GetAllErrors()
+    {
+        return ValidationContext.GetAllErrors();
+    }
+    
+    public bool IsValid => !ValidationContext.HasErrors;
+    
+    public void Dispose()
+    {
+        ValidationContext?.Dispose();
+    }
+}
