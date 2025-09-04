@@ -460,12 +460,66 @@ namespace Frontend.Services
 
             if (args.Sorts != null && args.Sorts.Any())
             {
-                // El ordenamiento se maneja en ConvertLoadDataArgsToQueryRequest
-                var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
-                if (sorts.Any())
+                foreach (var sort in args.Sorts)
                 {
-                    _logger.LogDebug($"Sort will be applied via QueryRequest: {string.Join(", ", sorts)}");
+                    if (!string.IsNullOrEmpty(sort.Property))
+                    {
+                        _logger.LogDebug($"Applying sort to query: {sort.Property} ({sort.SortOrder})");
+                        
+                        // Crear expression para OrderBy
+                        var propertyInfo = typeof(T).GetProperty(sort.Property);
+                        if (propertyInfo != null)
+                        {
+                            var parameter = Expression.Parameter(typeof(T), "x");
+                            var property = Expression.Property(parameter, propertyInfo);
+                            var lambda = Expression.Lambda(property, parameter);
+                            
+                            // Aplicar ordenamiento usando el método OrderBy correcto
+                            try
+                            {
+                                var isDescending = sort.SortOrder == SortOrder.Descending;
+                                _logger.LogDebug($"Looking for OrderBy method with property type: {propertyInfo.PropertyType.Name}, descending: {isDescending}");
+                                
+                                // Buscar método genérico OrderBy
+                                var allMethods = typeof(QueryBuilder<T>).GetMethods();
+                                var orderByMethods = allMethods.Where(m => m.Name == "OrderBy").ToArray();
+                                
+                                _logger.LogDebug($"Found {orderByMethods.Length} OrderBy methods total");
+                                foreach (var m in orderByMethods)
+                                {
+                                    var parameters = m.GetParameters();
+                                    _logger.LogDebug($"Method: {m.Name}, IsGeneric: {m.IsGenericMethodDefinition}, Parameters: {parameters.Length}");
+                                    if (parameters.Length > 0)
+                                        _logger.LogDebug($"  First param: {parameters[0].ParameterType.Name}");
+                                }
+                                
+                                var orderByMethod = orderByMethods.FirstOrDefault(m => 
+                                    m.IsGenericMethodDefinition && 
+                                    m.GetParameters().Length == 2 &&
+                                    m.GetParameters()[1].ParameterType == typeof(bool));
+                                
+                                if (orderByMethod != null)
+                                {
+                                    var genericMethod = orderByMethod.MakeGenericMethod(propertyInfo.PropertyType);
+                                    query = (QueryBuilder<T>)genericMethod.Invoke(query, new object[] { lambda, isDescending })!;
+                                    _logger.LogDebug($"✓ Sort applied successfully: {sort.Property} {sort.SortOrder}");
+                                }
+                                else
+                                {
+                                    _logger.LogWarning($"OrderBy method with correct signature not found");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"Error applying sort to {sort.Property}: {ex.Message}");
+                            }
+                        }
+                    }
                 }
+            }
+            else if (!string.IsNullOrEmpty(args.OrderBy))
+            {
+                _logger.LogDebug($"OrderBy string detected but not applied to query (needs Expression): {args.OrderBy}");
             }
 
             // Only use args.Filter as search if there are no column filters (args.Filters)
@@ -684,7 +738,7 @@ namespace Frontend.Services
             if (sort == null || string.IsNullOrEmpty(sort.Property))
                 return string.Empty;
 
-            var direction = sort.SortOrder == SortOrder.Descending ? " desc" : "";
+            var direction = sort.SortOrder == SortOrder.Descending ? " desc" : " asc";
             return $"{sort.Property}{direction}";
         }
 
