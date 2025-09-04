@@ -13,6 +13,7 @@ public partial class EntityTable<T>
 
     private async Task LoadData(LoadDataArgs args)
     {
+        args = SetLoadData(args);
         var callId = Guid.NewGuid().ToString()[..8];
         Console.WriteLine($"[DEBUG] ==> LoadData INICIO #{callId} con searchTerm: '{searchTerm}'");
         Console.WriteLine($"[DEBUG] ==> #{callId} ColumnConfigs Count: {ColumnConfigs?.Count ?? 0}");

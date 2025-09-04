@@ -218,7 +218,7 @@
                                               Property="@col.Property"
                                               Width="@col.Width"
                                               Sortable="false"
-                                              Filterable="false"
+                                              Filterable="true"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
                                               Visible="@col.Visible">
@@ -236,7 +236,7 @@
                                     <RadzenButton Icon="@GetSortIcon(col.Property)" 
                                                   Size="ButtonSize.ExtraSmall" 
                                                   ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => ToggleSort(col.Property))" 
+                                                  Click="@(() => { Console.WriteLine($"[DEBUG] Sort button clicked for: {col.Property}"); _ = ToggleSort(col.Property); })" 
                                                   Title="@GetSortTitle(col.Property)"
                                                   Style="padding: 1px 3px;" />
                                 </div>
@@ -252,7 +252,7 @@
                                               Property="@col.Property"
                                               Width="@col.Width"
                                               Sortable="false"
-                                              Filterable="false"
+                                              Filterable="true"
                                               TextAlign="@col.TextAlign"
                                               Frozen="@col.Frozen"
                                               Visible="@col.Visible">
@@ -270,7 +270,7 @@
                                     <RadzenButton Icon="@GetSortIcon(col.Property)" 
                                                   Size="ButtonSize.ExtraSmall" 
                                                   ButtonStyle="@(IsSortActive(col.Property) ? ButtonStyle.Secondary : ButtonStyle.Light)"
-                                                  Click="@(() => ToggleSort(col.Property))" 
+                                                  Click="@(() => { Console.WriteLine($"[DEBUG] Sort button clicked for: {col.Property}"); _ = ToggleSort(col.Property); })" 
                                                   Title="@GetSortTitle(col.Property)"
                                                   Style="padding: 1px 3px;" />
                                 </div>
@@ -292,7 +292,7 @@
                     <RadzenDataGridColumn TItem="T"
                                           Property="@prop.Name"
                                           Sortable="false"
-                                          Filterable="false">
+                                          Filterable="true">
                         <HeaderTemplate>
                             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                                 <div style="display: flex; align-items: center; gap: 0.3rem;">
