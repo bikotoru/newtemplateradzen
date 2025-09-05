@@ -38,10 +38,6 @@
                                         <RadzenStack Gap="1rem">
                                             {{FORM_FIELDS}}
                                             
-                                            <RadzenFormField Text="Activo">
-                                                <RadzenCheckBox @bind-Value="entity.Active" />
-                                            </RadzenFormField>
-                                            
                                         </RadzenStack>
                                         
                                     </FormValidator>
