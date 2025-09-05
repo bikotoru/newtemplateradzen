@@ -1,4 +1,5 @@
 using Frontend.Modules.Categoria;
+using Frontend.Modules.Inventario.Core;
 using Frontend.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -18,6 +19,7 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
 
         // Module Services
+        services.AddScoped<ProductoService>();
         services.AddScoped<CategoriaService>();
 
         return services;

@@ -5,7 +5,7 @@ using Backend.Controllers;
 
 namespace Backend.Modules.{{MODULE}}
 {
-    [Route("api/[controller]")]
+    [Route("api/{{MODULE_ROUTE}}/{{ENTITY_NAME_LOWER}}")]
     public class {{ENTITY_NAME}}Controller : BaseQueryController<Shared.Models.Entities.{{ENTITY_NAME}}>
     {
         private readonly {{ENTITY_NAME}}Service _{{ENTITY_NAME_LOWER}}Service;

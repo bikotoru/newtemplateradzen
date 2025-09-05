@@ -38,6 +38,8 @@ class EntityGenerator:
         # Importar generadores
         from backend.backend_generator import BackendGenerator
         from backend.service_registry import BackendServiceRegistry
+        from frontend.frontend_generator import FrontendGenerator
+        from frontend.service_registry import FrontendServiceRegistry
         from shared.validation import EntityValidator
         from table import DatabaseTableGenerator
         
@@ -45,6 +47,8 @@ class EntityGenerator:
         self.db_generator = DatabaseTableGenerator()
         self.backend_generator = BackendGenerator(self.root_path)
         self.backend_registry = BackendServiceRegistry(self.root_path)
+        self.frontend_generator = FrontendGenerator(self.root_path)
+        self.frontend_registry = FrontendServiceRegistry(self.root_path)
         self.validator = EntityValidator(self.root_path)
     
     def print_header(self, phase):
@@ -123,12 +127,28 @@ class EntityGenerator:
     def fase_3_frontend(self, entity_name, module):
         """FASE 3: Generar frontend (Service + Registry + Components)"""
         self.print_header(3)
-        print(f"🎨 Generando frontend para entidad: {entity_name}")
-        print(f"📁 Módulo: {module}")
-        print()
-        print("⚠️  FASE 3 aún no implementada")
-        print("💡 Proximamente: generación completa del frontend")
-        return False
+        
+        try:
+            # FASE 3.1: Generar Service frontend
+            if not self.frontend_generator.generate_service_only(entity_name, module):
+                return False
+            
+            # FASE 3.1: Actualizar ServiceRegistry frontend
+            if not self.frontend_registry.update(entity_name, module):
+                return False
+            
+            print()
+            print("🎉 FASE 3.1 COMPLETADA EXITOSAMENTE")
+            print(f"✅ Frontend {entity_name}Service.cs generado")
+            print(f"✅ Frontend ServiceRegistry actualizado")
+            print()
+            print("⚠️  FASE 3.2 pendiente: ViewManager + Componentes Razor")
+            print("💡 Proximamente: generación completa de ViewManager y componentes")
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en FASE 3: {e}")
+            return False
     
     def run(self, entity_name, module, phase, fields=None):
         """Ejecutar la fase especificada"""

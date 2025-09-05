@@ -31,10 +31,14 @@ class TemplateEngine:
     
     def prepare_entity_variables(self, entity_name, module):
         """Preparar variables estándar para entidades"""
+        # Convertir módulo a ruta de API (Inventario.Core -> inventario/core)
+        module_route = module.replace('.', '/').lower()
+        
         return {
             'ENTITY_NAME': entity_name,
             'ENTITY_NAME_LOWER': entity_name.lower(),
             'MODULE': module,
             'MODULE_PATH': module.replace('.', '/'),
+            'MODULE_ROUTE': module_route,
             'NAMESPACE': f"Backend.Modules.{module}"
         }

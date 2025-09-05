@@ -5,7 +5,7 @@ using Backend.Controllers;
 
 namespace Backend.Modules.Inventario.Core
 {
-    [Route("api/[controller]")]
+    [Route("api/inventario/core/producto")]
     public class ProductoController : BaseQueryController<Shared.Models.Entities.Producto>
     {
         private readonly ProductoService _productoService;
