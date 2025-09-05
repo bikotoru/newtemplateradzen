@@ -1,5 +1,4 @@
 @using Radzen.Blazor
-@inject IJSRuntime JSRuntime
 
 <div style="padding: 4px;">
     <!-- Buscador -->
@@ -23,7 +22,7 @@
             <ModuleExpander Title="@module.Text" 
                            Icon="@module.Icon" 
                            IsExpanded="@moduleExpanded"
-                           IsExpandedChanged="@((bool expanded) => OnModuleExpandedChanged(module.Text, expanded))">
+                           IsExpandedChanged="@(expanded => OnModuleExpandedChanged(module.Text, expanded))">
                 <RadzenPanelMenu>
                     @foreach (var item in GetFilteredMenuItems(module))
                     {
@@ -52,20 +51,14 @@
     private List<MenuModule> filteredModules = new();
     private Dictionary<string, bool> expandedModules = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Inicializando con módulos:", Modules?.Count ?? 0);
-        await JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Permisos del usuario:", UserPermissions?.ToArray() ?? new string[0]);
-        
         filteredModules = Modules.ToList();
         // Expandir el primer módulo por defecto
         if (Modules.Any())
         {
             expandedModules[Modules.First().Text] = true;
-            await JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Expandido por defecto:", Modules.First().Text);
         }
-        
-        await JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Módulos filtrados iniciales:", filteredModules.Count);
     }
 
     private async Task OnSearchChanged(ChangeEventArgs args)
@@ -121,77 +114,40 @@
 
     private List<MenuItem> GetFilteredMenuItems(MenuModule module)
     {
-        var filteredItems = new List<MenuItem>();
-        
-        foreach (var item in module.MenuItems)
-        {
-            var hasPermission = HasPermission(item.Permissions);
-            JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Item '{item.Text}' con permisos {string.Join(",", item.Permissions)} -> Acceso: {hasPermission}");
-            
-            if (hasPermission)
-            {
-                filteredItems.Add(item);
-            }
-        }
-        
-        return filteredItems;
+        return module.MenuItems.Where(item => HasPermission(item.Permissions)).ToList();
     }
 
     private bool HasPermission(List<string> requiredPermissions)
     {
-        JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Verificando permisos requeridos: [{string.Join(",", requiredPermissions)}] contra usuario: [{string.Join(",", UserPermissions ?? new List<string>())}]");
-        
-        if (!requiredPermissions.Any()) 
-        {
-            JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Sin permisos requeridos -> PERMITIDO");
-            return true;
-        }
+        if (!requiredPermissions.Any()) return true;
         
         // Si tiene wildcard "*", permitir acceso a cualquiera
-        if (requiredPermissions.Contains("*")) 
-        {
-            JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Contiene wildcard '*' -> PERMITIDO");
-            return true;
-        }
+        if (requiredPermissions.Contains("*")) return true;
         
         // Verificar permisos exactos
         foreach (var requiredPermission in requiredPermissions)
         {
-            JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Verificando permiso: '{requiredPermission}'");
-            
             // Permiso exacto
             if (UserPermissions?.Contains(requiredPermission) == true)
-            {
-                JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Permiso exacto encontrado: '{requiredPermission}' -> PERMITIDO");
                 return true;
-            }
                 
             // Si el permiso requerido tiene wildcard (ej: "CATEGORIA.*")
             if (requiredPermission.EndsWith(".*"))
             {
                 var basePermission = requiredPermission.Replace(".*", "");
-                JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Verificando wildcard base: '{basePermission}'");
-                
                 // Verificar si el usuario tiene permisos específicos de ese módulo
                 if (UserPermissions?.Any(up => up.StartsWith(basePermission + ".", StringComparison.OrdinalIgnoreCase)) == true)
-                {
-                    JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Permiso específico del módulo encontrado -> PERMITIDO");
                     return true;
-                }
                 // O si tiene el wildcard exacto
                 if (UserPermissions?.Contains(requiredPermission) == true)
-                {
-                    JSRuntime.InvokeVoidAsync("console.log", $"[ModularMenu] Wildcard exacto encontrado -> PERMITIDO");
                     return true;
-                }
             }
         }
         
-        JSRuntime.InvokeVoidAsync("console.log", "[ModularMenu] Ningún permiso coincide -> DENEGADO");
         return false;
     }
 
-    private async Task OnModuleExpandedChanged(string moduleText, bool expanded)
+    private void OnModuleExpandedChanged(string moduleText, bool expanded)
     {
         expandedModules[moduleText] = expanded;
         StateHasChanged();
