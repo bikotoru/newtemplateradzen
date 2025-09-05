@@ -19,6 +19,7 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
 
         // Module Services
+        services.AddScoped<MarcaService>();
         services.AddScoped<ProductoService>();
         services.AddScoped<CategoriaService>();
 

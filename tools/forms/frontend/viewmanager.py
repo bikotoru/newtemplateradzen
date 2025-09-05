@@ -99,14 +99,22 @@ class ViewManagerGenerator:
         }
         title = title_map.get(field_name, field_name)
         
+        # Determinar capacidades de filtro/ordenamiento
+        sortable = "true"
+        filterable = "true" 
+        
+        # Descripción solo filtrable, no ordenable
+        if field_name.lower() == 'descripcion':
+            sortable = "false"
+        
         # Template base - usar placeholder temporal
         config = f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
                     {{
                         Property = "{field_name}",
                         Title = "{title}",
                         Width = "{width}",
-                        Sortable = true,
-                        Filterable = true,
+                        Sortable = {sortable},
+                        Filterable = {filterable},
                         TextAlign = TextAlign.Left,
                         Visible = true,
                         Order = {order}
@@ -114,46 +122,6 @@ class ViewManagerGenerator:
         
         return config
     
-    def generate_admin_column_config(self, field, order):
-        """Generar configuración de columna para vista administrativa (más compacta)"""
-        field_name = field['name']
-        field_type = field['type']
-        
-        # Ancho más compacto para vista administrativa
-        width_map = {
-            'string': '150px' if field_name.lower() != 'descripcion' else '200px',
-            'int': '80px',
-            'decimal': '100px',
-            'DateTime': '110px',
-            'bool': '80px',
-            'Guid': '100px'
-        }
-        width = width_map.get(field_type, '120px')
-        
-        # Título más corto
-        title_map = {
-            'Nombre': 'Nombre',
-            'Descripcion': 'Desc.', 
-            'Precio': 'Precio',
-            'CodigoInterno': 'Código',
-            'Cantidad': 'Cant.',
-            'Stock': 'Stock'
-        }
-        title = title_map.get(field_name, field_name)
-        
-        config = f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
-                    {{
-                        Property = "{field_name}",
-                        Title = "{title}",
-                        Width = "{width}",
-                        Sortable = true,
-                        Filterable = true,
-                        TextAlign = TextAlign.Left,
-                        Visible = true,
-                        Order = {order}
-                    }}"""
-        
-        return config
     
     def generate_viewmanager(self, entity_name, module, module_path):
         """Generar ViewManager completo"""
@@ -167,89 +135,16 @@ class ViewManagerGenerator:
             
             # Generar configuraciones de columna
             column_configs = []
-            admin_column_configs = []
             
             for i, field in enumerate(fields, 1):
                 column_configs.append(self.generate_column_config(field, i))
-                admin_column_configs.append(self.generate_admin_column_config(field, i))
-            
-            # Agregar columna de estado al final
-            active_order = len(fields) + 1
-            active_config = f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
-                    {{
-                        Property = "Active",
-                        Title = "Estado",
-                        Width = "120px",
-                        Sortable = false,
-                        Filterable = true,
-                        TextAlign = TextAlign.Center,
-                        Visible = true,
-                        Order = {active_order},
-                        Template = {entity_name.lower()} => builder =>
-                        {{
-                            if ({entity_name.lower()}.Active)
-                            {{
-                                builder.OpenComponent<RadzenBadge>(0);
-                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Success);
-                                builder.AddAttribute(2, "Text", "Activo");
-                                builder.CloseComponent();
-                            }}
-                            else
-                            {{
-                                builder.OpenComponent<RadzenBadge>(0);
-                                builder.AddAttribute(1, "BadgeStyle", BadgeStyle.Danger);
-                                builder.AddAttribute(2, "Text", "Inactivo");
-                                builder.CloseComponent();
-                            }}
-                        }}
-                    }}"""
-            
-            column_configs.append(active_config)
-            
-            # Para vista administrativa: campos + Active + fechas
-            admin_column_configs.append(f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
-                    {{
-                        Property = "Active",
-                        Title = "Estado",
-                        Width = "80px",
-                        Sortable = true,
-                        Filterable = true,
-                        TextAlign = TextAlign.Center,
-                        Visible = true,
-                        Order = {active_order}
-                    }}""")
-            
-            admin_column_configs.append(f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
-                    {{
-                        Property = "FechaCreacion",
-                        Title = "Creado",
-                        Width = "110px",
-                        Sortable = true,
-                        Filterable = true,
-                        TextAlign = TextAlign.Center,
-                        Visible = true,
-                        Order = {active_order + 1}
-                    }}""")
-            
-            admin_column_configs.append(f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
-                    {{
-                        Property = "FechaModificacion",
-                        Title = "Modificado",
-                        Width = "110px",
-                        Sortable = true,
-                        Filterable = true,
-                        TextAlign = TextAlign.Center,
-                        Visible = true,
-                        Order = {active_order + 2}
-                    }}""")
             
             # Preparar variables para el template
             variables = self.template_engine.prepare_entity_variables(entity_name, module)
             variables.update({
                 'PRIMARY_FIELD': primary_field,
                 'PRIMARY_FIELD_TITLE': primary_field_title,
-                'COLUMN_CONFIGS': ',\n                    '.join(column_configs),
-                'ADMIN_COLUMN_CONFIGS': ',\n                    '.join(admin_column_configs)
+                'COLUMN_CONFIGS': ',\n                    '.join(column_configs)
             })
             
             # Renderizar template
