@@ -20,8 +20,8 @@ class EntityValidator:
         if not module:
             raise ValueError("Module es requerido")
         
-        if phase not in [1, 2, 3, 3.2, 3.3, 3.4, 3.5]:
-            raise ValueError("Phase debe ser 1, 2, 3, 3.2, 3.3, 3.4 o 3.5")
+        if phase not in [1, 2]:
+            raise ValueError("Phase debe ser 1 o 2")
         
         # Validar que la entidad no sea una palabra reservada
         reserved_words = ['user', 'order', 'table', 'index', 'key', 'value']

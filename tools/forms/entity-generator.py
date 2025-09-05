@@ -98,26 +98,56 @@ class EntityGenerator:
             return False
     
     def fase_2_backend(self, entity_name, module):
-        """FASE 2: Generar backend (Service + Controller + Registry)"""
+        """FASE 2: Generar sistema completo (Backend + Frontend)"""
         self.print_header(2)
         
         try:
+            print("🔧 Generando Backend...")
+            
             # Generar archivos backend
             if not self.backend_generator.generate(entity_name, module):
                 return False
             
-            # Actualizar ServiceRegistry
+            # Actualizar ServiceRegistry backend
             if not self.backend_registry.update(entity_name, module):
                 return False
             
+            print("✅ Backend completado")
             print()
-            print("🎉 FASE 2 COMPLETADA EXITOSAMENTE")
-            print(f"✅ {entity_name}Service.cs generado")
-            print(f"✅ {entity_name}Controller.cs generado")
+            print("🎨 Generando Frontend completo...")
+            
+            # Generar frontend completo (Service + ViewManager + List + Fast + Formulario)
+            if not self.frontend_generator.generate_frontend_with_formulario(entity_name, module):
+                return False
+            
+            # Actualizar ServiceRegistry frontend
+            if not self.frontend_registry.update(entity_name, module):
+                return False
+            
+            print()
+            print("🎉🎉 FASE 2 COMPLETADA EXITOSAMENTE - SISTEMA CRUD COMPLETO! 🎉🎉")
+            print()
+            print("📁 BACKEND GENERADO:")
+            print(f"✅ {entity_name}Service.cs")
+            print(f"✅ {entity_name}Controller.cs") 
             print(f"✅ Backend ServiceRegistry actualizado")
             print()
-            print("📋 SIGUIENTE PASO:")
-            print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 3")
+            print("📁 FRONTEND GENERADO:")
+            print(f"✅ Frontend {entity_name}Service.cs")
+            print(f"✅ Frontend {entity_name}ViewManager.cs")
+            print(f"✅ Frontend {entity_name}List.razor + .cs")
+            print(f"✅ Frontend {entity_name}Fast.razor + .cs")
+            print(f"✅ Frontend {entity_name}Formulario.razor + .cs")
+            print(f"✅ Frontend ServiceRegistry actualizado")
+            print()
+            print("🌐 URLS DISPONIBLES:")
+            print(f"   Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
+            print(f"   Formulario: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/formulario")
+            print()
+            print("🎊 ENTIDAD CRUD COMPLETAMENTE FUNCIONAL!")
+            print("🔗 Con soporte automático para lookups")
+            print("⚡ Incluye creación rápida como componente independiente")
+            
             return True
             
         except Exception as e:
@@ -290,16 +320,6 @@ class EntityGenerator:
                 return self.fase_1_database(entity_name, module, fields)
             elif phase == 2:
                 return self.fase_2_backend(entity_name, module)
-            elif phase == 3:
-                return self.fase_3_frontend(entity_name, module)
-            elif phase == 3.2:
-                return self.fase_32_frontend_full(entity_name, module)
-            elif phase == 3.3:
-                return self.fase_33_frontend_components(entity_name, module)
-            elif phase == 3.4:
-                return self.fase_34_frontend_with_fast(entity_name, module)
-            elif phase == 3.5:
-                return self.fase_35_frontend_formulario_completo(entity_name, module)
             
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
@@ -312,8 +332,8 @@ def main():
                        help='Nombre de la entidad (ej: Marca, Producto)')
     parser.add_argument('--module', required=True,
                        help='Módulo donde crear la entidad (ej: Inventario.Core)')
-    parser.add_argument('--phase', type=float, choices=[1, 2, 3, 3.2, 3.3, 3.4, 3.5], required=True,
-                       help='Fase a ejecutar: 1=Database, 2=Backend, 3=Frontend(Service), 3.2=Frontend+ViewManager, 3.3=Frontend+List, 3.4=Frontend+Fast, 3.5=Frontend+Formulario')
+    parser.add_argument('--phase', type=float, choices=[1, 2], required=True,
+                       help='Fase a ejecutar: 1=Database, 2=Backend+Frontend(Sistema CRUD completo)')
     parser.add_argument('--fields', nargs='*', default=None,
                        help='Campos personalizados: "nombre:tipo:tamaño"')
     
