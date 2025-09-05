@@ -20,7 +20,6 @@ public static class ServiceRegistry
 
         // Module Services
         services.AddScoped<MarcaService>();
-        services.AddScoped<ProductoService>();
         services.AddScoped<CategoriaService>();
 
         return services;

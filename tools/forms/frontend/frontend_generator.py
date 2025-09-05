@@ -18,12 +18,14 @@ class FrontendGenerator:
         from shared.template_engine import TemplateEngine
         from frontend.viewmanager import ViewManagerGenerator
         from frontend.fast_generator import FastFieldGenerator
+        from frontend.formulario_generator import FormularioFieldGenerator
         
         # Inicializar componentes
         templates_path = self.forms_path / "templates"
         self.template_engine = TemplateEngine(templates_path)
         self.viewmanager_generator = ViewManagerGenerator(self.root_path)
         self.fast_generator = FastFieldGenerator(templates_path, self.root_path)
+        self.formulario_generator = FormularioFieldGenerator(templates_path, self.root_path)
     
     def generate_service(self, entity_name, module, module_path):
         """Generar archivo Service del frontend usando template"""
@@ -96,9 +98,11 @@ class FrontendGenerator:
                 'MODULE_NAMESPACE': module.replace('.', '.')
             })
             
-            # Variables específicas para Fast component
+            # Variables específicas por tipo de componente
             if component_type == 'fast':
                 self._prepare_fast_variables(entity_name, variables)
+            elif component_type == 'formulario':
+                self._prepare_formulario_variables(entity_name, variables)
             
             # Renderizar templates
             razor_content = self.template_engine.render_template(f"frontend/components/{component_type}.razor.template", variables)
@@ -139,6 +143,38 @@ class FrontendGenerator:
             'FORM_FIELDS': '\n                '.join(form_fields),
             'VALIDATION_RULES': '\n            '.join(validation_rules),
             'FIELD_VALIDATIONS': '\n\n            '.join(field_validations)
+        })
+    
+    def _prepare_formulario_variables(self, entity_name, variables):
+        """Preparar variables específicas para componente Formulario"""
+        # Detectar campos de la entidad
+        fields = self.viewmanager_generator.detect_entity_fields(entity_name)
+        
+        # Campo principal para título
+        primary_field = fields[0]['name'] if fields else 'Nombre'
+        variables['PRIMARY_FIELD'] = primary_field
+        
+        # Generar campos de formulario
+        form_fields = []
+        validation_rules = []
+        field_validations = []
+        
+        for field in fields:
+            form_fields.append(self.formulario_generator.generate_form_field(field))
+            validation_rules.append(self.fast_generator.generate_validation_rule(field))  # Reutilizar validaciones
+            field_validations.append(self.fast_generator.generate_field_validation_check(field))  # Reutilizar validaciones
+        
+        # Recopilar dependencias de lookups
+        lookup_deps = self.formulario_generator.collect_lookup_dependencies(fields)
+        
+        # Agregar a variables
+        variables.update({
+            'FORM_FIELDS': '\n                                            '.join(form_fields),
+            'VALIDATION_RULES': '\n            '.join(validation_rules),
+            'FIELD_VALIDATIONS': '\n\n            '.join(field_validations),
+            'LOOKUP_SERVICE_INJECTIONS': lookup_deps['service_injections'],
+            'LOOKUP_SEARCH_FIELDS': lookup_deps['search_fields'],
+            'LOOKUP_FIELD_INITIALIZATIONS': lookup_deps['initializations']
         })
 
     def generate_service_and_viewmanager(self, entity_name, module):
@@ -217,6 +253,42 @@ class FrontendGenerator:
             
             # 5. Generar componente Fast
             if not self.generate_razor_component(entity_name, module, module_path, "fast"):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en frontend generator: {e}")
+            return False
+    
+    def generate_frontend_with_formulario(self, entity_name, module):
+        """Generar Service + ViewManager + List + Fast + Formulario (FASE 3.5)"""
+        try:
+            print(f"🎨 Generando frontend completo con Formulario para entidad: {entity_name}")
+            print(f"📁 Módulo: {module}")
+            
+            # 1. Crear directorio
+            module_path = self.create_module_directory(module)
+            print(f"📁 Directorio creado: {module_path}")
+            
+            # 2. Generar Service
+            if not self.generate_service(entity_name, module, module_path):
+                return False
+            
+            # 3. Generar ViewManager
+            if not self.generate_viewmanager(entity_name, module, module_path):
+                return False
+            
+            # 4. Generar componente List
+            if not self.generate_razor_component(entity_name, module, module_path, "list"):
+                return False
+            
+            # 5. Generar componente Fast
+            if not self.generate_razor_component(entity_name, module, module_path, "fast"):
+                return False
+            
+            # 6. Generar componente Formulario
+            if not self.generate_razor_component(entity_name, module, module_path, "formulario"):
                 return False
             
             return True

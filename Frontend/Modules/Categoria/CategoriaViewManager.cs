@@ -29,7 +29,7 @@ namespace Frontend.Modules.Categoria
             // Vista completa por defecto
             ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.Categoria>
             {
-                DisplayName = "Vista Completa",
+                DisplayName = "c",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.Categoria>()?
                     .Where(c => c.Active == true)
                     .OrderBy(c => c.Nombre) ?? null!,

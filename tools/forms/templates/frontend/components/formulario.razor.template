@@ -1,13 +1,13 @@
-@page "/categoria/formulario"
-@page "/categoria/formulario/{Id:guid}"
+@page "/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario"
+@page "/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario/{Id:guid}"
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
 
-<PageTitle>@(isEditMode ? $"Editar Categoría - {entity.Nombre}" : "Nueva Categoría")</PageTitle>
+<PageTitle>@(isEditMode ? $"Editar {{ENTITY_DISPLAY_NAME}} - {entity.{{PRIMARY_FIELD}}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")</PageTitle>
 
-<PageWithCommandBar BackPath="/categoria/list" 
+<PageWithCommandBar BackPath="/{{MODULE_PATH}}/{{ENTITY_LOWER}}/list" 
                     ShowSave
                     OnSaveClick="@SaveForm">
 
@@ -19,10 +19,10 @@
                     <RadzenRow JustifyContent="JustifyContent.Center">
                         <RadzenColumn SizeLG="4" SizeMD="6" SizeSM="12">
                             
-                            <EssentialsCard Title="@(isEditMode ? "Editar Categoría" : "Nueva Categoría")" 
+                            <EssentialsCard Title="@(isEditMode ? "Editar {{ENTITY_DISPLAY_NAME}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")" 
                                            Icon="@(isEditMode ? "edit" : "add")" 
                                            IconColor="#0078d4"
-                                            ShowEssentials=@(entity.Id != Guid.Empty)>
+                                           ShowEssentials=@(entity.Id != Guid.Empty)>
                              
                                 <EssentialsTemplate>
                                     <EssentialsGrid>
@@ -36,23 +36,7 @@
                                     <FormValidator Entity="entity" Rules="@GetValidationRules()">
                                         
                                         <RadzenStack Gap="1rem">
-                                            
-                                            <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-                                                <RadzenFormField Text="Nombre" Style="width: 100%">
-                                                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
-                                                                   Value="@entity.Nombre"
-                                                                   Placeholder="Ingrese el nombre de la categoría" />
-                                                </RadzenFormField>
-                                            </ValidatedInput>
-                                            
-                                            <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
-                                                <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
-                                                    <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
-                                                                    Value="@entity.Descripcion"
-                                                                    Placeholder="Ingrese la descripción (opcional)" 
-                                                                    Rows="3" />
-                                                </RadzenFormField>
-                                            </ValidatedInput>
+                                            {{FORM_FIELDS}}
                                             
                                             <RadzenFormField Text="Activo">
                                                 <RadzenCheckBox @bind-Value="entity.Active" />
@@ -72,6 +56,4 @@
         </CrmTabs>
     </div>
 
-
 </PageWithCommandBar>
-

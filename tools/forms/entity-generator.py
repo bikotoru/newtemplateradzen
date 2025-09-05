@@ -232,10 +232,49 @@ class EntityGenerator:
             print("🎊 ENTIDAD CON CREACIÓN RÁPIDA COMPLETAMENTE FUNCIONAL!")
             print(f"🌐 Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
             print(f"⚡ Creación rápida disponible como componente independiente")
+            print()
+            print("📋 SIGUIENTE PASO:")
+            print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 3.5")
             return True
             
         except Exception as e:
             print(f"❌ ERROR en FASE 3.4: {e}")
+            return False
+    
+    def fase_35_frontend_formulario_completo(self, entity_name, module):
+        """FASE 3.5: Generar frontend completo con Formulario"""
+        self.print_header("3.5")
+        
+        try:
+            # Generar Service + ViewManager + List + Fast + Formulario
+            if not self.frontend_generator.generate_frontend_with_formulario(entity_name, module):
+                return False
+            
+            # Actualizar ServiceRegistry
+            if not self.frontend_registry.update(entity_name, module):
+                return False
+            
+            print()
+            print("🎉 FASE 3.5 COMPLETADA EXITOSAMENTE")
+            print(f"✅ Frontend {entity_name}Service.cs generado")
+            print(f"✅ Frontend {entity_name}ViewManager.cs generado")
+            print(f"✅ Frontend {entity_name}List.razor generado")
+            print(f"✅ Frontend {entity_name}List.razor.cs generado")
+            print(f"✅ Frontend {entity_name}Fast.razor generado")
+            print(f"✅ Frontend {entity_name}Fast.razor.cs generado")
+            print(f"✅ Frontend {entity_name}Formulario.razor generado")
+            print(f"✅ Frontend {entity_name}Formulario.razor.cs generado")
+            print(f"✅ Frontend ServiceRegistry actualizado")
+            print()
+            print("🎊🎊 ENTIDAD CRUD COMPLETAMENTE FUNCIONAL! 🎊🎊")
+            print(f"🌐 Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
+            print(f"📝 Formulario: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/formulario")
+            print(f"⚡ Creación rápida disponible como componente")
+            print(f"🔗 Con soporte completo para lookups automáticos")
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en FASE 3.5: {e}")
             return False
     
     def run(self, entity_name, module, phase, fields=None):
@@ -259,6 +298,8 @@ class EntityGenerator:
                 return self.fase_33_frontend_components(entity_name, module)
             elif phase == 3.4:
                 return self.fase_34_frontend_with_fast(entity_name, module)
+            elif phase == 3.5:
+                return self.fase_35_frontend_formulario_completo(entity_name, module)
             
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
@@ -271,8 +312,8 @@ def main():
                        help='Nombre de la entidad (ej: Marca, Producto)')
     parser.add_argument('--module', required=True,
                        help='Módulo donde crear la entidad (ej: Inventario.Core)')
-    parser.add_argument('--phase', type=float, choices=[1, 2, 3, 3.2, 3.3, 3.4], required=True,
-                       help='Fase a ejecutar: 1=Database, 2=Backend, 3=Frontend(Service), 3.2=Frontend+ViewManager, 3.3=Frontend+List, 3.4=Frontend+Fast')
+    parser.add_argument('--phase', type=float, choices=[1, 2, 3, 3.2, 3.3, 3.4, 3.5], required=True,
+                       help='Fase a ejecutar: 1=Database, 2=Backend, 3=Frontend(Service), 3.2=Frontend+ViewManager, 3.3=Frontend+List, 3.4=Frontend+Fast, 3.5=Frontend+Formulario')
     parser.add_argument('--fields', nargs='*', default=None,
                        help='Campos personalizados: "nombre:tipo:tamaño"')
     
