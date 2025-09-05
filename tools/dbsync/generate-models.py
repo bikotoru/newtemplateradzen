@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 🐍 Database-First Model Generator for .NET + Blazor
 Reads from launchSettings.json and generates models automatically
@@ -16,6 +17,12 @@ import subprocess
 import argparse
 from pathlib import Path
 import re
+
+# Configurar encoding UTF-8 para Windows
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
 
 class DatabaseModelGenerator:
     def __init__(self, project_path="Backend"):
@@ -227,10 +234,10 @@ def main():
         success = generator.run()
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
-        print("\n\n⏹️  Proceso cancelado por el usuario")
+        print("\n\nProceso cancelado por el usuario")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ ERROR inesperado: {e}")
+        print(f"\nERROR inesperado: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

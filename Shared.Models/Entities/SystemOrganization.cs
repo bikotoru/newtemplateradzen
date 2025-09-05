@@ -21,6 +21,8 @@ public partial class SystemOrganization
 
     public virtual ICollection<Categoria> Categoria { get; set; } = new List<Categoria>();
 
+    public virtual ICollection<Marca> Marca { get; set; } = new List<Marca>();
+
     public virtual ICollection<SystemConfig> SystemConfig { get; set; } = new List<SystemConfig>();
 
     public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();

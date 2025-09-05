@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shared.Models.Entities;
 
-public partial class Categoria
+public partial class Marca
 {
     public Guid Id { get; set; }
 
@@ -22,6 +22,8 @@ public partial class Categoria
     public string? Nombre { get; set; }
 
     public string? Descripcion { get; set; }
+
+    public string? CodigoInterno { get; set; }
 
     public virtual SystemUsers? Creador { get; set; }
 

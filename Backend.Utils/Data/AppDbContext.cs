@@ -14,6 +14,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Categoria> Categoria { get; set; }
 
+    public virtual DbSet<Marca> Marca { get; set; }
+
     public virtual DbSet<SystemConfig> SystemConfig { get; set; }
 
     public virtual DbSet<SystemConfigValues> SystemConfigValues { get; set; }
@@ -62,6 +64,37 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Organization).WithMany(p => p.Categoria)
                 .HasForeignKey(d => d.OrganizationId)
                 .HasConstraintName("FK_categoria_OrganizationId");
+        });
+
+        modelBuilder.Entity<Marca>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__marca__3214EC07117A2B75");
+
+            entity.ToTable("marca");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.CodigoInterno)
+                .HasMaxLength(50)
+                .HasColumnName("codigo_interno");
+            entity.Property(e => e.Descripcion).HasColumnName("descripcion");
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(255)
+                .HasColumnName("nombre");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.MarcaCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_marca_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.MarcaModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_marca_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.Marca)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_marca_OrganizationId");
         });
 
         modelBuilder.Entity<SystemConfig>(entity =>

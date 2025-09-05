@@ -87,9 +87,41 @@ class EntityGenerator:
         print(f"🔧 Generando backend para entidad: {entity_name}")
         print(f"📁 Módulo: {module}")
         print()
-        print("⚠️  FASE 2 aún no implementada")
-        print("💡 Proximamente: generación de Service, Controller y registro en ServiceRegistry")
-        return False
+        
+        try:
+            # 1. Crear directorio del módulo (manejar subdirectorios con punto)
+            module_parts = module.split('.')
+            backend_module_path = self.root_path / "Backend" / "Modules"
+            for part in module_parts:
+                backend_module_path = backend_module_path / part
+            backend_module_path.mkdir(parents=True, exist_ok=True)
+            print(f"📁 Directorio creado: {backend_module_path}")
+            
+            # 2. Generar Service
+            if not self.generate_backend_service(entity_name, module, backend_module_path):
+                return False
+            
+            # 3. Generar Controller
+            if not self.generate_backend_controller(entity_name, module, backend_module_path):
+                return False
+            
+            # 4. Actualizar ServiceRegistry
+            if not self.update_backend_service_registry(entity_name, module):
+                return False
+            
+            print()
+            print("🎉 FASE 2 COMPLETADA EXITOSAMENTE")
+            print(f"✅ {entity_name}Service.cs generado")
+            print(f"✅ {entity_name}Controller.cs generado")
+            print(f"✅ ServiceRegistry actualizado")
+            print()
+            print("📋 SIGUIENTE PASO:")
+            print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 3")
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en FASE 2: {e}")
+            return False
     
     def fase_3_frontend(self, entity_name, module):
         """FASE 3: Generar frontend (Service + Registry)"""
@@ -117,6 +149,105 @@ class EntityGenerator:
         if entity_name.lower() in reserved_words:
             raise ValueError(f"'{entity_name}' es una palabra reservada")
         
+        return True
+    
+    def generate_backend_service(self, entity_name, module, module_path):
+        """Generar archivo Service del backend"""
+        service_content = f"""using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Backend.Utils.Data;
+using Backend.Utils.Services;
+using Shared.Models.Entities;
+
+namespace Backend.Modules.{module}
+{{
+    public class {entity_name}Service : BaseQueryService<Shared.Models.Entities.{entity_name}>
+    {{
+        public {entity_name}Service(AppDbContext context, ILogger<{entity_name}Service> logger) 
+            : base(context, logger)
+        {{
+        }}
+
+    }}
+}}"""
+
+        service_file = module_path / f"{entity_name}Service.cs"
+        service_file.write_text(service_content, encoding='utf-8')
+        print(f"✅ {entity_name}Service.cs generado")
+        return True
+    
+    def generate_backend_controller(self, entity_name, module, module_path):
+        """Generar archivo Controller del backend"""
+        controller_content = f"""using Microsoft.AspNetCore.Mvc;
+using Backend.Utils.Services;
+using Shared.Models.Entities;
+using Backend.Controllers;
+
+namespace Backend.Modules.{module}
+{{
+    [Route("api/[controller]")]
+    public class {entity_name}Controller : BaseQueryController<Shared.Models.Entities.{entity_name}>
+    {{
+        private readonly {entity_name}Service _{entity_name.lower()}Service;
+
+        public {entity_name}Controller({entity_name}Service {entity_name.lower()}Service, ILogger<{entity_name}Controller> logger, IServiceProvider serviceProvider)
+            : base({entity_name.lower()}Service, logger, serviceProvider)
+        {{
+            _{entity_name.lower()}Service = {entity_name.lower()}Service;
+        }}
+
+    }}
+}}"""
+
+        controller_file = module_path / f"{entity_name}Controller.cs"
+        controller_file.write_text(controller_content, encoding='utf-8')
+        print(f"✅ {entity_name}Controller.cs generado")
+        return True
+    
+    def update_backend_service_registry(self, entity_name, module):
+        """Actualizar ServiceRegistry del backend"""
+        registry_file = self.root_path / "Backend" / "Services" / "ServiceRegistry.cs"
+        
+        if not registry_file.exists():
+            print(f"❌ ServiceRegistry no encontrado: {registry_file}")
+            return False
+        
+        # Leer contenido actual
+        content = registry_file.read_text(encoding='utf-8')
+        
+        # 1. Agregar using al inicio
+        using_line = f"using Backend.Modules.{module};"
+        if using_line not in content:
+            # Buscar donde insertar el using
+            lines = content.split('\n')
+            insert_index = 0
+            for i, line in enumerate(lines):
+                if line.startswith('using Backend.Modules.'):
+                    insert_index = i + 1
+                elif line.startswith('using Backend.Utils.') and insert_index == 0:
+                    insert_index = i
+                    break
+            
+            lines.insert(insert_index, using_line)
+            content = '\n'.join(lines)
+            print(f"✅ Using agregado: {using_line}")
+        
+        # 2. Agregar registro del servicio
+        service_registration = f"        services.AddScoped<{entity_name}Service>();"
+        if service_registration not in content:
+            # Buscar donde insertar el servicio
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if "// Module Services" in line:
+                    # Insertar después del comentario
+                    lines.insert(i + 1, service_registration)
+                    content = '\n'.join(lines)
+                    print(f"✅ Servicio registrado: {entity_name}Service")
+                    break
+        
+        # Escribir archivo actualizado
+        registry_file.write_text(content, encoding='utf-8')
+        print(f"✅ ServiceRegistry actualizado")
         return True
     
     def run(self, entity_name, module, phase, fields=None):

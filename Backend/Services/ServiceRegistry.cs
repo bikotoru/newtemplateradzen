@@ -1,5 +1,6 @@
 using Backend.Modules.Categoria;
 using Backend.Modules.Auth.Login;
+using Backend.Modules.Inventario.Core;
 using Backend.Utils.Services;
 using Backend.Utils.Security;
 
@@ -13,6 +14,7 @@ public static class ServiceRegistry
         services.AddScoped<LoginService>();
         
         // Module Services
+        services.AddScoped<MarcaService>();
         services.AddScoped<CategoriaService>();
         
         // Utils Services
