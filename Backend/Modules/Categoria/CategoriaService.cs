@@ -13,15 +13,5 @@ namespace Backend.Modules.Categoria
         {
         }
 
-        // ✅ Hereda automáticamente todos los métodos base:
-        // - CreateAsync(CreateRequest<Categoria>)
-        // - UpdateAsync(UpdateRequest<Categoria>)
-        // - GetAllPagedAsync(page, pageSize)
-        // - GetAllUnpagedAsync()
-        // - GetByIdAsync(id)
-        // - DeleteAsync(id)
-        // - CreateBatchAsync(CreateBatchRequest<Categoria>)
-        // - UpdateBatchAsync(UpdateBatchRequest<Categoria>)
-
     }
 }
