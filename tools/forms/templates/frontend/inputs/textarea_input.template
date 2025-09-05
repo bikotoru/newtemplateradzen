@@ -1,0 +1,8 @@
+<ValidatedInput FieldName="{{FIELD_NAME}}" Value="@entity.{{FIELD_NAME}}">
+    <RadzenFormField Text="{{FIELD_DISPLAY}}">
+        <RadzenTextArea @oninput="@(v => entity.{{FIELD_NAME}} = v.Value?.ToString())" 
+                        Value="@entity.{{FIELD_NAME}}"
+                        Placeholder="{{FIELD_PLACEHOLDER}}" 
+                        Rows="3" />
+    </RadzenFormField>
+</ValidatedInput>

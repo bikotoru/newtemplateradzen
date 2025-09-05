@@ -1,0 +1,7 @@
+<ValidatedInput FieldName="{{FIELD_NAME}}" Value="@entity.{{FIELD_NAME}}">
+    <RadzenFormField Text="{{FIELD_DISPLAY}}">
+        <RadzenDatePicker @bind-Value="entity.{{FIELD_NAME}}" 
+                          ShowTime="{{SHOW_TIME}}"
+                          DateFormat="{{DATE_FORMAT}}" />
+    </RadzenFormField>
+</ValidatedInput>

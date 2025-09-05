@@ -1,0 +1,12 @@
+<ValidatedInput FieldName="{{FIELD_NAME}}" Value="@entity.{{FIELD_NAME}}">
+    <RadzenFormField Text="{{FIELD_DISPLAY}}">
+        <Lookup TEntity="{{LOOKUP_ENTITY}}" 
+               TValue="{{LOOKUP_VALUE_TYPE}}" 
+               @bind-Value="entity.{{FIELD_NAME}}"
+               Service="{{LOOKUP_SERVICE}}"
+               DisplayProperty="{{LOOKUP_DISPLAY_PROPERTY}}"
+               EntityDisplayName="{{LOOKUP_ENTITY_DISPLAY}}"
+               {{LOOKUP_SEARCH_FIELDS}}
+               {{LOOKUP_CACHE_CONFIG}} />
+    </RadzenFormField>
+</ValidatedInput>
