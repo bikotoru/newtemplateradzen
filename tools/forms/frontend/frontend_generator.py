@@ -75,6 +75,42 @@ class FrontendGenerator:
             print(f"❌ ERROR en frontend generator: {e}")
             return False
     
+    def generate_razor_component(self, entity_name, module, module_path, component_type):
+        """Generar un componente Razor específico"""
+        try:
+            # Preparar variables para el template
+            variables = self.template_engine.prepare_entity_variables(entity_name, module)
+            
+            # Variables adicionales específicas para componentes
+            module_path_url = module.lower().replace('.', '/')
+            entity_plural = f"{entity_name}s"  # Simple pluralización
+            
+            variables.update({
+                'MODULE_PATH': module_path_url,
+                'ENTITY_LOWER': entity_name.lower(),
+                'ENTITY_PLURAL': entity_plural,
+                'MODULE_NAMESPACE': module.replace('.', '.')
+            })
+            
+            # Renderizar templates
+            razor_content = self.template_engine.render_template(f"frontend/components/{component_type}.razor.template", variables)
+            cs_content = self.template_engine.render_template(f"frontend/components/{component_type}.razor.cs.template", variables)
+            
+            # Escribir archivos
+            razor_file = module_path / f"{entity_name}{component_type.title()}.razor"
+            cs_file = module_path / f"{entity_name}{component_type.title()}.razor.cs"
+            
+            razor_file.write_text(razor_content, encoding='utf-8')
+            cs_file.write_text(cs_content, encoding='utf-8')
+            
+            print(f"✅ {entity_name}{component_type.title()}.razor generado")
+            print(f"✅ {entity_name}{component_type.title()}.razor.cs generado")
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR generando {component_type}: {e}")
+            return False
+
     def generate_service_and_viewmanager(self, entity_name, module):
         """Generar Service + ViewManager frontend (FASE 3.2)"""
         try:
@@ -91,6 +127,34 @@ class FrontendGenerator:
             
             # 3. Generar ViewManager
             if not self.generate_viewmanager(entity_name, module, module_path):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en frontend generator: {e}")
+            return False
+    
+    def generate_full_frontend(self, entity_name, module):
+        """Generar Service + ViewManager + Componentes Razor (FASE 3.3)"""
+        try:
+            print(f"🎨 Generando frontend completo para entidad: {entity_name}")
+            print(f"📁 Módulo: {module}")
+            
+            # 1. Crear directorio
+            module_path = self.create_module_directory(module)
+            print(f"📁 Directorio creado: {module_path}")
+            
+            # 2. Generar Service
+            if not self.generate_service(entity_name, module, module_path):
+                return False
+            
+            # 3. Generar ViewManager
+            if not self.generate_viewmanager(entity_name, module, module_path):
+                return False
+            
+            # 4. Generar componente List
+            if not self.generate_razor_component(entity_name, module, module_path, "list"):
                 return False
             
             return True

@@ -169,12 +169,41 @@ class EntityGenerator:
             print(f"✅ Frontend {entity_name}ViewManager.cs generado")
             print(f"✅ Frontend ServiceRegistry actualizado")
             print()
-            print("⚠️  FASE 3.3 pendiente: Componentes Razor (Fast, Formulario, List)")
-            print("💡 Proximamente: generación completa de componentes Razor")
+            print("📋 SIGUIENTE PASO:")
+            print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 3.3")
             return True
             
         except Exception as e:
             print(f"❌ ERROR en FASE 3.2: {e}")
+            return False
+    
+    def fase_33_frontend_components(self, entity_name, module):
+        """FASE 3.3: Generar componentes Razor completos"""
+        self.print_header("3.3")
+        
+        try:
+            # Generar Service + ViewManager + Componentes Razor
+            if not self.frontend_generator.generate_full_frontend(entity_name, module):
+                return False
+            
+            # Actualizar ServiceRegistry
+            if not self.frontend_registry.update(entity_name, module):
+                return False
+            
+            print()
+            print("🎉 FASE 3.3 COMPLETADA EXITOSAMENTE")
+            print(f"✅ Frontend {entity_name}Service.cs generado")
+            print(f"✅ Frontend {entity_name}ViewManager.cs generado")
+            print(f"✅ Frontend {entity_name}List.razor generado")
+            print(f"✅ Frontend {entity_name}List.razor.cs generado")
+            print(f"✅ Frontend ServiceRegistry actualizado")
+            print()
+            print("🎊 ENTIDAD COMPLETAMENTE FUNCIONAL!")
+            print(f"🌐 Puedes acceder en: /{''.join(module.lower().split('.'))}/marca/list")
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en FASE 3.3: {e}")
             return False
     
     def run(self, entity_name, module, phase, fields=None):
@@ -194,6 +223,8 @@ class EntityGenerator:
                 return self.fase_3_frontend(entity_name, module)
             elif phase == 3.2:
                 return self.fase_32_frontend_full(entity_name, module)
+            elif phase == 3.3:
+                return self.fase_33_frontend_components(entity_name, module)
             
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
@@ -206,8 +237,8 @@ def main():
                        help='Nombre de la entidad (ej: Marca, Producto)')
     parser.add_argument('--module', required=True,
                        help='Módulo donde crear la entidad (ej: Inventario.Core)')
-    parser.add_argument('--phase', type=float, choices=[1, 2, 3, 3.2], required=True,
-                       help='Fase a ejecutar: 1=Database, 2=Backend, 3=Frontend(Service), 3.2=Frontend+ViewManager')
+    parser.add_argument('--phase', type=float, choices=[1, 2, 3, 3.2, 3.3], required=True,
+                       help='Fase a ejecutar: 1=Database, 2=Backend, 3=Frontend(Service), 3.2=Frontend+ViewManager, 3.3=Frontend+Componentes')
     parser.add_argument('--fields', nargs='*', default=None,
                        help='Campos personalizados: "nombre:tipo:tamaño"')
     

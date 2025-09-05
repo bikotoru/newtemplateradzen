@@ -1,0 +1,61 @@
+using Microsoft.AspNetCore.Components;
+using Frontend.Components.Base.Tables;
+using Shared.Models.Entities;
+using Frontend.Services;
+using Radzen;
+using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
+
+namespace Frontend.Modules.{{MODULE_NAMESPACE}};
+
+public partial class {{ENTITY_NAME}}List : ComponentBase
+{
+    [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private DialogService DialogService { get; set; } = null!;
+    [Inject] private QueryService QueryService { get; set; } = null!;
+
+    private EntityTable<{{ENTITY_NAME}}Entity>? entityTable;
+    private {{ENTITY_NAME}}ViewManager viewManager = null!;
+    private ViewConfiguration<{{ENTITY_NAME}}Entity> currentView = null!;
+    
+    private List<IViewConfiguration<{{ENTITY_NAME}}Entity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<{{ENTITY_NAME}}Entity>>().ToList();
+    
+    protected override void OnInitialized()
+    {
+        viewManager = new {{ENTITY_NAME}}ViewManager(QueryService);
+        currentView = viewManager.GetDefaultView();
+        base.OnInitialized();
+    }
+
+    private async Task HandleEdit({{ENTITY_NAME}}Entity {{ENTITY_LOWER}})
+    {
+        Navigation.NavigateTo($"/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario/{{{ENTITY_LOWER}}.Id}");
+    }
+
+    private async Task HandleDelete({{ENTITY_NAME}}Entity {{ENTITY_LOWER}})
+    {
+        var response = await {{ENTITY_NAME}}Service.DeleteAsync({{ENTITY_LOWER}}.Id);
+        
+        if (!response.Success)
+        {
+            await DialogService.Alert(
+                response.Message ?? "Error al eliminar {{ENTITY_LOWER}}", 
+                "Error"
+            );
+        }
+    }
+    
+    private async Task OnViewChanged(IViewConfiguration<{{ENTITY_NAME}}Entity> selectedView)
+    {
+        if (selectedView is ViewConfiguration<{{ENTITY_NAME}}Entity> viewConfig)
+        {
+            currentView = viewConfig;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private string GetGridKey()
+    {
+        return $"grid_{currentView?.DisplayName ?? "default"}";
+    }
+}
