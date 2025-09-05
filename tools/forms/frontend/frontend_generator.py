@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 🎨 Frontend Generator
-Genera Service del frontend usando templates
+Genera Service y ViewManager del frontend usando templates
 """
 
 import sys
@@ -13,13 +13,15 @@ class FrontendGenerator:
         self.root_path = Path(root_path)
         self.forms_path = self.root_path / "tools" / "forms"
         
-        # Importar template engine
+        # Importar template engine y viewmanager generator
         sys.path.append(str(self.forms_path))
         from shared.template_engine import TemplateEngine
+        from frontend.viewmanager import ViewManagerGenerator
         
-        # Inicializar motor de templates
+        # Inicializar componentes
         templates_path = self.forms_path / "templates"
         self.template_engine = TemplateEngine(templates_path)
+        self.viewmanager_generator = ViewManagerGenerator(self.root_path)
     
     def generate_service(self, entity_name, module, module_path):
         """Generar archivo Service del frontend usando template"""
@@ -49,6 +51,10 @@ class FrontendGenerator:
         frontend_module_path.mkdir(parents=True, exist_ok=True)
         return frontend_module_path
     
+    def generate_viewmanager(self, entity_name, module, module_path):
+        """Generar ViewManager del frontend"""
+        return self.viewmanager_generator.generate_viewmanager(entity_name, module, module_path)
+    
     def generate_service_only(self, entity_name, module):
         """Generar solo el service frontend (FASE 3.1)"""
         try:
@@ -61,6 +67,30 @@ class FrontendGenerator:
             
             # 2. Generar Service
             if not self.generate_service(entity_name, module, module_path):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en frontend generator: {e}")
+            return False
+    
+    def generate_service_and_viewmanager(self, entity_name, module):
+        """Generar Service + ViewManager frontend (FASE 3.2)"""
+        try:
+            print(f"🎨 Generando service + viewmanager frontend para entidad: {entity_name}")
+            print(f"📁 Módulo: {module}")
+            
+            # 1. Crear directorio
+            module_path = self.create_module_directory(module)
+            print(f"📁 Directorio creado: {module_path}")
+            
+            # 2. Generar Service
+            if not self.generate_service(entity_name, module, module_path):
+                return False
+            
+            # 3. Generar ViewManager
+            if not self.generate_viewmanager(entity_name, module, module_path):
                 return False
             
             return True

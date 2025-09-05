@@ -1,0 +1,94 @@
+using Frontend.Components.Base.Tables;
+using Frontend.Services;
+using Radzen;
+using Radzen.Blazor;
+using Microsoft.AspNetCore.Components.Rendering;
+
+namespace Frontend.Modules.{{MODULE}}
+{
+    public class {{ENTITY_NAME}}ViewManager
+    {
+        /// <summary>
+        /// Lista de configuraciones de vista predefinidas
+        /// </summary>
+        public List<ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>> ViewConfigurations { get; private set; } = new();
+        
+        private readonly QueryService? _queryService;
+
+        public {{ENTITY_NAME}}ViewManager(QueryService? queryService = null)
+        {
+            _queryService = queryService;
+            InitializeDefaultViews();
+        }
+
+        /// <summary>
+        /// Inicializa las vistas por defecto
+        /// </summary>
+        private void InitializeDefaultViews()
+        {
+            // Vista completa por defecto
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>
+            {
+                DisplayName = "Vista Completa",
+                QueryBuilder = _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>()?
+                    .Where(c => c.Active == true)
+                    .OrderBy(c => c.{{PRIMARY_FIELD}}) ?? null!,
+                ColumnConfigs = new List<ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>>
+                {
+                    {{COLUMN_CONFIGS}}
+                }
+            });
+
+            // Vista compacta solo con campo principal
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>
+            {
+                DisplayName = "Vista Compacta",
+                QueryBuilder = _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>()?
+                    .Where(c => c.Active == true)
+                    .OrderBy(c => c.{{PRIMARY_FIELD}}) ?? null!,
+                ColumnConfigs = new List<ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>>
+                {
+                    new ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>
+                    {
+                        Property = "{{PRIMARY_FIELD}}",
+                        Title = "{{PRIMARY_FIELD_TITLE}}",
+                        Width = "250px",
+                        Sortable = true,
+                        Filterable = true,
+                        TextAlign = TextAlign.Left,
+                        Visible = true,
+                        Order = 1
+                    }
+                }
+            });
+
+            // Vista administrativa con todas las columnas
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>
+            {
+                DisplayName = "Vista Administrativa",
+                QueryBuilder = _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>()?
+                    .OrderBy(c => c.FechaModificacion, true) ?? null!, // Últimos modificados primero
+                ColumnConfigs = new List<ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>>
+                {
+                    {{ADMIN_COLUMN_CONFIGS}}
+                }
+            });
+        }
+
+        /// <summary>
+        /// Obtiene una configuración por nombre
+        /// </summary>
+        public ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>? GetViewByName(string displayName)
+        {
+            return ViewConfigurations.FirstOrDefault(v => v.DisplayName == displayName);
+        }
+
+        /// <summary>
+        /// Obtiene la vista por defecto
+        /// </summary>
+        public ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}> GetDefaultView()
+        {
+            return ViewConfigurations.FirstOrDefault() ?? new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>("Default", _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>() ?? null!);
+        }
+    }
+}
