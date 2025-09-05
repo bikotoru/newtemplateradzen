@@ -66,11 +66,13 @@ else
         {
             var principalModule = PrincipalMenuConfig.GetMenuModule();
             var adminModule = AdministracionMenuConfig.GetMenuModule();
+            var inventarioModule = InventarioMenuConfig.GetMenuModule();
             
             allModules = new List<MenuModule>
             {
                 principalModule,
-                adminModule
+                adminModule,
+                inventarioModule
             };
         }
         catch (Exception ex)

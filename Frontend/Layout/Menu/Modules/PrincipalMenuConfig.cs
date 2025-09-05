@@ -17,7 +17,7 @@ public static class PrincipalMenuConfig
                     Text = "Categorías",
                     Icon = "category",
                     Path = "/categoria/list",
-                    Permissions = new List<string>{ "*"}
+                    Permissions = new List<string>{ "CATEGORIA.VIEWMENU"}
                 }
             }
         };
