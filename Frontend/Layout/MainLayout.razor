@@ -1,5 +1,6 @@
 ﻿@using Frontend.Services
 @using Frontend.Components.Base
+@using Frontend.Layout.Menu
 @using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
 @inject AuthService AuthService
@@ -37,23 +38,7 @@
     </RadzenHeader>
     
     <RadzenSidebar @bind-Expanded="@sidebar1Expanded">
-        <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="📊 Módulo Principal" Icon="dashboard">
-                <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
-                <RadzenPanelMenuItem Text="Counter" Icon="plus_one" Path="/counter" />
-                <RadzenPanelMenuItem Text="Weather" Icon="wb_sunny" Path="/weather" />
-                <RadzenPanelMenuItem Text="Test" Icon="bug_report" Path="/test" />
-                <RadzenPanelMenuItem Text="Demo CommandBar" Icon="view_list" Path="/demo/list" />
-                <RadzenPanelMenuItem Text="Categorías" Icon="category" Path="/categoria/list" />
-            </RadzenPanelMenuItem>
-            <AuthorizeView Roles="Admin,SuperAdmin">
-                <RadzenPanelMenuItem Text="⚙️ Administración" Icon="settings">
-                    <RadzenPanelMenuItem Text="Usuarios" Icon="account_box" Path="/admin/users" />
-                    <RadzenPanelMenuItem Text="Roles" Icon="admin_panel_settings" Path="/admin/roles" />
-                    <RadzenPanelMenuItem Text="Permisos" Icon="security" Path="/admin/permissions" />
-                </RadzenPanelMenuItem>
-            </AuthorizeView>
-        </RadzenPanelMenu>
+        <MenuUnificado />
     </RadzenSidebar>
     
     <RadzenBody Style="padding: 0px !important">

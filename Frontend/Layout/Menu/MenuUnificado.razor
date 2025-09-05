@@ -1,0 +1,107 @@
+@using Frontend.Components.Base
+@using Frontend.Layout.Menu.Modules
+@using Frontend.Services
+@using Radzen.Blazor
+@inject AuthService AuthService
+@inject IJSRuntime JSRuntime
+
+@if (allModules.Any() && userPermissions.Any())
+{
+    <ModularMenu Modules="@allModules" UserPermissions="@userPermissions" />
+}
+else if (isLoading)
+{
+    <div style="padding: 16px; text-align: center;">
+        <RadzenProgressBarCircular ShowValue="false" Size="ProgressBarCircularSize.Small" />
+        <div style="margin-top: 8px;">Cargando menú...</div>
+    </div>
+}
+else
+{
+    <div style="padding: 16px; text-align: center; color: var(--rz-text-disabled-color);">
+        No hay menús disponibles
+    </div>
+}
+
+@code {
+    private List<MenuModule> allModules = new();
+    private List<string> userPermissions = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserPermissions();
+        await LoadModules();
+        
+        // Marcar como completado y forzar re-renderizado
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadUserPermissions()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Iniciando LoadUserPermissions");
+            
+            await AuthService.EnsureInitializedAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] AuthService inicializado");
+            
+            // Verificar estado de autenticación
+            var isAuth = await AuthService.IsAuthenticatedAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", $"[MenuUnificado] Usuario autenticado: {isAuth}");
+            
+            // Obtener permisos del usuario
+            var permissions = await AuthService.GetAllUserPermissionsAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Permisos obtenidos:", permissions.ToArray());
+            
+            // Obtener roles del usuario 
+            var roles = await AuthService.GetUserRolesAsync();
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Roles obtenidos:", roles.ToArray());
+            
+            // Combinar permisos y roles para el sistema de menú
+            userPermissions = new List<string>();
+            userPermissions.AddRange(permissions);
+            userPermissions.AddRange(roles);
+            
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Permisos finales combinados:", userPermissions.ToArray());
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "[MenuUnificado] Error en LoadUserPermissions:", ex.Message);
+            userPermissions = new List<string>();
+        }
+    }
+
+    private async Task LoadModules()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Cargando módulos");
+            
+            var principalModule = PrincipalMenuConfig.GetMenuModule();
+            var adminModule = AdministracionMenuConfig.GetMenuModule();
+            
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Módulo Principal:", principalModule.Text, "Items:", principalModule.MenuItems.Count);
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Módulo Admin:", adminModule.Text, "Items:", adminModule.MenuItems.Count);
+            
+            // Log de permisos requeridos por cada item
+            foreach (var item in principalModule.MenuItems)
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", $"[MenuUnificado] Item '{item.Text}' requiere permisos:", item.Permissions.ToArray());
+            }
+            
+            allModules = new List<MenuModule>
+            {
+                principalModule,
+                adminModule
+            };
+            
+            await JSRuntime.InvokeVoidAsync("console.log", "[MenuUnificado] Módulos cargados:", allModules.Count);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "[MenuUnificado] Error en LoadModules:", ex.Message);
+        }
+    }
+}

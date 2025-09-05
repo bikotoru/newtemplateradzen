@@ -18,7 +18,8 @@
       "Bash(rm:*)",
       "Bash(rg:*)",
       "Bash(wc:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

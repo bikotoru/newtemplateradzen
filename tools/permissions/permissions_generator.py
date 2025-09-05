@@ -16,9 +16,15 @@ import pyodbc
 
 # Configurar encoding UTF-8 para Windows
 if sys.platform == "win32":
-    import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
+    try:
+        import codecs
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
+    except:
+        # Fallback silencioso si no se puede configurar encoding
+        pass
 
 class PermissionsGenerator:
     def __init__(self, project_path="Backend"):
@@ -163,7 +169,7 @@ class PermissionsGenerator:
         return count > 0
     
     def generate_permissions(self, entity_name, entity_plural=None, preview=False):
-        """Generar permisos para una entidad"""
+        """Generar permisos para una entidad con verificación inteligente"""
         
         # Generar plural si no se proporciona
         if not entity_plural:
@@ -180,6 +186,8 @@ class PermissionsGenerator:
         # Preparar datos
         now = datetime.now()
         permissions_to_create = []
+        existing_permissions = []
+        skipped_permissions = []
         
         try:
             # Conectar a la base de datos
@@ -221,19 +229,47 @@ class PermissionsGenerator:
                     'fecha_modificacion': now
                 }
                 
-                # Verificar si ya existe (solo si no es preview)
+                # Verificar si ya existe (tanto en preview como en ejecución)
                 if not preview:
                     if self.permission_exists(cursor, action_key):
+                        existing_permissions.append(action_key)
+                        skipped_permissions.append(f"{action_key} - {description}")
                         print(f"⚠️ Ya existe: {action_key}")
                         continue
+                else:
+                    # En preview mode, simular verificación
+                    try:
+                        conn = pyodbc.connect(connection_string)
+                        temp_cursor = conn.cursor()
+                        if self.permission_exists(temp_cursor, action_key):
+                            existing_permissions.append(action_key)
+                            skipped_permissions.append(f"{action_key} - {description}")
+                            print(f"⚠️ Ya existe: {action_key}")
+                            conn.close()
+                            continue
+                        conn.close()
+                    except:
+                        # Si falla la verificación en preview, asumir que no existe
+                        pass
                 
                 permissions_to_create.append(permission_data)
                 print(f"✅ Preparado: {action_key} - {description}")
             
             print()
             
+            # Mostrar resumen
+            if existing_permissions:
+                print(f"📊 Permisos existentes: {len(existing_permissions)}")
+                for skipped in skipped_permissions:
+                    print(f"   • {skipped}")
+                print()
+            
             if not permissions_to_create:
-                print("💡 Todos los permisos ya existen. No hay nada que crear.")
+                if existing_permissions:
+                    print("💡 Todos los permisos ya existen. No hay nada que crear.")
+                    print("✅ Sistema de permisos verificado correctamente")
+                else:
+                    print("⚠️ No se encontraron permisos para crear")
                 return True
             
             print(f"📊 Total a crear: {len(permissions_to_create)} permisos")
@@ -281,12 +317,26 @@ VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, '1', ?, ?, ?)"""
             conn.close()
             
             print()
-            print("🎉 PERMISOS CREADOS EXITOSAMENTE!")
-            print(f"✅ {len(permissions_to_create)} permisos insertados en system_permissions")
+            print("🎉 PERMISOS PROCESADOS EXITOSAMENTE!")
+            
+            if existing_permissions:
+                print(f"⚠️ {len(existing_permissions)} permisos ya existían")
+            
+            if permissions_to_create:
+                print(f"✅ {len(permissions_to_create)} permisos nuevos insertados")
+                print()
+                print("📋 PERMISOS CREADOS:")
+                for perm in permissions_to_create:
+                    print(f"   • {perm['action_key']} - {perm['description']}")
+            
+            if existing_permissions:
+                print()
+                print("📋 PERMISOS YA EXISTENTES:")
+                for skipped in skipped_permissions:
+                    print(f"   • {skipped}")
+            
             print()
-            print("📋 PERMISOS CREADOS:")
-            for perm in permissions_to_create:
-                print(f"   • {perm['action_key']} - {perm['description']}")
+            print("✅ Sistema de permisos configurado correctamente")
             
             return True
             

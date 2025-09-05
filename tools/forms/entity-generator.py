@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🎯 Entity Generator - Generador Completo de Entidades (REFACTORIZADO)
-Automatiza la creación de entidades CRUD completas en 2 fases:
+🎯 Entity Generator - Generador Completo de Entidades (MODULAR)
+Automatiza la creación de entidades CRUD con opciones flexibles:
 
-FASE 1: Base de Datos (tabla + sync EF Core + permisos)
-FASE 2: Sistema CRUD Completo (Backend + Frontend)
+OPCIONES MODULARES:
+🗄️  --target db        = Solo Base de Datos (tabla + sync EF Core + permisos)
+🎨  --target interfaz   = Solo Interfaz (backend + frontend completo)
+🚀  --target todo       = Todo junto (DB + Interfaz completo)
 
-Integra automáticamente:
-- ✅ Creación de tabla SQL
-- 🔐 Generación de permisos del sistema  
-- 🔧 Backend completo (Service + Controller)
-- 🎨 Frontend completo (Service + ViewManager + Components)
+VERIFICACIONES INTELIGENTES:
+- ✅ Detecta permisos existentes automáticamente
+- 🔄 Solo crea permisos faltantes
+- 📊 Reporta estado actual
 
 Usage:
-    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --phase 1
-    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --phase 2
+    # Solo base de datos
+    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --target db
+    
+    # Solo interfaz (requiere tabla existente)
+    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --target interfaz
+    
+    # Todo completo
+    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --target todo
 """
 
 import sys
@@ -46,6 +53,7 @@ class EntityGenerator:
         from frontend.frontend_generator import FrontendGenerator
         from frontend.service_registry import FrontendServiceRegistry
         from shared.validation import EntityValidator
+        from shared.entity_configurator import EntityConfigurator
         from table import DatabaseTableGenerator
         from permissions_generator import PermissionsGenerator
         
@@ -57,6 +65,7 @@ class EntityGenerator:
         self.frontend_registry = FrontendServiceRegistry(self.root_path)
         self.validator = EntityValidator(self.root_path)
         self.permissions_generator = PermissionsGenerator()
+        self.configurator = EntityConfigurator()
     
     def print_header(self, phase):
         print("=" * 70)
@@ -64,23 +73,33 @@ class EntityGenerator:
         print("=" * 70)
         print()
     
-    def fase_1_database(self, entity_name, module, fields):
-        """FASE 1: Crear tabla en base de datos, sincronizar modelos y generar permisos"""
-        self.print_header(1)
-        print(f"📊 Creando tabla para entidad: {entity_name}")
-        print(f"📁 Módulo: {module}")
-        print(f"📝 Campos: {len(fields)}")
-        for field in fields:
-            print(f"   • {field}")
+    def target_db(self, config):
+        """TARGET DB: Crear tabla en base de datos, sincronizar modelos y generar permisos"""
+        self.print_header("DB")
+        print(f"🗄️ CREANDO BASE DE DATOS para: {config.entity_name}")
         print()
         
-        # Usar DatabaseTableGenerator como librería
-        table_name = entity_name.lower()
+        # Paso 1: Crear tabla
+        print("📊 PASO 1: Creando tabla en base de datos...")
+        table_name = config.entity_name.lower()
+        
+        # Convertir configuración a formato table.py
+        fields_for_table = []
+        for field in config.regular_fields:
+            field_str = f"{field.name}:{field.field_type.value}"
+            if field.size:
+                field_str += f":{field.size}"
+            fields_for_table.append(field_str)
+        
+        fks_for_table = []
+        for fk in config.foreign_keys:
+            fk_str = f"{fk.field}:{fk.ref_table}"
+            fks_for_table.append(fk_str)
         
         success = self.db_generator.run(
             table_name=table_name,
-            fields=fields,
-            foreign_keys=None,
+            fields=fields_for_table,
+            foreign_keys=fks_for_table,
             unique_fields=None,
             execute=True,
             preview=False,
@@ -88,39 +107,134 @@ class EntityGenerator:
             add_fields_mode=False
         )
         
-        if success:
+        if not success:
             print()
-            print("🎉 FASE 1 COMPLETADA EXITOSAMENTE")
-            print(f"✅ Tabla '{table_name}' creada en base de datos")
-            print(f"✅ Modelos EF Core sincronizados")
-            print(f"✅ Entidad {entity_name} disponible para QueryService")
-            print()
+            print("❌ ERROR CREANDO TABLA")
+            print("💡 Revisa los errores anteriores antes de continuar")
+            return False
+        
+        print(f"✅ Tabla '{table_name}' creada en base de datos")
+        print(f"✅ Modelos EF Core sincronizados")
+        print(f"✅ Entidad {config.entity_name} disponible para QueryService")
+        print()
+        
+        # Paso 2: Generar permisos con verificación
+        print("🔐 PASO 2: Verificando y generando permisos...")
+        permissions_success = self.generate_permissions_smart(config.entity_name, config.entity_plural)
+        
+        print()
+        print("🎉 TARGET DB COMPLETADO EXITOSAMENTE!")
+        print("📋 SIGUIENTE PASO (opcional):")
+        print(f"   python tools/forms/entity-generator.py --entity \"{config.entity_name}\" --module \"{config.module}\" --target interfaz")
+        
+        return success and permissions_success
+    
+    def generate_permissions_smart(self, entity_name, entity_plural=None):
+        """Generar permisos con verificación inteligente"""
+        try:
+            if not entity_plural:
+                entity_plural = f"{entity_name}s"
             
-            # Generar permisos automáticamente
-            print("🔐 Generando permisos del sistema...")
+            # Verificar permisos existentes primero
+            print(f"🔍 Verificando permisos existentes para {entity_name}...")
+            
+            # Usar el permissions generator para verificar y crear
             permissions_success = self.permissions_generator.generate_permissions(
                 entity_name=entity_name,
-                entity_plural=f"{entity_name}s",
+                entity_plural=entity_plural,
                 preview=False
             )
             
-            if permissions_success:
-                print(f"✅ Permisos generados para {entity_name}")
-            else:
-                print(f"⚠️ Error generando permisos para {entity_name}")
-                print("💡 Los permisos se pueden generar manualmente:")
-                print(f"   python tools/permissions/permissions_generator.py --entity {entity_name}")
+            return permissions_success
             
-            print()
-            print("📋 SIGUIENTE PASO:")
-            print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 2")
-            return True
-        else:
-            print()
-            print("❌ FASE 1 FALLÓ")
-            print("💡 Revisa los errores anteriores antes de continuar")
+        except Exception as e:
+            print(f"⚠️ Error generando permisos para {entity_name}: {e}")
+            print("💡 Los permisos se pueden generar manualmente:")
+            print(f"   python tools/permissions/permissions_generator.py --entity {entity_name}")
             return False
     
+    def target_interfaz(self, config):
+        """TARGET INTERFAZ: Generar solo backend + frontend (requiere tabla existente)"""
+        self.print_header("INTERFAZ")
+        print(f"🎨 GENERANDO INTERFAZ para: {config.entity_name}")
+        print()
+        
+        try:
+            # Paso 1: Generar Backend
+            print("🔧 PASO 1: Generando Backend...")
+            if not self.backend_generator.generate(config.entity_name, config.module):
+                return False
+            
+            if not self.backend_registry.update(config.entity_name, config.module):
+                return False
+            
+            print("✅ Backend completado")
+            print()
+            
+            # Paso 2: Generar Frontend completo
+            print("🎨 PASO 2: Generando Frontend completo...")
+            if not self.frontend_generator.generate_frontend_with_formulario(config.entity_name, config.module):
+                return False
+            
+            if not self.frontend_registry.update(config.entity_name, config.module):
+                return False
+            
+            print()
+            print("🎉 TARGET INTERFAZ COMPLETADO EXITOSAMENTE!")
+            print()
+            print("📁 BACKEND GENERADO:")
+            print(f"✅ {config.entity_name}Service.cs")
+            print(f"✅ {config.entity_name}Controller.cs") 
+            print(f"✅ Backend ServiceRegistry actualizado")
+            print()
+            print("📁 FRONTEND GENERADO:")
+            print(f"✅ Frontend {config.entity_name}Service.cs")
+            print(f"✅ Frontend {config.entity_name}ViewManager.cs")
+            print(f"✅ Frontend {config.entity_name}List.razor + .cs")
+            print(f"✅ Frontend {config.entity_name}Fast.razor + .cs")
+            print(f"✅ Frontend {config.entity_name}Formulario.razor + .cs")
+            print(f"✅ Frontend ServiceRegistry actualizado")
+            print()
+            print("🌐 URLS DISPONIBLES:")
+            print(f"   Lista: /{''.join(config.module.lower().split('.'))}/{config.entity_name.lower()}/list")
+            print(f"   Formulario: /{''.join(config.module.lower().split('.'))}/{config.entity_name.lower()}/formulario")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ ERROR en TARGET INTERFAZ: {e}")
+            return False
+    
+    def target_todo(self, config):
+        """TARGET TODO: Generar todo completo (DB + Interfaz)"""
+        self.print_header("TODO")
+        print(f"🚀 GENERACIÓN COMPLETA para: {config.entity_name}")
+        print()
+        
+        # Paso 1: Base de datos
+        print("🗄️ ETAPA 1: Base de datos...")
+        if not self.target_db(config):
+            return False
+        
+        print()
+        print("=" * 50)
+        print()
+        
+        # Paso 2: Interfaz
+        print("🎨 ETAPA 2: Interfaz completa...")
+        if not self.target_interfaz(config):
+            return False
+        
+        print()
+        print("🎊🎊 TARGET TODO COMPLETADO EXITOSAMENTE! 🎊🎊")
+        print("🌟 ENTIDAD CRUD COMPLETAMENTE FUNCIONAL!")
+        print("✅ Base de datos creada y permisos configurados")
+        print("✅ Backend y Frontend completamente generados")
+        print("🔗 Con soporte automático para lookups")
+        print("⚡ Incluye creación rápida como componente independiente")
+        
+        return True
+
     def fase_2_backend(self, entity_name, module):
         """FASE 2: Generar sistema completo (Backend + Frontend)"""
         self.print_header(2)
@@ -331,47 +445,89 @@ class EntityGenerator:
             print(f"❌ ERROR en FASE 3.5: {e}")
             return False
     
-    def run(self, entity_name, module, phase, fields=None):
-        """Ejecutar la fase especificada"""
+    def run(self, args):
+        """Ejecutar el target especificado con configuración avanzada"""
         try:
-            # Validaciones
-            self.validator.validate_entity_inputs(entity_name, module, phase)
-            self.validator.validate_project_structure()
-            self.validator.validate_phase_requirements(phase, fields)
+            # Crear y validar configuración completa
+            config = self.configurator.configure_from_args(args)
             
-            # Ejecutar la fase correspondiente
-            if phase == 1:
-                return self.fase_1_database(entity_name, module, fields)
-            elif phase == 2:
-                return self.fase_2_backend(entity_name, module)
+            # Mostrar resumen de configuración
+            self.configurator.print_configuration_summary(config)
+            
+            # Ejecutar el target correspondiente
+            if config.target == 'db':
+                return self.target_db(config)
+            elif config.target == 'interfaz':
+                return self.target_interfaz(config)
+            elif config.target == 'todo':
+                return self.target_todo(config)
+            else:
+                print(f"❌ ERROR: Target '{config.target}' no válido. Opciones: db, interfaz, todo")
+                return False
             
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
             return False
 
 def main():
-    parser = argparse.ArgumentParser(description='🎯 Entity Generator - Generador de Entidades por Fases (MODULAR)')
+    parser = argparse.ArgumentParser(
+        description='🎯 Entity Generator - Generador Avanzado de Entidades CRUD',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Ejemplo completo:
+  python3 tools/forms/entity-generator.py \\
+    --entity "Producto" --plural "Productos" --module "Inventario.Core" --target todo \\
+    --fields "nombre:string:255" "codigo:string:50" "precio:decimal:18,2" \\
+    --fk "categoria_id:categorias" \\
+    --form-fields "nombre:required:placeholder=Nombre del producto" "precio:required:min=0" \\
+    --grid-fields "nombre:200px:left:sf" "codigo:120px:left:s" "precio:120px:right:sf" \\
+    --lookups "categoria_id:categorias:Nombre:required:cache" \\
+    --search-fields "nombre,codigo"
+        """)
     
+    # Argumentos básicos
     parser.add_argument('--entity', required=True,
-                       help='Nombre de la entidad (ej: Marca, Producto)')
+                       help='Nombre de la entidad (ej: Producto)')
+    parser.add_argument('--plural', 
+                       help='Plural de la entidad (ej: Productos)')
     parser.add_argument('--module', required=True,
                        help='Módulo donde crear la entidad (ej: Inventario.Core)')
-    parser.add_argument('--phase', type=float, choices=[1, 2], required=True,
-                       help='Fase a ejecutar: 1=Database, 2=Backend+Frontend(Sistema CRUD completo)')
-    parser.add_argument('--fields', nargs='*', default=None,
-                       help='Campos personalizados: "nombre:tipo:tamaño"')
+    parser.add_argument('--target', choices=['db', 'interfaz', 'todo'], required=True,
+                       help='Target: db=Solo BD, interfaz=Solo interfaz, todo=Completo')
+    
+    # Configuración de base de datos
+    parser.add_argument('--fields', nargs='*', 
+                       help='Campos de BD: "nombre:tipo:tamaño"')
+    parser.add_argument('--fk', nargs='*',
+                       help='Foreign Keys: "campo:tabla_referencia"')
+    
+    # Configuración de UI
+    parser.add_argument('--form-fields', nargs='*',
+                       help='Config formulario: "campo:required:placeholder=..."')
+    parser.add_argument('--grid-fields', nargs='*', 
+                       help='Config grilla: "campo:ancho:align:opciones"')
+    parser.add_argument('--readonly-fields', nargs='*',
+                       help='Campos solo lectura: "campo:tipo:label=..."')
+    parser.add_argument('--lookups', nargs='*',
+                       help='Lookups: "campo:tabla:campo_display:opciones"')
+    
+    # Configuración adicional
+    parser.add_argument('--search-fields', 
+                       help='Campos de búsqueda: "campo1,campo2,campo3"')
     
     args = parser.parse_args()
+    
+    # Validaciones básicas
+    if args.target in ['db', 'todo']:
+        if not args.fields and not args.fk:
+            print("❌ ERROR: --fields o --fk requerido para targets 'db' y 'todo'")
+            print("💡 Ejemplo: --fields \"nombre:string:100\" --fk \"categoria_id:categorias\"")
+            sys.exit(1)
     
     generator = EntityGenerator()
     
     try:
-        success = generator.run(
-            entity_name=args.entity,
-            module=args.module,
-            phase=args.phase,
-            fields=args.fields
-        )
+        success = generator.run(args)
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         print("\n\n⏹️ Proceso cancelado por el usuario")

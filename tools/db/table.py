@@ -16,6 +16,18 @@ import argparse
 from pathlib import Path
 import re
 
+# Configurar encoding UTF-8 para Windows
+if sys.platform == "win32":
+    try:
+        import codecs
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
+    except:
+        # Fallback silencioso si no se puede configurar encoding
+        pass
+
 class DatabaseTableGenerator:
     def __init__(self, project_path="Backend"):
         self.project_path = Path(project_path)
