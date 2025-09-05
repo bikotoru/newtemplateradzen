@@ -6,9 +6,9 @@ using Shared.Models.Entities;
 
 namespace Backend.Modules.Inventario.Core
 {
-    public class MarcaService : BaseQueryService<Shared.Models.Entities.Marca>
+    public class ProductoService : BaseQueryService<Shared.Models.Entities.Producto>
     {
-        public MarcaService(AppDbContext context, ILogger<MarcaService> logger) 
+        public ProductoService(AppDbContext context, ILogger<ProductoService> logger) 
             : base(context, logger)
         {
         }

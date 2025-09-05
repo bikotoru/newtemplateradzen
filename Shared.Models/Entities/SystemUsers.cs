@@ -37,13 +37,13 @@ public partial class SystemUsers
 
     public virtual ICollection<SystemUsers> InverseModificador { get; set; } = new List<SystemUsers>();
 
-    public virtual ICollection<Marca> MarcaCreador { get; set; } = new List<Marca>();
-
-    public virtual ICollection<Marca> MarcaModificador { get; set; } = new List<Marca>();
-
     public virtual SystemUsers? Modificador { get; set; }
 
     public virtual SystemOrganization? Organization { get; set; }
+
+    public virtual ICollection<Producto> ProductoCreador { get; set; } = new List<Producto>();
+
+    public virtual ICollection<Producto> ProductoModificador { get; set; } = new List<Producto>();
 
     public virtual ICollection<SystemConfig> SystemConfigCreador { get; set; } = new List<SystemConfig>();
 

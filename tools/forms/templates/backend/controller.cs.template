@@ -1,0 +1,20 @@
+using Microsoft.AspNetCore.Mvc;
+using Backend.Utils.Services;
+using Shared.Models.Entities;
+using Backend.Controllers;
+
+namespace Backend.Modules.{{MODULE}}
+{
+    [Route("api/[controller]")]
+    public class {{ENTITY_NAME}}Controller : BaseQueryController<Shared.Models.Entities.{{ENTITY_NAME}}>
+    {
+        private readonly {{ENTITY_NAME}}Service _{{ENTITY_NAME_LOWER}}Service;
+
+        public {{ENTITY_NAME}}Controller({{ENTITY_NAME}}Service {{ENTITY_NAME_LOWER}}Service, ILogger<{{ENTITY_NAME}}Controller> logger, IServiceProvider serviceProvider)
+            : base({{ENTITY_NAME_LOWER}}Service, logger, serviceProvider)
+        {
+            _{{ENTITY_NAME_LOWER}}Service = {{ENTITY_NAME_LOWER}}Service;
+        }
+
+    }
+}

@@ -14,7 +14,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Categoria> Categoria { get; set; }
 
-    public virtual DbSet<Marca> Marca { get; set; }
+    public virtual DbSet<Producto> Producto { get; set; }
 
     public virtual DbSet<SystemConfig> SystemConfig { get; set; }
 
@@ -66,35 +66,35 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_categoria_OrganizationId");
         });
 
-        modelBuilder.Entity<Marca>(entity =>
+        modelBuilder.Entity<Producto>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__marca__3214EC07117A2B75");
+            entity.HasKey(e => e.Id).HasName("PK__producto__3214EC076725E079");
 
-            entity.ToTable("marca");
+            entity.ToTable("producto");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.CodigoInterno)
-                .HasMaxLength(50)
-                .HasColumnName("codigo_interno");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(255)
                 .HasColumnName("nombre");
+            entity.Property(e => e.Precio)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("precio");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.MarcaCreador)
+            entity.HasOne(d => d.Creador).WithMany(p => p.ProductoCreador)
                 .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_marca_CreadorId");
+                .HasConstraintName("FK_producto_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.MarcaModificador)
+            entity.HasOne(d => d.Modificador).WithMany(p => p.ProductoModificador)
                 .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_marca_ModificadorId");
+                .HasConstraintName("FK_producto_ModificadorId");
 
-            entity.HasOne(d => d.Organization).WithMany(p => p.Marca)
+            entity.HasOne(d => d.Organization).WithMany(p => p.Producto)
                 .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_marca_OrganizationId");
+                .HasConstraintName("FK_producto_OrganizationId");
         });
 
         modelBuilder.Entity<SystemConfig>(entity =>

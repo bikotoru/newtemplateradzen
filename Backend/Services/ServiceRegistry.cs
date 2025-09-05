@@ -14,7 +14,7 @@ public static class ServiceRegistry
         services.AddScoped<LoginService>();
         
         // Module Services
-        services.AddScoped<MarcaService>();
+        services.AddScoped<ProductoService>();
         services.AddScoped<CategoriaService>();
         
         // Utils Services
