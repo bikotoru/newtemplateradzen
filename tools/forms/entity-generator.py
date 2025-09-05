@@ -2,16 +2,20 @@
 # -*- coding: utf-8 -*-
 """
 🎯 Entity Generator - Generador Completo de Entidades (REFACTORIZADO)
-Automatiza la creación de entidades CRUD completas en 3 fases:
+Automatiza la creación de entidades CRUD completas en 2 fases:
 
-FASE 1: Base de Datos (tabla + sync EF Core)
-FASE 2: Backend (Service + Controller + Registry)
-FASE 3: Frontend (Service + Registry + Components)
+FASE 1: Base de Datos (tabla + sync EF Core + permisos)
+FASE 2: Sistema CRUD Completo (Backend + Frontend)
+
+Integra automáticamente:
+- ✅ Creación de tabla SQL
+- 🔐 Generación de permisos del sistema  
+- 🔧 Backend completo (Service + Controller)
+- 🎨 Frontend completo (Service + ViewManager + Components)
 
 Usage:
     python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --phase 1
     python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --phase 2
-    python tools/forms/entity-generator.py --entity "Marca" --module "Inventario.Core" --phase 3
 """
 
 import sys
@@ -34,6 +38,7 @@ class EntityGenerator:
         # Importar módulos
         sys.path.append(str(self.forms_path))
         sys.path.append(str(self.tools_path / "db"))
+        sys.path.append(str(self.tools_path / "permissions"))
         
         # Importar generadores
         from backend.backend_generator import BackendGenerator
@@ -42,6 +47,7 @@ class EntityGenerator:
         from frontend.service_registry import FrontendServiceRegistry
         from shared.validation import EntityValidator
         from table import DatabaseTableGenerator
+        from permissions_generator import PermissionsGenerator
         
         # Inicializar componentes
         self.db_generator = DatabaseTableGenerator()
@@ -50,6 +56,7 @@ class EntityGenerator:
         self.frontend_generator = FrontendGenerator(self.root_path)
         self.frontend_registry = FrontendServiceRegistry(self.root_path)
         self.validator = EntityValidator(self.root_path)
+        self.permissions_generator = PermissionsGenerator()
     
     def print_header(self, phase):
         print("=" * 70)
@@ -58,7 +65,7 @@ class EntityGenerator:
         print()
     
     def fase_1_database(self, entity_name, module, fields):
-        """FASE 1: Crear tabla en base de datos y sincronizar modelos"""
+        """FASE 1: Crear tabla en base de datos, sincronizar modelos y generar permisos"""
         self.print_header(1)
         print(f"📊 Creando tabla para entidad: {entity_name}")
         print(f"📁 Módulo: {module}")
@@ -87,6 +94,23 @@ class EntityGenerator:
             print(f"✅ Tabla '{table_name}' creada en base de datos")
             print(f"✅ Modelos EF Core sincronizados")
             print(f"✅ Entidad {entity_name} disponible para QueryService")
+            print()
+            
+            # Generar permisos automáticamente
+            print("🔐 Generando permisos del sistema...")
+            permissions_success = self.permissions_generator.generate_permissions(
+                entity_name=entity_name,
+                entity_plural=f"{entity_name}s",
+                preview=False
+            )
+            
+            if permissions_success:
+                print(f"✅ Permisos generados para {entity_name}")
+            else:
+                print(f"⚠️ Error generando permisos para {entity_name}")
+                print("💡 Los permisos se pueden generar manualmente:")
+                print(f"   python tools/permissions/permissions_generator.py --entity {entity_name}")
+            
             print()
             print("📋 SIGUIENTE PASO:")
             print(f"   python tools/forms/entity-generator.py --entity \"{entity_name}\" --module \"{module}\" --phase 2")
