@@ -48,10 +48,6 @@ public partial class CategoriaList : ComponentBase
         base.OnInitialized();
     }
 
-    private void GoToCreate()
-    {
-        Navigation.NavigateTo("/categoria/formulario");
-    }
 
     private async Task HandleEdit(CategoriaEntity categoria)
     {
