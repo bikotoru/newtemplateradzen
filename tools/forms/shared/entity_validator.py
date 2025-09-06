@@ -146,28 +146,72 @@ class EntityConfigValidator:
             return errors
         
         try:
-            # Importar table generator para verificar existencia de tablas
-            import sys
+            import subprocess
+            import json
             from pathlib import Path
             
-            # Agregar path de db tools
+            # Leer connection string
             root_path = Path.cwd()
-            tools_path = root_path / "tools" / "db"
-            sys.path.append(str(tools_path))
+            project_path = root_path / "Backend"
+            launch_settings_path = project_path / "Properties" / "launchSettings.json"
             
-            from table import DatabaseTableGenerator
-            db_generator = DatabaseTableGenerator()
+            connection_string = None
+            if launch_settings_path.exists():
+                with open(launch_settings_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                
+                for profile_name, profile_data in settings.get("profiles", {}).items():
+                    env_vars = profile_data.get("environmentVariables", {})
+                    sql_connection = env_vars.get("SQL")
+                    if sql_connection:
+                        connection_string = sql_connection
+                        break
+            
+            if not connection_string:
+                # Si no hay connection string, no validar
+                return errors
+            
+            # Parsear connection string
+            parts = {}
+            for part in connection_string.split(';'):
+                if '=' in part and part.strip():
+                    key, value = part.split('=', 1)
+                    parts[key.strip().lower()] = value.strip()
+            
+            server = parts.get('server', 'localhost')
+            database = parts.get('database', 'NewPOC')
+            user_id = parts.get('user id', 'sa')
+            password = parts.get('password', 'Soporte.2019')
             
             for fk in config.foreign_keys:
                 table_name = fk.ref_table
                 
-                # Verificar si la tabla existe
-                if not db_generator.table_exists(table_name):
-                    errors.append(f"Tabla referenciada '{table_name}' no existe en la base de datos (FK: {fk.field})")
-                    errors.append(f"💡 Crea primero la tabla '{table_name}' o usa una tabla existente")
+                # Query para verificar existencia
+                check_query = f"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table_name}'"
+                
+                result = subprocess.run([
+                    'sqlcmd', '-S', server, '-U', user_id, '-P', password, '-d', database,
+                    '-Q', check_query, '-h', '-1'
+                ], capture_output=True, text=True, timeout=30)
+                
+                if result.returncode == 0:
+                    # Parsear el resultado de sqlcmd - buscar el número en las líneas
+                    lines = result.stdout.strip().split('\n')
+                    count = 0
+                    for line in lines:
+                        line = line.strip()
+                        if line.isdigit():
+                            count = int(line)
+                            break
+                    
+                    if count == 0:
+                        errors.append(f"Tabla referenciada '{table_name}' no existe en la base de datos (FK: {fk.field})")
+                        errors.append(f"💡 Crea primero la tabla '{table_name}' o usa una tabla existente")
+                else:
+                    errors.append(f"⚠️ Error verificando tabla '{table_name}': {result.stderr}")
         
         except Exception as e:
-            # Si no podemos verificar, advertir pero no bloquear
+            # Si no podemos verificar, solo advertir
             errors.append(f"⚠️ No se pudo verificar existencia de tablas referenciadas: {e}")
             errors.append("💡 Verifica manualmente que las tablas en --fk existan antes de continuar")
         

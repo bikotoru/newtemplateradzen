@@ -67,6 +67,22 @@ class PermissionsGenerator:
                 'description': 'Restaurar {entity_plural_lower}'
             }
         ]
+        
+        # Permisos especiales para tablas NN (muchos-a-muchos)
+        self.nn_permissions = [
+            {
+                'action': 'ADDTARGET',
+                'description': 'Agregar {target_table} a {source_table}'
+            },
+            {
+                'action': 'DELETETARGET',
+                'description': 'Quitar {target_table} de {source_table}'
+            },
+            {
+                'action': 'EDITTARGET',
+                'description': 'Editar {target_table} en {source_table}'
+            }
+        ]
     
     def set_connection_string(self, connection_string):
         """Configurar cadena de conexión personalizada"""
@@ -168,8 +184,246 @@ class PermissionsGenerator:
         count = cursor.fetchone()[0]
         return count > 0
     
+    def is_nn_table(self, entity_name):
+        """Detectar si es una tabla NN (muchos-a-muchos)"""
+        return entity_name.lower().startswith('nn_')
+    
+    def parse_nn_table_name(self, entity_name):
+        """Parsear nombre de tabla NN para extraer source, target y alias"""
+        if not self.is_nn_table(entity_name):
+            return None
+        
+        # Formato: nn_source_target o nn_source_target_alias
+        name_lower = entity_name.lower()
+        parts = name_lower.split('_')[1:]  # Remover 'nn'
+        
+        if len(parts) >= 2:
+            source_table = parts[0]
+            target_table = parts[1]
+            alias = '_'.join(parts[2:]) if len(parts) > 2 else None
+            
+            return {
+                'source_table': source_table,
+                'target_table': target_table,
+                'alias': alias
+            }
+        
+        return None
+    
+    def generate_nn_permissions(self, entity_name, nn_info, preview=False):
+        """Generar permisos especiales para tablas NN (muchos-a-muchos)"""
+        
+        source_table = nn_info['source_table']
+        target_table = nn_info['target_table']
+        alias = nn_info['alias']
+        
+        # Para permisos NN, el GroupKey siempre es la SOURCE table
+        source_upper = source_table.upper()
+        
+        print(f"🔗 Generando permisos NN para tabla: {entity_name}")
+        print(f"🎯 Source Table: {source_table}")
+        print(f"🎯 Target Table: {target_table}")
+        if alias:
+            print(f"🏷️ Alias: {alias}")
+        print(f"🏷️ GroupKey: {source_upper} (source table)")
+        print()
+        
+        # Preparar datos
+        now = datetime.now()
+        permissions_to_create = []
+        existing_permissions = []
+        skipped_permissions = []
+        
+        try:
+            # Conectar a la base de datos
+            connection_string = self.get_connection_string()
+            print(f"🔌 Conectando a base de datos...")
+            
+            # Mostrar info de conexión (sin credenciales)  
+            if "UID=" in connection_string:
+                print(f"🔑 Usando autenticación SQL")
+            else:
+                print(f"🔑 Usando autenticación de Windows")
+            
+            if preview:
+                print("👀 MODO PREVIEW - No se ejecutarán cambios")
+                organization_id = "F5B94C07-FAE1-4A2B-90AB-B73D4AAD67DC"
+            else:
+                conn = pyodbc.connect(connection_string)
+                cursor = conn.cursor()
+                organization_id = self.get_organization_id(cursor)
+            
+            print(f"🏢 Organization ID: {organization_id}")
+            print()
+            
+            # Generar cada permiso NN
+            for perm_template in self.nn_permissions:
+                if alias:
+                    # Con alias: SOURCE.ALIASACTION
+                    action_key = f"{source_upper}.{alias.upper()}{perm_template['action']}"
+                    description = perm_template['description'].format(
+                        source_table=source_table, 
+                        target_table=f"{target_table} ({alias})"
+                    )
+                else:
+                    # Sin alias: SOURCE.ACTION + TARGET 
+                    action_key = f"{source_upper}.{perm_template['action']}"
+                    description = perm_template['description'].format(
+                        source_table=source_table, 
+                        target_table=target_table
+                    )
+                
+                permission_name = action_key
+                
+                permission_data = {
+                    'id': str(uuid.uuid4()).upper(),
+                    'name': permission_name,
+                    'description': description,
+                    'action_key': action_key,
+                    'group_key': source_upper,  # Siempre la source table
+                    'group_name': source_table.capitalize(),
+                    'organization_id': organization_id,
+                    'fecha_creacion': now,
+                    'fecha_modificacion': now
+                }
+                
+                # Verificar si ya existe
+                if not preview:
+                    if self.permission_exists(cursor, action_key):
+                        existing_permissions.append(action_key)
+                        skipped_permissions.append(f"{action_key} - {description}")
+                        print(f"⚠️ Ya existe: {action_key}")
+                        continue
+                else:
+                    # En preview mode, simular verificación
+                    try:
+                        conn_temp = pyodbc.connect(connection_string)
+                        temp_cursor = conn_temp.cursor()
+                        if self.permission_exists(temp_cursor, action_key):
+                            existing_permissions.append(action_key)
+                            skipped_permissions.append(f"{action_key} - {description}")
+                            print(f"⚠️ Ya existe: {action_key}")
+                            conn_temp.close()
+                            continue
+                        conn_temp.close()
+                    except:
+                        pass
+                
+                permissions_to_create.append(permission_data)
+                print(f"✅ Preparado: {action_key} - {description}")
+            
+            print()
+            
+            # Mostrar resumen y ejecutar igual que el método regular
+            return self._execute_permissions_creation(
+                permissions_to_create, existing_permissions, skipped_permissions, 
+                preview, conn if not preview else None
+            )
+            
+        except Exception as e:
+            print(f"❌ ERROR: {e}")
+            return False
+    
+    def _execute_permissions_creation(self, permissions_to_create, existing_permissions, skipped_permissions, preview, conn):
+        """Método helper para ejecutar la creación de permisos"""
+        
+        # Mostrar resumen
+        if existing_permissions:
+            print(f"📊 Permisos existentes: {len(existing_permissions)}")
+            for skipped in skipped_permissions:
+                print(f"   • {skipped}")
+            print()
+        
+        if not permissions_to_create:
+            if existing_permissions:
+                print("💡 Todos los permisos ya existen. No hay nada que crear.")
+                print("✅ Sistema de permisos verificado correctamente")
+            else:
+                print("⚠️ No se encontraron permisos para crear")
+            return True
+        
+        print(f"📊 Total a crear: {len(permissions_to_create)} permisos")
+        
+        if preview:
+            print()
+            print("📋 SQL QUE SE EJECUTARÍA:")
+            print("-" * 60)
+            for perm in permissions_to_create:
+                sql = f"""INSERT INTO [dbo].[system_permissions] 
+([Id], [Nombre], [Descripcion], [FechaCreacion], [FechaModificacion], 
+[OrganizationId], [CreadorId], [ModificadorId], [Active], [ActionKey], [GroupKey], [GrupoNombre]) 
+VALUES ('{perm['id']}', N'{perm['name']}', N'{perm['description']}', 
+'{perm['fecha_creacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
+'{perm['fecha_modificacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
+'{perm['organization_id']}', NULL, NULL, '1', '{perm['action_key']}', 
+'{perm['group_key']}', N'{perm['group_name']}');"""
+                print(sql)
+                print()
+            return True
+        
+        # Ejecutar inserts
+        print("💾 Ejecutando inserts...")
+        
+        for perm in permissions_to_create:
+            sql = """INSERT INTO [dbo].[system_permissions] 
+([Id], [Nombre], [Descripcion], [FechaCreacion], [FechaModificacion], 
+[OrganizationId], [CreadorId], [ModificadorId], [Active], [ActionKey], [GroupKey], [GrupoNombre]) 
+VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, '1', ?, ?, ?)"""
+            
+            conn.cursor().execute(sql, 
+                perm['id'], 
+                perm['name'], 
+                perm['description'],
+                perm['fecha_creacion'], 
+                perm['fecha_modificacion'],
+                perm['organization_id'],
+                perm['action_key'],
+                perm['group_key'],
+                perm['group_name']
+            )
+        
+        # Confirmar cambios
+        conn.commit()
+        conn.close()
+        
+        print()
+        print("🎉 PERMISOS PROCESADOS EXITOSAMENTE!")
+        
+        if existing_permissions:
+            print(f"⚠️ {len(existing_permissions)} permisos ya existían")
+        
+        if permissions_to_create:
+            print(f"✅ {len(permissions_to_create)} permisos nuevos insertados")
+            print()
+            print("📋 PERMISOS CREADOS:")
+            for perm in permissions_to_create:
+                print(f"   • {perm['action_key']} - {perm['description']}")
+        
+        if existing_permissions:
+            print()
+            print("📋 PERMISOS YA EXISTENTES:")
+            for skipped in skipped_permissions:
+                print(f"   • {skipped}")
+        
+        print()
+        print("✅ Sistema de permisos configurado correctamente")
+        
+        return True
+    
     def generate_permissions(self, entity_name, entity_plural=None, preview=False):
         """Generar permisos para una entidad con verificación inteligente"""
+        
+        # Verificar si es tabla NN
+        is_nn = self.is_nn_table(entity_name)
+        nn_info = self.parse_nn_table_name(entity_name) if is_nn else None
+        
+        if is_nn and nn_info:
+            return self.generate_nn_permissions(entity_name, nn_info, preview)
+        else:
+            return self.generate_regular_permissions(entity_name, entity_plural, preview)
+    
+    def generate_regular_permissions(self, entity_name, entity_plural=None, preview=False):
+        """Generar permisos regulares (no NN)"""
         
         # Generar plural si no se proporciona
         if not entity_plural:
@@ -178,7 +432,7 @@ class PermissionsGenerator:
         entity_upper = entity_name.upper()
         entity_plural_lower = entity_plural.lower()
         
-        print(f"🔐 Generando permisos para entidad: {entity_name}")
+        print(f"🔐 Generando permisos REGULARES para entidad: {entity_name}")
         print(f"📝 Plural: {entity_plural}")
         print(f"🏷️ Grupo: {entity_upper}")
         print()
@@ -257,88 +511,11 @@ class PermissionsGenerator:
             
             print()
             
-            # Mostrar resumen
-            if existing_permissions:
-                print(f"📊 Permisos existentes: {len(existing_permissions)}")
-                for skipped in skipped_permissions:
-                    print(f"   • {skipped}")
-                print()
-            
-            if not permissions_to_create:
-                if existing_permissions:
-                    print("💡 Todos los permisos ya existen. No hay nada que crear.")
-                    print("✅ Sistema de permisos verificado correctamente")
-                else:
-                    print("⚠️ No se encontraron permisos para crear")
-                return True
-            
-            print(f"📊 Total a crear: {len(permissions_to_create)} permisos")
-            
-            if preview:
-                print()
-                print("📋 SQL QUE SE EJECUTARÍA:")
-                print("-" * 60)
-                for perm in permissions_to_create:
-                    sql = f"""INSERT INTO [dbo].[system_permissions] 
-([Id], [Nombre], [Descripcion], [FechaCreacion], [FechaModificacion], 
-[OrganizationId], [CreadorId], [ModificadorId], [Active], [ActionKey], [GroupKey], [GrupoNombre]) 
-VALUES ('{perm['id']}', N'{perm['name']}', N'{perm['description']}', 
-'{perm['fecha_creacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
-'{perm['fecha_modificacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
-'{perm['organization_id']}', NULL, NULL, '1', '{perm['action_key']}', 
-'{perm['group_key']}', N'{perm['group_name']}');"""
-                    print(sql)
-                    print()
-                return True
-            
-            # Ejecutar inserts
-            print("💾 Ejecutando inserts...")
-            
-            for perm in permissions_to_create:
-                sql = """INSERT INTO [dbo].[system_permissions] 
-([Id], [Nombre], [Descripcion], [FechaCreacion], [FechaModificacion], 
-[OrganizationId], [CreadorId], [ModificadorId], [Active], [ActionKey], [GroupKey], [GrupoNombre]) 
-VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, '1', ?, ?, ?)"""
-                
-                cursor.execute(sql, 
-                    perm['id'], 
-                    perm['name'], 
-                    perm['description'],
-                    perm['fecha_creacion'], 
-                    perm['fecha_modificacion'],
-                    perm['organization_id'],
-                    perm['action_key'],
-                    perm['group_key'],
-                    perm['group_name']
-                )
-            
-            # Confirmar cambios
-            conn.commit()
-            conn.close()
-            
-            print()
-            print("🎉 PERMISOS PROCESADOS EXITOSAMENTE!")
-            
-            if existing_permissions:
-                print(f"⚠️ {len(existing_permissions)} permisos ya existían")
-            
-            if permissions_to_create:
-                print(f"✅ {len(permissions_to_create)} permisos nuevos insertados")
-                print()
-                print("📋 PERMISOS CREADOS:")
-                for perm in permissions_to_create:
-                    print(f"   • {perm['action_key']} - {perm['description']}")
-            
-            if existing_permissions:
-                print()
-                print("📋 PERMISOS YA EXISTENTES:")
-                for skipped in skipped_permissions:
-                    print(f"   • {skipped}")
-            
-            print()
-            print("✅ Sistema de permisos configurado correctamente")
-            
-            return True
+            # Mostrar resumen y ejecutar usando el helper
+            return self._execute_permissions_creation(
+                permissions_to_create, existing_permissions, skipped_permissions, 
+                preview, conn if not preview else None
+            )
             
         except Exception as e:
             print(f"❌ ERROR: {e}")

@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\base\\backend\\services\\serviceregistry.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\services\\serviceregistry.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|c:\\users\\vuret\\onedrive\\escritorio\\nueva carpeta (12)\\base\\backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{83F531AB-AD83-4CFA-9F7C-0122BBC17BD2}|Backend\\Backend.csproj|solutionrelative:backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -111,6 +115,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "ServiceRegistry.cs",
+              "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend\\Services\\ServiceRegistry.cs",
+              "RelativeDocumentMoniker": "Backend\\Services\\ServiceRegistry.cs",
+              "ToolTip": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend\\Services\\ServiceRegistry.cs",
+              "RelativeToolTip": "Backend\\Services\\ServiceRegistry.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-06T00:07:22.108Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend\\Program.cs",
               "RelativeDocumentMoniker": "Backend\\Program.cs",
@@ -123,7 +140,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "MenuUnificado.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Layout\\Menu\\MenuUnificado.razor",
               "RelativeDocumentMoniker": "Frontend\\Layout\\Menu\\MenuUnificado.razor",
@@ -136,7 +153,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "ServiceRegistry.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Services\\ServiceRegistry.cs",
               "RelativeDocumentMoniker": "Frontend\\Services\\ServiceRegistry.cs",
@@ -149,7 +166,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "SystemOrganization.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Shared.Models\\Entities\\SystemOrganization.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Entities\\SystemOrganization.cs",
@@ -162,7 +179,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "SystemUsers.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Shared.Models\\Entities\\SystemUsers.cs",
               "RelativeDocumentMoniker": "Shared.Models\\Entities\\SystemUsers.cs",
@@ -175,7 +192,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "AppDbContext.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend.Utils\\Data\\AppDbContext.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\Data\\AppDbContext.cs",
@@ -196,7 +213,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "PermissionService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend.Utils\\Security\\PermissionService.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\Security\\PermissionService.cs",
@@ -209,7 +226,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "PermisoAttribute.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend.Utils\\Attributes\\PermisoAttribute.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\Attributes\\PermisoAttribute.cs",
@@ -222,7 +239,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "ExcelExportService.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Backend.Utils\\Services\\ExcelExportService.cs",
               "RelativeDocumentMoniker": "Backend.Utils\\Services\\ExcelExportService.cs",
@@ -235,7 +252,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "ModularMenu.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Components\\Base\\ModularMenu.razor",
               "RelativeDocumentMoniker": "Frontend\\Components\\Base\\ModularMenu.razor",
@@ -248,7 +265,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "fluent-base.css",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\style\\fluent-base.css",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-base.css",
@@ -260,7 +277,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "fluent-dark-base.css",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\style\\fluent-dark-base.css",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-dark-base.css",
@@ -272,7 +289,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "fluent-base.css.old",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\style\\fluent-base.css.old",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\style\\fluent-base.css.old",
@@ -284,7 +301,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "bootstrap-reboot.css",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css",
@@ -296,7 +313,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 21,
               "Title": "bootstrap.css",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.css",
@@ -308,7 +325,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "app.css",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\css\\app.css",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\css\\app.css",
@@ -320,7 +337,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "theme-switcher.js",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\js\\theme-switcher.js",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\js\\theme-switcher.js",
@@ -332,7 +349,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "index.html",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\wwwroot\\index.html",
               "RelativeDocumentMoniker": "Frontend\\wwwroot\\index.html",
@@ -344,7 +361,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "_Imports.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\_Imports.razor",
               "RelativeDocumentMoniker": "Frontend\\_Imports.razor",
@@ -356,7 +373,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "Home.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Pages\\Home.razor",
               "RelativeDocumentMoniker": "Frontend\\Pages\\Home.razor",
@@ -368,7 +385,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "NavMenu.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Layout\\NavMenu.razor",
               "RelativeDocumentMoniker": "Frontend\\Layout\\NavMenu.razor",
@@ -380,7 +397,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "MainLayout.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Layout\\MainLayout.razor",
               "RelativeDocumentMoniker": "Frontend\\Layout\\MainLayout.razor",
@@ -392,7 +409,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\Program.cs",
               "RelativeDocumentMoniker": "Frontend\\Program.cs",
@@ -404,7 +421,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 24,
               "Title": "App.razor",
               "DocumentMoniker": "C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\base\\Frontend\\App.razor",
               "RelativeDocumentMoniker": "Frontend\\App.razor",

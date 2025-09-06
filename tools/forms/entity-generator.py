@@ -515,6 +515,14 @@ Ejemplo completo:
     parser.add_argument('--search-fields', 
                        help='Campos de búsqueda: "campo1,campo2,campo3"')
     
+    # Argumentos para tablas NN (muchos-a-muchos)
+    parser.add_argument('--nn-source', 
+                       help='Tabla source para NN: "venta"')
+    parser.add_argument('--nn-target',
+                       help='Tabla target para NN: "producto"')
+    parser.add_argument('--nn-alias',
+                       help='Alias para NN (opcional): "promocion"')
+    
     args = parser.parse_args()
     
     # Validaciones básicas

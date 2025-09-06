@@ -87,6 +87,13 @@ class LookupConfig:
     filter_field: Optional[str] = None
 
 @dataclass
+class NNTableConfig:
+    """Configuración para tablas muchos-a-muchos (NN)"""
+    source_table: str       # venta
+    target_table: str       # producto  
+    alias: Optional[str] = None  # para casos como nn_venta_producto_promocion
+
+@dataclass
 class EntityConfiguration:
     """Configuración completa de una entidad"""
     entity_name: str
@@ -106,6 +113,9 @@ class EntityConfiguration:
     
     # Configuración adicional
     search_fields: List[str] = field(default_factory=list)
+    
+    # Configuración NN (muchos-a-muchos)
+    nn_config: Optional[NNTableConfig] = None
     
     def get_all_db_fields(self) -> Set[str]:
         """Obtener todos los campos que van a la BD"""
@@ -128,3 +138,17 @@ class EntityConfiguration:
     def get_lookup_field_names(self) -> Set[str]:
         """Obtener nombres de campos con lookup"""
         return set(self.lookups.keys())
+    
+    def is_nn_table(self) -> bool:
+        """Detectar si es una tabla NN (muchos-a-muchos)"""
+        return self.entity_name.lower().startswith('nn_')
+    
+    def get_nn_table_name(self) -> str:
+        """Construir nombre de tabla NN"""
+        if not self.is_nn_table() or not self.nn_config:
+            return self.entity_name.lower()
+        
+        if self.nn_config.alias:
+            return f"nn_{self.nn_config.source_table.lower()}_{self.nn_config.target_table.lower()}_{self.nn_config.alias.lower()}"
+        else:
+            return f"nn_{self.nn_config.source_table.lower()}_{self.nn_config.target_table.lower()}"
