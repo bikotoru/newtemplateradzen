@@ -53,6 +53,24 @@ ENTIDADES_CON_INTERFAZ:
   - Tablas de configuración con CRUD
   - Entidades transaccionales
 
+TABLAS_NN_ESPECIALES:
+  nomenclatura: nn_source_target o nn_source_target_alias
+  deteccion_automatica: nombres que empiecen con "nn_"
+  permisos_especiales:
+    - SOURCE.ADDTARGET - "Agregar target a source"
+    - SOURCE.DELETETARGET - "Quitar target de source" 
+    - SOURCE.EDITTARGET - "Editar target en source"
+  con_alias:
+    - SOURCE.ALIASADDTARGET - "Agregar target (alias) a source"
+    - SOURCE.ALIASDELETETARGET - "Quitar target (alias) de source"
+    - SOURCE.ALIASEDITTARGET - "Editar target (alias) en source"
+  group_key: Siempre la tabla SOURCE (no la tabla NN)
+  validacion: Verifica que source-table y target-table existan
+  ejemplo:
+    tabla: nn_venta_producto
+    permisos: VENTA.ADDTARGET, VENTA.DELETETARGET, VENTA.EDITTARGET
+    group_key: VENTA (source table)
+
 BASE_ENTITY_CAMPOS_AUTOMÁTICOS:
   - Id: Guid (Primary Key)
   - OrganizationId: Guid? (Nullable)
@@ -406,15 +424,18 @@ def generar_comando_entidad(entidad):
 
 def generar_comando_nn(entidad):
     """
-    Genera comando para relación N:N
+    Genera comando para relación N:N usando la nueva funcionalidad NN implementada
     """
     
-    return f'''python3 tools/generate_nn_relation.py "{entidad.nombre}" \\
-  --main-entity "{entidad.entidad_principal}" \\
-  --related-entity "{entidad.entidad_relacionada}" \\
-  --custom-fields "{entidad.campos_custom}" \\
-  --module {entidad.modulo} \\
-  --yes'''
+    # Usar entity-generator.py con los nuevos parámetros NN
+    return f'''python3 tools/forms/entity-generator.py \\
+  --entity "{entidad.nombre}" \\
+  --module "{entidad.modulo}" \\
+  --target db \\
+  --nn-source "{entidad.source_table}" \\
+  --nn-target "{entidad.target_table}" \\
+  --nn-alias "{entidad.alias}" \\
+  --fk "{entidad.source_table}_id:{entidad.source_table}" "{entidad.target_table}_id:{entidad.target_table}"'''
 ```
 
 ## 📋 FLUJO DE EJECUCIÓN COMPLETO
@@ -475,6 +496,10 @@ TABLAS_NN_DETECTADAS:
   "venta con productos" → nn_venta_producto
   "usuario con roles" → nn_usuario_rol
   "empleado con proyectos" → nn_empleado_proyecto
+  
+COMANDOS_NN_GENERADOS:
+  simple: python3 tools/forms/entity-generator.py --entity "nn_venta_producto" --nn-source "venta" --nn-target "producto"
+  con_alias: python3 tools/forms/entity-generator.py --entity "nn_venta_producto" --nn-source "venta" --nn-target "producto" --nn-alias "promocion"
 ```
 
 ### Asignación Automática de Módulos
@@ -729,7 +754,127 @@ Cada comando `--target todo` genera:
 - 6 permisos del sistema automáticos
 - Modelos EF Core sincronizados
 
-El comando estará listo para usar con `@ai-plan "tu solicitud aquí"` y generará toda la estructura de implementación automáticamente.
+## 🔗 TABLAS MUCHOS-A-MUCHOS (NN) - NUEVA FUNCIONALIDAD
+
+### Detección Automática
+El sistema detecta automáticamente tablas NN cuando el nombre de la entidad empieza con `nn_`:
+
+```bash
+# Detecta automáticamente como tabla NN
+python3 tools/forms/entity-generator.py --entity "nn_venta_producto" ...
+```
+
+### Parámetros Especiales para Tablas NN
+
+```bash
+--nn-source "venta"      # Tabla source (REQUERIDO para NN)
+--nn-target "producto"   # Tabla target (REQUERIDO para NN)  
+--nn-alias "promocion"   # Alias opcional para evitar duplicados
+```
+
+### Ejemplos Completos
+
+#### 1. Tabla NN Básica
+```bash
+# Crear nn_venta_producto 
+python3 tools/forms/entity-generator.py \
+    --entity "nn_venta_producto" \
+    --module "Ventas.Core" \
+    --target db \
+    --nn-source "venta" \
+    --nn-target "producto" \
+    --fk "venta_id:venta" "producto_id:producto"
+```
+
+**Resultado**:
+- ✅ Tabla: `nn_venta_producto`
+- ✅ Permisos: `VENTA.ADDTARGET`, `VENTA.DELETETARGET`, `VENTA.EDITTARGET`
+- ✅ GroupKey: `VENTA` (source table)
+
+#### 2. Tabla NN con Alias (para evitar duplicados)
+```bash
+# Crear nn_venta_producto_promocion cuando nn_venta_producto ya existe
+python3 tools/forms/entity-generator.py \
+    --entity "nn_venta_producto" \
+    --module "Ventas.Core" \
+    --target db \
+    --nn-source "venta" \
+    --nn-target "producto" \
+    --nn-alias "promocion" \
+    --fk "venta_id:venta" "producto_id:producto"
+```
+
+**Resultado**:
+- ✅ Tabla: `nn_venta_producto_promocion`  
+- ✅ Permisos: `VENTA.PROMOCIONADDTARGET`, `VENTA.PROMOCIONDELETETARGET`, `VENTA.PROMOCIONEDITTARGET`
+- ✅ GroupKey: `VENTA` (source table)
+
+#### 3. Otros Ejemplos de Tablas NN
+
+```bash
+# Usuario-Rol
+python3 tools/forms/entity-generator.py \
+    --entity "nn_usuario_rol" \
+    --module "Admin.Core" \
+    --target db \
+    --nn-source "usuario" \
+    --nn-target "rol" \
+    --fk "usuario_id:usuario" "rol_id:rol"
+
+# Empleado-Proyecto  
+python3 tools/forms/entity-generator.py \
+    --entity "nn_empleado_proyecto" \
+    --module "RRHH.Core" \
+    --target db \
+    --nn-source "empleado" \
+    --nn-target "proyecto" \
+    --fk "empleado_id:empleado" "proyecto_id:proyecto"
+```
+
+### Características Especiales de Tablas NN
+
+#### ✅ Validación Automática
+- Verifica que las tablas `source-table` y `target-table` existan
+- Bloquea la creación si las tablas referenciadas no se encuentran
+
+#### ✅ Permisos Especializados  
+- **SIN ALIAS**: `SOURCE.ADDTARGET`, `SOURCE.DELETETARGET`, `SOURCE.EDITTARGET`
+- **CON ALIAS**: `SOURCE.ALIASADDTARGET`, `SOURCE.ALIASDELETETARGET`, `SOURCE.ALIASEDITTARGET`
+- **GroupKey**: Siempre es la tabla SOURCE (no la tabla NN)
+
+#### ✅ Detección de Conflictos
+- Si `nn_source_target` ya existe, puede usar `--nn-alias` para crear `nn_source_target_alias`
+- Evita errores por tablas duplicadas
+
+#### ✅ Nomenclatura Estándar
+- **Formato básico**: `nn_source_target` (ej: `nn_venta_producto`)
+- **Formato con alias**: `nn_source_target_alias` (ej: `nn_venta_producto_promocion`)
+
+### Configuración Interactiva vs Argumentos
+
+#### Modo Interactivo (sin argumentos NN)
+```bash
+python3 tools/forms/entity-generator.py --entity "nn_venta_producto" --module "Ventas.Core" --target db --fk "venta_id:venta" "producto_id:producto"
+
+# El sistema preguntará interactivamente:
+🎯 Ingrese SOURCE TABLE (ej: venta): venta
+🎯 Ingrese TARGET TABLE (ej: producto): producto  
+🤔 ¿Desea usar un ALIAS? (s/n): n
+```
+
+#### Modo Argumentos (recomendado para automatización)
+```bash  
+python3 tools/forms/entity-generator.py \
+    --entity "nn_venta_producto" \
+    --module "Ventas.Core" \
+    --target db \
+    --nn-source "venta" \
+    --nn-target "producto" \
+    --nn-alias "promocion" \
+    --fk "venta_id:venta" "producto_id:producto"
+```
+
+El comando estará listo para usar con `@ai-plan "tu solicitud aquí"` y generará toda la estructura de implementación automáticamente, **incluyendo la nueva funcionalidad de tablas NN**.
 
 <function_calls>
 <invoke name="TodoWrite">
