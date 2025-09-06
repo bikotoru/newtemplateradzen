@@ -1,0 +1,126 @@
+@using Frontend.Services.Validation
+@using System.Reactive.Linq
+@implements IDisposable
+
+<!-- El ValidatedInput es un simple wrapper -->
+<div class="validated-input @GetCssClass()">
+    
+    <!-- Este div captura los eventos de blur -->
+    <div @onblur="OnBlur" @onfocusout="OnBlur">
+        @ChildContent
+    </div>
+    
+    <!-- Mostrar errores -->
+    @if (HasError)
+    {
+        <div class="validation-error">
+            <span class="error-icon">⚠</span>
+            @ErrorMessage
+        </div>
+    }
+    
+</div>
+
+<style>
+    .validated-input {
+        width: 100%;
+    }
+    
+    .validated-input.has-error .rz-textbox,
+    .validated-input.has-error .rz-textarea {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    .validated-input.is-valid .rz-textbox,
+    .validated-input.is-valid .rz-textarea {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.1rem rgba(40, 167, 69, 0.25) !important;
+    }
+    
+    .validation-error {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .error-icon {
+        font-size: 1rem;
+    }
+    
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+
+@code {
+    [Parameter] public string FieldName { get; set; } = "";
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+    
+    [CascadingParameter(Name = "ValidationContext")] 
+    public ValidationContext? ValidationContext { get; set; }
+    
+    private IDisposable? _fieldSubscription;
+    private FieldValidationState _currentState = FieldValidationState.Empty;
+    private bool _hasBeenValidated = false;
+    
+    // Propiedades reactivas
+    private bool HasError => _currentState.HasErrors;
+    private string ErrorMessage => _currentState.FirstError ?? "";
+    private bool IsValid => _currentState.IsValid && _hasBeenValidated;
+    
+    protected override void OnInitialized()
+    {
+        if (ValidationContext != null && !string.IsNullOrEmpty(FieldName))
+        {
+            // Suscribirse a cambios de validación para este campo
+            _fieldSubscription = ValidationContext.ValidationChanges
+                .Where(change => change.FieldName == FieldName)
+                .Subscribe(change => {
+                    _currentState = change.FieldState;
+                    _hasBeenValidated = true;
+                    InvokeAsync(StateHasChanged);
+                });
+        }
+    }
+    
+    private async Task OnBlur(FocusEventArgs e)
+    {
+        if (ValidationContext != null && !string.IsNullOrEmpty(FieldName))
+        {
+            // Pequeño delay para asegurar que el binding se actualizó
+            await Task.Delay(50);
+            await ValidationContext.ValidateFieldAsync(FieldName, Value);
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        // Si el Value cambió, podemos re-validar si ya se había validado antes
+        if (_hasBeenValidated && ValidationContext != null && !string.IsNullOrEmpty(FieldName))
+        {
+            _ = Task.Run(async () => {
+                await Task.Delay(50);
+                await ValidationContext.ValidateFieldAsync(FieldName, Value);
+            });
+        }
+    }
+    
+    private string GetCssClass()
+    {
+        if (HasError) return "has-error";
+        if (IsValid) return "is-valid";
+        return "";
+    }
+    
+    public void Dispose()
+    {
+        _fieldSubscription?.Dispose();
+    }
+}

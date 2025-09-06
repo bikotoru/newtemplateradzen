@@ -39,11 +39,19 @@ window.switchTheme = (cssFile) => {
     }
 };
 
+// Set theme function
+window.setTheme = (theme) => {
+    console.log('Setting theme to:', theme);
+    localStorage.setItem('fluentTheme', theme);
+    const cssFile = theme === 'dark' ? '/style/fluent-dark-base.css' : '/style/fluent-base.css';
+    window.switchTheme(cssFile);
+};
+
 // Initialize theme on page load
 window.initializeTheme = () => {
     console.log('Initializing theme...');
     try {
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedTheme = localStorage.getItem('fluentTheme') || 'light';
         console.log('Saved theme from localStorage:', savedTheme);
         const cssFile = savedTheme === 'dark' ? '/style/fluent-dark-base.css' : '/style/fluent-base.css';
         console.log(cssFile);
@@ -51,4 +59,30 @@ window.initializeTheme = () => {
     } catch (error) {
         console.error('Error initializing theme:', error);
     }
+};
+
+// Setup theme listener for PageWithCommandBar
+window.setupPageWithCommandBarThemeListener = (dotnetRef) => {
+    console.log('Setting up PageWithCommandBar theme listener');
+    
+    // Store the .NET reference
+    window.pageWithCommandBarInstance = dotnetRef;
+    
+    // Listen for storage events (when theme changes in different tabs)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            console.log('Storage theme change detected:', e.newValue);
+            if (window.pageWithCommandBarInstance) {
+                window.pageWithCommandBarInstance.invokeMethodAsync('OnThemeChanged', e.newValue);
+            }
+        }
+    });
+    
+    // Listen for custom theme change events (when theme changes in same tab)
+    window.addEventListener('themeChanged', function(e) {
+        console.log('Custom theme change event detected:', e.detail.theme);
+        if (window.pageWithCommandBarInstance) {
+            window.pageWithCommandBarInstance.invokeMethodAsync('OnThemeChanged', e.detail.theme);
+        }
+    });
 };

@@ -1,21 +1,43 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.Components.Authorization;
 using Frontend;
+using Frontend.Services;
 using Radzen;
-using Shared.Models.Services;
+
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// HttpClient configurado para API Backend
-builder.Services.AddScoped(sp => new HttpClient 
-{ 
-    BaseAddress = new Uri("https://localhost:7002") // Puerto del Backend
+// HttpClient básico para AuthService (sin interceptor para evitar circular dependency)
+builder.Services.AddScoped<HttpClient>(sp =>
+{
+    var httpClient = new HttpClient()
+    {
+        BaseAddress = new Uri("https://localhost:7124")
+    };
+    return httpClient;
 });
 
-// Servicios
-builder.Services.AddRadzenComponents();
-builder.Services.AddScoped<QueryService>();
+// Registrar todos los servicios usando ServiceRegistry
+builder.Services.RegisterAllServices();
 
-await builder.Build().RunAsync();
+// Servicios adicionales
+builder.Services.AddRadzenComponents();
+
+// Servicio de Cache
+builder.Services.AddSingleton<CacheService>();
+
+// Servicios de autorización
+builder.Services.AddAuthorizationCore();
+
+// Servicio API
+builder.Services.AddScoped<API>();
+
+var app = builder.Build();
+
+// AuthService se inicializará automáticamente cuando se use por primera vez
+
+await app.RunAsync();

@@ -1,0 +1,78 @@
+@using Frontend.Components.Base
+@using Frontend.Services
+@using Radzen.Blazor
+@inject AuthService AuthService
+
+@if (allModules.Any() && userPermissions.Any())
+{
+    <ModularMenu Modules="@allModules" UserPermissions="@userPermissions" />
+}
+else if (isLoading)
+{
+    <div style="padding: 16px; text-align: center;">
+        <RadzenProgressBarCircular ShowValue="false" Size="ProgressBarCircularSize.Small" />
+        <div style="margin-top: 8px;">Cargando menú...</div>
+    </div>
+}
+else
+{
+    <div style="padding: 16px; text-align: center; color: var(--rz-text-disabled-color);">
+        No hay menús disponibles
+    </div>
+}
+
+@code {
+    private List<MenuModule> allModules = new();
+    private List<string> userPermissions = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserPermissions();
+        await LoadModules();
+        
+        // Marcar como completado y forzar re-renderizado
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadUserPermissions()
+    {
+        try
+        {
+            await AuthService.EnsureInitializedAsync();
+            
+            // Obtener permisos del usuario
+            var permissions = await AuthService.GetAllUserPermissionsAsync();
+            
+            // Obtener roles del usuario 
+            var roles = await AuthService.GetUserRolesAsync();
+            
+            // Combinar permisos y roles para el sistema de menú
+            userPermissions = new List<string>();
+            userPermissions.AddRange(permissions);
+            userPermissions.AddRange(roles);
+        }
+        catch (Exception ex)
+        {
+            userPermissions = new List<string>();
+        }
+    }
+
+    private async Task LoadModules()
+    {
+        try
+        {
+
+            
+            allModules = new List<MenuModule>
+            {
+               
+            };
+        }
+        catch (Exception ex)
+        {
+            allModules = new List<MenuModule>();
+        }
+    }
+}

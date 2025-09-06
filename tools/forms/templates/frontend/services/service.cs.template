@@ -1,0 +1,44 @@
+using Frontend.Services;
+using Shared.Models.Entities;
+using Shared.Models.Requests;
+using Shared.Models.Responses;
+using Shared.Models.Builders;
+using Shared.Models.QueryModels;
+
+namespace Frontend.Modules.{{MODULE}}
+{
+    public class {{ENTITY_NAME}}Service : BaseApiService<Shared.Models.Entities.{{ENTITY_NAME}}>
+    {
+        public {{ENTITY_NAME}}Service(API api, ILogger<{{ENTITY_NAME}}Service> logger) 
+            : base(api, logger, "api/{{MODULE_ROUTE}}/{{ENTITY_NAME_LOWER}}")
+        {
+        }
+
+        // ✅ Hereda automáticamente todos los métodos base:
+        
+        // 📋 CRUD Individual:
+        // - CreateAsync(CreateRequest<{{ENTITY_NAME}}>)
+        // - UpdateAsync(UpdateRequest<{{ENTITY_NAME}}>)
+        // - GetAllPagedAsync(page, pageSize)
+        // - GetAllUnpagedAsync()
+        // - GetByIdAsync(id)
+        // - DeleteAsync(id)
+        
+        // 📦 CRUD por Lotes:
+        // - CreateBatchAsync(CreateBatchRequest<{{ENTITY_NAME}}>)
+        // - UpdateBatchAsync(UpdateBatchRequest<{{ENTITY_NAME}}>)
+        
+        
+        // 🚀 Strongly Typed Query Builder:
+        // - Query().Where(c => c.Active).Search("term").InFields(c => c.Nombre).ToListAsync()
+        // - Query().Include(c => c.Usuario).OrderBy(c => c.Fecha).ToPagedResultAsync()
+        
+        // ⚡ Health Check:
+        // - HealthCheckAsync()
+
+        // ✅ Solo métodos custom permitidos aquí
+
+        
+    }
+
+}

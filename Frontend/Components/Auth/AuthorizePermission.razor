@@ -1,0 +1,174 @@
+@using Frontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject AuthService AuthService
+
+@if (_hasPermission)
+{
+    @ChildContent
+}
+else if (NotAuthorizedContent != null)
+{
+    @NotAuthorizedContent
+}
+
+@code {
+    /// <summary>
+    /// Contenido a mostrar si el usuario tiene los permisos requeridos
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Contenido a mostrar si el usuario NO tiene los permisos requeridos
+    /// </summary>
+    [Parameter] public RenderFragment? NotAuthorizedContent { get; set; }
+
+    /// <summary>
+    /// Acción del permiso requerido (create, read, update, delete, view, etc.)
+    /// </summary>
+    [Parameter] public string Action { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Entidad del permiso requerido (users, roles, permissions, products, etc.)
+    /// </summary>
+    [Parameter] public string Entity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nombre completo del permiso (alternativo a Action + Entity)
+    /// Formato: "entity.action" (ej: "users.create", "products.view")
+    /// </summary>
+    [Parameter] public string Permission { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lista de permisos. El usuario debe tener AL MENOS UNO para ver el contenido
+    /// Formato: "action:entity" o "entity.action"
+    /// </summary>
+    [Parameter] public string[] Permissions { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Rol requerido (alternativo a permisos)
+    /// </summary>
+    [Parameter] public string Role { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lista de roles. El usuario debe tener AL MENOS UNO para ver el contenido
+    /// </summary>
+    [Parameter] public string[] Roles { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Si es true, requiere permisos de SuperAdmin
+    /// </summary>
+    [Parameter] public bool RequireSuperAdmin { get; set; } = false;
+
+    /// <summary>
+    /// Si es true, requiere permisos de Admin de organización
+    /// </summary>
+    [Parameter] public bool RequireOrgAdmin { get; set; } = false;
+
+    private bool _hasPermission = false;
+    private AuthenticationState? _authenticationState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Suscribirse a cambios en el estado de autenticación
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        
+        // Verificar permisos iniciales
+        await CheckPermissionsAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Re-verificar permisos cuando cambien los parámetros
+        await CheckPermissionsAsync();
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await CheckPermissionsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CheckPermissionsAsync()
+    {
+        try
+        {
+            _authenticationState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+            // Si no está autenticado, no tiene permisos
+            if (_authenticationState?.User?.Identity?.IsAuthenticated != true)
+            {
+                _hasPermission = false;
+                return;
+            }
+
+            // Verificar SuperAdmin si es requerido
+            if (RequireSuperAdmin)
+            {
+                _hasPermission = AuthService.IsSuperAdmin();
+                return;
+            }
+
+            // Verificar Admin de organización si es requerido
+            if (RequireOrgAdmin)
+            {
+                _hasPermission = AuthService.IsOrganizationAdmin();
+                return;
+            }
+
+            // Verificar roles si están especificados
+            if (!string.IsNullOrEmpty(Role))
+            {
+                _hasPermission = AuthService.HasRole(Role);
+                return;
+            }
+
+            if (Roles.Any())
+            {
+                foreach (var role in Roles)
+                {
+                    if (AuthService.HasRole(role))
+                    {
+                        _hasPermission = true;
+                        return;
+                    }
+                }
+                _hasPermission = false;
+                return;
+            }
+
+            // Verificar permiso específico (Action + Entity)
+            if (!string.IsNullOrEmpty(Action) && !string.IsNullOrEmpty(Entity))
+            {
+                _hasPermission = AuthService.HasPermission(Action, Entity);
+                return;
+            }
+
+            // Verificar permiso por nombre completo
+            if (!string.IsNullOrEmpty(Permission))
+            {
+                _hasPermission = AuthService.HasPermission(Permission);
+                return;
+            }
+
+            // Verificar lista de permisos (AL MENOS UNO)
+            if (Permissions.Any())
+            {
+                _hasPermission = AuthService.HasAnyPermission(Permissions);
+                return;
+            }
+
+            // Si no se especificó ningún criterio, permitir acceso por defecto
+            _hasPermission = true;
+        }
+        catch (Exception ex)
+        {
+            _hasPermission = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}

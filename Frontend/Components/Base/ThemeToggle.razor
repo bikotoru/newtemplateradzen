@@ -29,17 +29,16 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading theme: {ex.Message}");
             isDarkMode = false;
         }
     }
 
     private async Task ToggleTheme()
     {
-        Console.WriteLine($"ToggleTheme called, current state: {isDarkMode}");
         isDarkMode = !isDarkMode;
         await ApplyTheme();
         await SaveThemeToStorage();
+        await NotifyThemeChange();
         StateHasChanged();
     }
 
@@ -48,12 +47,10 @@
         var cssFile = isDarkMode ? "/style/fluent-dark-base.css" : "/style/fluent-base.css";
         try
         {
-            Console.WriteLine($"Switching to: {cssFile}");
             await JSRuntime.InvokeVoidAsync("window.switchTheme", cssFile);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error switching theme: {ex.Message}");
         }
     }
 
@@ -63,11 +60,27 @@
         {
             var themeValue = isDarkMode ? "dark" : "light";
             await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", themeValue);
-            Console.WriteLine($"Theme saved: {themeValue}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving theme: {ex.Message}");
+        }
+    }
+
+    private async Task NotifyThemeChange()
+    {
+        try
+        {
+            var themeValue = isDarkMode ? "dark" : "light";
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                // Dispatch custom event for components listening to theme changes
+                const event = new CustomEvent('themeChanged', {{
+                    detail: {{ theme: '{themeValue}' }}
+                }});
+                window.dispatchEvent(event);
+            ");
+        }
+        catch (Exception ex)
+        {
         }
     }
 

@@ -1,0 +1,17 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Backend.Utils.Data;
+using Backend.Utils.Services;
+using Shared.Models.Entities;
+
+namespace Backend.Modules.{{MODULE}}
+{
+    public class {{ENTITY_NAME}}Service : BaseQueryService<Shared.Models.Entities.{{ENTITY_NAME}}>
+    {
+        public {{ENTITY_NAME}}Service(AppDbContext context, ILogger<{{ENTITY_NAME}}Service> logger) 
+            : base(context, logger)
+        {
+        }
+
+    }
+}

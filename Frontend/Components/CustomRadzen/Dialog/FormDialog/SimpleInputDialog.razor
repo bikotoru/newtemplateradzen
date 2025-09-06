@@ -1,0 +1,141 @@
+@using Frontend.Componentes.CustomRadzen.Dialog
+@using Radzen
+@using Radzen.Blazor
+
+<div class="simple-input-dialog">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger mb-3">@ErrorMessage</div>
+    }
+
+    @switch (Options.InputType)
+    {
+        case SimpleInputType.Text:
+            <RadzenFormField Text="@Options.Label" Variant="Variant.Outlined" Style="width: 100%">
+                <RadzenTextBox @bind-Value="@InputValue"
+                               Placeholder="@Options.Placeholder"
+                               Style="width: 100%;"
+                               Change="@(args => ValidateInput())" />
+            </RadzenFormField>
+            break;
+
+        case SimpleInputType.Numeric:
+            <RadzenFormField Text="@Options.Label" Variant="Variant.Outlined" Style="width: 100%">
+                <RadzenNumeric @bind-Value="@NumericValue"
+                               Min="@Options.MinValue"
+                               Max="@Options.MaxValue"
+                               Placeholder="@Options.Placeholder"
+                               Style="width: 100%;"
+                               TValue="decimal"
+                               Change="@(args => ValidateInput())" />
+            </RadzenFormField>
+            break;
+
+        case SimpleInputType.TextArea:
+            <RadzenFormField Text="@Options.Label" Variant="Variant.Outlined" Style="width: 100%">
+                <RadzenTextArea @bind-Value="@InputValue"
+                                Placeholder="@Options.Placeholder"
+                                Rows="@Options.Rows"
+                                Style="width: 100%;"
+                                Change="@(args => ValidateInput())" />
+            </RadzenFormField>
+            break;
+    }
+
+    <div class="d-flex justify-content-end mt-3">
+        <RadzenButton ButtonType="ButtonType.Button"
+                      ButtonStyle="ButtonStyle.Light"
+                      Text="@Options.CancelButtonText"
+                      Click="@OnCancel"
+                      Style="margin-right: 10px;" />
+
+        <RadzenButton ButtonType="ButtonType.Button"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Text="@Options.OkButtonText"
+                      Click="@OnConfirm" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public SimpleInputDialogOptions Options { get; set; }
+
+    [Parameter]
+    public DialogService DialogService { get; set; }
+
+    private string InputValue { get; set; } = string.Empty;
+    private decimal NumericValue { get; set; } = 0;
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (Options.DefaultValue != null)
+        {
+            if (Options.InputType == SimpleInputType.Numeric)
+            {
+                try
+                {
+                    NumericValue = Convert.ToDecimal(Options.DefaultValue);
+                }
+                catch { }
+            }
+            else
+            {
+                InputValue = Options.DefaultValue.ToString();
+            }
+        }
+    }
+
+    private void ValidateInput()
+    {
+        ErrorMessage = string.Empty;
+
+        if (Options.Required)
+        {
+            bool isEmpty = Options.InputType == SimpleInputType.Numeric
+                ? NumericValue == 0 && Options.AllowZero == false
+                : string.IsNullOrWhiteSpace(InputValue);
+
+            if (isEmpty)
+            {
+                ErrorMessage = Options.RequiredMessage;
+                return;
+            }
+        }
+
+        if (Options.Validator != null)
+        {
+            object valueToValidate = Options.InputType == SimpleInputType.Numeric
+                ? (object)NumericValue
+                : InputValue;
+
+            bool isValid = Options.Validator(valueToValidate);
+            if (!isValid)
+            {
+                ErrorMessage = Options.ValidationMessage;
+            }
+        }
+    }
+
+    private void OnConfirm()
+    {
+        ValidateInput();
+
+        if (string.IsNullOrEmpty(ErrorMessage))
+        {
+            if (Options.InputType == SimpleInputType.Numeric)
+            {
+                DialogService.Close(NumericValue);
+            }
+            else
+            {
+                DialogService.Close(InputValue);
+            }
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}

@@ -1,0 +1,40 @@
+using Frontend.Components.Base.Tables;
+using Frontend.Services;
+using Radzen;
+
+namespace Frontend.Modules.{{MODULE}}
+{
+    public class {{ENTITY_NAME}}ViewManager
+    {
+        public List<ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>> ViewConfigurations { get; private set; } = new();
+        private readonly QueryService? _queryService;
+
+        public {{ENTITY_NAME}}ViewManager(QueryService? queryService = null)
+        {
+            _queryService = queryService;
+            InitializeDefaultViews();
+        }
+
+        private void InitializeDefaultViews()
+        {
+            ViewConfigurations.Add(new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>
+            {
+                DisplayName = "Vista Completa",
+                QueryBuilder = _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>()?
+                    .Where(x => x.Active == true)
+                    .OrderBy(x => x.{{PRIMARY_FIELD}}),
+                ColumnConfigs = new List<ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>>
+                {
+                    {{COLUMN_CONFIGS}}
+                }
+            });
+        }
+
+        public ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>? GetViewByName(string displayName) => 
+            ViewConfigurations.FirstOrDefault(v => v.DisplayName == displayName);
+
+        public ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}> GetDefaultView() => 
+            ViewConfigurations.FirstOrDefault() ?? 
+            new ViewConfiguration<Shared.Models.Entities.{{ENTITY_NAME}}>("Default", _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>() ?? null!);
+    }
+}

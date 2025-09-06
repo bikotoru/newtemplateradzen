@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(for f in *.cs)",
+      "Bash(do sed -i 's/namespace BlazorFluentUI/namespace Frontend.Components.FluentUI/g' \"$f\")",
+      "Bash(done)",
+      "Bash(dotnet build:*)",
+      "Bash(for f in *.cs *.razor)",
+      "Bash(do [ -f \"$f\" ])",
+      "Bash(sed:*)",
+      "Bash(dotnet run:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(del \"C:\\Users\\vuret\\OneDrive\\Escritorio\\Nueva carpeta (12)\\NuevoProyecto\\Frontend\\Components\\Base\\Forms\\FormularioConTabs.razor\")",
+      "Bash(del:*)",
+      "Bash(rmdir:*)",
+      "Bash(rm:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": []
+  }
+}

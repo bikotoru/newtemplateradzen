@@ -303,6 +303,74 @@ BEGIN
 END
 
 -- ========================================
+-- ⚙️ TABLA: system_config
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_config' AND xtype='U')
+BEGIN
+    CREATE TABLE system_config (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        Field NVARCHAR(255) NOT NULL,
+        TypeField NVARCHAR(255) NOT NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- No Foreign Keys - Global configuration records
+    );
+    
+    -- Índices para system_config
+    CREATE NONCLUSTERED INDEX IX_system_config_Field ON system_config(Field);
+    CREATE NONCLUSTERED INDEX IX_system_config_TypeField ON system_config(TypeField);
+    CREATE NONCLUSTERED INDEX IX_system_config_OrganizationId ON system_config(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_config_Active ON system_config(Active);
+    CREATE NONCLUSTERED INDEX IX_system_config_FechaCreacion ON system_config(FechaCreacion);
+    
+    PRINT '✅ Tabla system_config creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_config ya existe';
+END
+
+-- ========================================
+-- 📊 TABLA: system_config_values
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_config_values' AND xtype='U')
+BEGIN
+    CREATE TABLE system_config_values (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        SystemConfigId UNIQUEIDENTIFIER NOT NULL,
+        Value NVARCHAR(MAX) NOT NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- Foreign Keys
+        CONSTRAINT FK_system_config_values_SystemConfigId 
+            FOREIGN KEY (SystemConfigId) REFERENCES system_config(Id) ON DELETE CASCADE
+        -- No other Foreign Keys - Global configuration records
+    );
+    
+    -- Índices para system_config_values
+    CREATE NONCLUSTERED INDEX IX_system_config_values_SystemConfigId ON system_config_values(SystemConfigId);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_OrganizationId ON system_config_values(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_Active ON system_config_values(Active);
+    CREATE NONCLUSTERED INDEX IX_system_config_values_FechaCreacion ON system_config_values(FechaCreacion);
+    
+    PRINT '✅ Tabla system_config_values creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_config_values ya existe';
+END
+
+-- ========================================
 -- 📊 DATOS INICIALES
 -- ========================================
 
@@ -357,7 +425,7 @@ END
 IF NOT EXISTS (SELECT 1 FROM system_users WHERE Email = 'admin@admin.cl')
 BEGIN
     INSERT INTO system_users (Id, Nombre, Password, Email, OrganizationId, Active)
-    VALUES (@AdminUserId, 'Administrador Sistema', 'Soporte.2019', 'admin@admin.cl', @OrgId, 1);
+    VALUES (@AdminUserId, 'Administrador Sistema', 'U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5', 'admin@admin.cl', @OrgId, 1);
     PRINT '✅ Usuario admin@admin.cl creado';
 END
 ELSE
@@ -401,7 +469,7 @@ PRINT '========================================';
 PRINT '';
 PRINT '🏢 Organización: Organización Base';
 PRINT '👤 Usuario Admin: admin@admin.cl';
-PRINT '🔑 Password: Soporte.2019';
+PRINT '🔑 Password: U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5';
 PRINT '👥 Rol: Administrador';
 PRINT '🔐 Permiso: SuperAdmin';
 PRINT '';
@@ -413,6 +481,8 @@ PRINT '   • system_roles';
 PRINT '   • system_users_roles';
 PRINT '   • system_users_permissions';
 PRINT '   • system_roles_permissions';
+PRINT '   • system_config';
+PRINT '   • system_config_values';
 PRINT '';
 PRINT '🎯 Listo para usar con el generador de modelos Python!';
 PRINT '========================================';
@@ -420,7 +490,7 @@ PRINT '========================================';
 -- Mostrar información de conexión
 SELECT 
     'admin@admin.cl' as Usuario,
-    'Soporte.2019' as Password,
+    'U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5' as Password,
     'Organización Base' as Organizacion,
     'Administrador' as Rol,
     'SuperAdmin' as Permiso;

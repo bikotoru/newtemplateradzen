@@ -1,0 +1,98 @@
+using Microsoft.AspNetCore.Components;
+using Shared.Models.Entities;
+using Shared.Models.Builders;
+using Frontend.Services.Validation;
+using Radzen;
+using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
+
+namespace Frontend.Modules.{{MODULE_NAMESPACE}};
+
+public partial class {{ENTITY_NAME}}Fast : ComponentBase
+{
+    [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
+    [Parameter] public EventCallback<{{ENTITY_NAME}}Entity> OnEntityCreated { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private {{ENTITY_NAME}}Entity entity = new() 
+    { 
+        Active = true,
+        FechaCreacion = DateTime.Now,
+        FechaModificacion = DateTime.Now
+    };
+    private bool isLoading = false;
+
+    private FormValidationRules GetValidationRules()
+    {
+        return FormValidationRulesBuilder
+            .Create()
+            {{VALIDATION_RULES}}
+            .Build();
+    }
+    
+    private async Task SaveEntity()
+    {
+        try
+        {
+            isLoading = true;
+
+            {{FIELD_VALIDATIONS}}
+
+            var createRequest = new CreateRequestBuilder<{{ENTITY_NAME}}Entity>(entity)
+                .Build();
+
+            var response = await {{ENTITY_NAME}}Service.CreateAsync(createRequest);
+
+            if (response.Success && response.Data != null)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "¡Éxito!",
+                    Detail = "{{ENTITY_DISPLAY_NAME}} creado exitosamente",
+                    Duration = 4000
+                });
+                
+                await OnEntityCreated.InvokeAsync(response.Data);
+                
+                // Resetear el formulario
+                entity = new {{ENTITY_NAME}}Entity 
+                { 
+                    Active = true,
+                    FechaCreacion = DateTime.Now,
+                    FechaModificacion = DateTime.Now
+                };
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = response.Message ?? "Error al crear {{ENTITY_LOWER}}",
+                    Duration = 5000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error Inesperado",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

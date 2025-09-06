@@ -1,0 +1,731 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="crm-tabs-wrapper">
+@if (_tabs.Where(t => t.IsVisible).Count() > 1)
+{
+    <div class="crm-tabs-nav">
+        <button class="crm-tab-arrow crm-tab-arrow-left">
+            <span>◀</span>
+        </button>
+
+        <div class="crm-tabs-container">
+            <div class="crm-tabs-scroll">
+                @foreach (var tab in _tabs.Where(t => t.IsVisible))
+                {
+                    <button class="crm-tab-button @(tab.IsActive ? "active" : "")"
+                            data-tab="@tab.Id"
+                            @onclick="() => SetActiveTab(tab.Id)"
+                            style="@(!string.IsNullOrEmpty(tab.TitleColor) ? $"color: {tab.TitleColor};" : "")">
+                        @if (!string.IsNullOrEmpty(tab.Icon))
+                        {
+                            <RadzenIcon Icon="@tab.Icon" Style="@($"margin-right: 6px;" + (!string.IsNullOrEmpty(tab.IconColor) ? $" color: {tab.IconColor};" : ""))" />
+                        }
+                        @tab.Title
+                    </button>
+                }
+            </div>
+        </div>
+
+        <button class="crm-tab-arrow crm-tab-arrow-right">
+            <span>▶</span>
+        </button>
+    </div>
+}
+
+<!-- Main Content Container -->
+<div class="crm-main-content">
+    <!-- Tab Contents - Solo renderizar tab activo -->
+    @foreach (var tab in _tabs.Where(t => t.IsActive))
+    {
+        <div class="crm-tab-content active" id="@tab.Id" @key="@tab.Id">
+            @tab.Content
+        </div>
+    }
+</div>
+
+<!-- CascadingValue para registrar tabs hijos -->
+<div style="display: none;">
+    <CascadingValue Value="this">
+        @ChildContent
+    </CascadingValue>
+</div>
+</div>
+
+<style>
+
+    /* Wrapper for full height */
+    .crm-tabs-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Tabs Navigation */
+    .crm-tabs-nav {
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-theme .crm-tabs-nav,
+    [data-theme="dark"] .crm-tabs-nav {
+        background: #161b22;
+        border-bottom-color: #30363d;
+    }
+
+    .crm-tabs-container {
+        display: flex;
+        overflow: hidden;
+        flex: 1;
+        position: relative;
+        min-width: 0;
+    }
+
+    .crm-tabs-scroll {
+        display: flex;
+        transition: transform 0.3s ease;
+        flex-shrink: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* Internet Explorer 10+ */
+        width: 100%;
+        min-width: 0;
+    }
+
+        /* Ocultar scrollbar en WebKit browsers */
+        .crm-tabs-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+    .crm-tab-button {
+        background: none;
+        border: none;
+        padding: 6px 20px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #495057;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+        min-width: fit-content;
+    }
+
+        .crm-tab-button:hover {
+            background: #e9ecef;
+        }
+
+    body.dark-theme .crm-tab-button,
+    [data-theme="dark"] .crm-tab-button {
+        color: #e5e7eb;
+    }
+
+        body.dark-theme .crm-tab-button:hover,
+        [data-theme="dark"] .crm-tab-button:hover {
+            background: #21262d;
+        }
+
+    .crm-tab-button.active {
+        color: #0078d4;
+        border-bottom-color: #0078d4;
+        background: white;
+    }
+
+    body.dark-theme .crm-tab-button.active,
+    [data-theme="dark"] .crm-tab-button.active {
+        color: #58a6ff;
+        border-bottom-color: #58a6ff;
+        background: #0d1117;
+    }
+
+    /* Navigation arrows */
+    .crm-tab-arrow {
+        background: #f8f9fa;
+        border: none;
+        padding: 6px 8px;
+        cursor: pointer;
+        color: #495057;
+        border-right: 1px solid #dee2e6;
+        border-left: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        flex-shrink: 0;
+    }
+
+    body.dark-theme .crm-tab-arrow,
+    [data-theme="dark"] .crm-tab-arrow {
+        background: #161b22;
+        color: #e5e7eb;
+        border-right-color: #30363d;
+        border-left-color: #30363d;
+    }
+
+    .crm-tab-arrow:hover {
+        background: #e9ecef;
+    }
+
+    body.dark-theme .crm-tab-arrow:hover,
+    [data-theme="dark"] .crm-tab-arrow:hover {
+        background: #21262d;
+    }
+
+    .crm-tab-arrow:disabled,
+    .crm-tab-arrow.disabled {
+        color: #adb5bd;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+        .crm-tab-arrow:disabled:hover,
+        .crm-tab-arrow.disabled:hover {
+            background: #f8f9fa;
+            color: #adb5bd;
+        }
+
+    body.dark-theme .crm-tab-arrow:disabled,
+    body.dark-theme .crm-tab-arrow.disabled,
+    [data-theme="dark"] .crm-tab-arrow:disabled,
+    [data-theme="dark"] .crm-tab-arrow.disabled {
+        color: #484f58;
+        opacity: 0.5;
+    }
+
+        body.dark-theme .crm-tab-arrow:disabled:hover,
+        body.dark-theme .crm-tab-arrow.disabled:hover,
+        [data-theme="dark"] .crm-tab-arrow:disabled:hover,
+        [data-theme="dark"] .crm-tab-arrow.disabled:hover {
+            background: #161b22;
+            color: #484f58;
+        }
+
+    .crm-tab-arrow-left {
+        border-right: 1px solid #dee2e6;
+    }
+
+    .crm-tab-arrow-right {
+        border-left: 1px solid #dee2e6;
+    }
+
+    .crm-tabs-nav.has-overflow .crm-tab-arrow {
+        display: flex;
+    }
+
+    /* Indicadores de gradiente para mostrar que hay más contenido */
+    .crm-tabs-container::before,
+    .crm-tabs-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 20px;
+        pointer-events: none;
+        z-index: 2;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .crm-tabs-container::before {
+        left: 0;
+        background: linear-gradient(to right, #f8f9fa, transparent);
+    }
+
+    body.dark-theme .crm-tabs-container::before,
+    [data-theme="dark"] .crm-tabs-container::before {
+        background: linear-gradient(to right, #161b22, transparent);
+    }
+
+    .crm-tabs-container::after {
+        right: 0;
+        background: linear-gradient(to left, #f8f9fa, transparent);
+    }
+
+    body.dark-theme .crm-tabs-container::after,
+    [data-theme="dark"] .crm-tabs-container::after {
+        background: linear-gradient(to left, #161b22, transparent);
+    }
+
+    .crm-tabs-nav.show-left-gradient .crm-tabs-container::before {
+        opacity: 1;
+    }
+
+    .crm-tabs-nav.show-right-gradient .crm-tabs-container::after {
+        opacity: 1;
+    }
+
+    /* Main content styles */
+    .crm-main-content {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .crm-tab-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+</style>
+
+        <script>
+
+    window.CrmComponents = {
+        blazorInstance: null,
+        initialized: false,
+        processedButtons: new Set(), // Para rastrear botones ya procesados
+
+        registerBlazorInstance: function(dotNetRef) {
+            this.blazorInstance = dotNetRef;
+
+            if (!this.initialized) {
+                this.initSimpleDropdowns();
+                this.initialized = true;
+            }
+        },
+
+        initSimpleDropdowns: function() {
+
+            // Event listener muy específico - NO tocar clicks en áreas clickables principales
+            document.addEventListener('click', (e) => {
+                // Verificar que e.target es un elemento DOM válido
+                if (!e.target || typeof e.target.closest !== 'function') {
+                    return;
+                }
+
+                const target = e.target;
+
+                // Debug: verificar qué está siendo clickeado
+                const clickableArea = target.closest('.crm-menu-clickable');
+                if (clickableArea) {
+                    const menuItem = clickableArea.closest('.crm-menu-item');
+                    const buttonId = menuItem?.getAttribute('data-button-id');
+                    const dropdown = menuItem?.querySelector(':scope > .crm-dropdown');
+
+
+                    // Solo procesar si realmente tiene dropdown
+                    if (dropdown) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+
+                        // Cerrar otros dropdowns
+                        document.querySelectorAll('.crm-dropdown.show').forEach(dd => {
+                            if (dd !== dropdown) dd.classList.remove('show');
+                        });
+
+                        // Toggle dropdown actual
+                        dropdown.classList.toggle('show');
+                        return;
+                    } else {
+                    }
+                    // Si no tiene dropdown, NO hacer nada - ni siquiera return, dejar que continúe el flujo
+                }
+
+                // Caso 2: Click en un item DENTRO del dropdown
+                const menuItemInDropdown = target.closest('.crm-dropdown .crm-menu-item');
+                if (menuItemInDropdown && !menuItemInDropdown.querySelector('.crm-dropdown')) {
+                    // Es un item final (sin sub-dropdown)
+
+                    // CANCELAR COMPLETAMENTE el evento para que Blazor NO lo procese
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    // Prevenir múltiples clicks
+                    if (menuItemInDropdown.dataset.processing) {
+                        return;
+                    }
+                    menuItemInDropdown.dataset.processing = 'true';
+
+                    const buttonId = menuItemInDropdown.getAttribute('data-button-id');
+                    const text = this.getCleanText(menuItemInDropdown);
+
+                    // Cerrar dropdown solo si NO tiene data-keep-open="true"
+                    const parentDropdown = menuItemInDropdown.closest('.crm-dropdown');
+                    if (parentDropdown) {
+                        const keepOpenElement = parentDropdown.querySelector('[data-keep-open="true"]');
+                        if (!keepOpenElement) {
+                            parentDropdown.classList.remove('show');
+                        }
+                    }
+
+                    // Llamar directamente al método Blazor SOLO SI NO fue procesado antes
+                    if (buttonId && this.blazorInstance) {
+                        const uniqueKey = `${buttonId}-${Date.now()}`;
+
+                        // Verificar si ya fue procesado recientemente
+                        if (this.processedButtons.has(buttonId)) {
+                            delete menuItemInDropdown.dataset.processing;
+                            return;
+                        }
+
+                        // Marcar como procesado
+                        this.processedButtons.add(buttonId);
+
+                        this.blazorInstance.invokeMethodAsync('HandleMenuItemClickFromJs', text, buttonId);
+
+                        // Limpiar flags después de la ejecución
+                        setTimeout(() => {
+                            delete menuItemInDropdown.dataset.processing;
+                            this.processedButtons.delete(buttonId); // Permitir futuros clicks
+                        }, 1000);
+                    }
+                    return; // IMPORTANTE: return para no continuar procesando
+                }
+
+                // Caso 3: Click dentro de dropdown con data-keep-open - NO cerrar
+                const clickedInsideKeepOpen = target.closest('[data-keep-open="true"]');
+                if (clickedInsideKeepOpen) {
+                    // No hacer nada, mantener dropdown abierto
+                    return;
+                }
+
+                // Caso 4: Click fuera - cerrar todos los dropdowns
+                if (!target.closest('.crm-menu-item') && !target.closest('.crm-more-menu')) {
+                    document.querySelectorAll('.crm-dropdown.show').forEach(dropdown => {
+                        dropdown.classList.remove('show');
+                    });
+                }
+            });
+
+            // Manejo de sub-menús en hover
+            document.addEventListener('mouseenter', (e) => {
+                // Verificar que e.target es un elemento DOM válido
+                if (!e.target || typeof e.target.closest !== 'function') {
+                    return;
+                }
+
+                const menuItem = e.target.closest('.crm-dropdown .crm-menu-item');
+                if (menuItem && menuItem.querySelector(':scope > .crm-dropdown')) {
+                    // Tiene sub-dropdown, mostrarlo
+                    const subDropdown = menuItem.querySelector(':scope > .crm-dropdown');
+                    subDropdown.classList.add('show');
+                }
+            }, true);
+
+            document.addEventListener('mouseleave', (e) => {
+                // Verificar que e.target es un elemento DOM válido
+                if (!e.target || typeof e.target.closest !== 'function') {
+                    return;
+                }
+
+                const menuItem = e.target.closest('.crm-dropdown .crm-menu-item');
+                if (menuItem && menuItem.querySelector(':scope > .crm-dropdown')) {
+                    // Ocultar sub-dropdown después de un delay
+                    const subDropdown = menuItem.querySelector(':scope > .crm-dropdown');
+                    setTimeout(() => {
+                        if (!menuItem.matches(':hover') && !subDropdown.matches(':hover')) {
+                            subDropdown.classList.remove('show');
+                        }
+                    }, 200);
+                }
+            }, true);
+        },
+
+        getCleanText: function(element) {
+            // Obtener solo el texto del elemento, sin textos de elementos hijos
+            const clone = element.cloneNode(true);
+
+            // Remover elementos hijos que tienen dropdowns
+            const childDropdowns = clone.querySelectorAll('.crm-dropdown');
+            childDropdowns.forEach(dd => dd.remove());
+
+            return clone.textContent.trim().split('\n')[0];
+        },
+
+        // Funciones requeridas por otros componentes
+        initDropdowns: function() {
+            // Ya se inicializó en initSimpleDropdowns
+        },
+
+        initTabNavigation: function() {
+
+            // Configurar scroll para cada grupo de tabs
+            document.querySelectorAll('.crm-tabs-nav').forEach(tabNav => {
+                this.setupTabScroll(tabNav);
+            });
+
+            // Listener para resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    document.querySelectorAll('.crm-tabs-nav').forEach(tabNav => {
+                        this.updateTabArrows(tabNav);
+                    });
+                }, 150);
+            });
+        },
+
+        initTabs: function() {
+
+            // Forzar inicialización inmediata
+            document.querySelectorAll('.crm-tabs-nav').forEach(tabNav => {
+                this.updateTabArrows(tabNav);
+            });
+
+            // Y también después de un delay para asegurar
+            setTimeout(() => {
+                document.querySelectorAll('.crm-tabs-nav').forEach(tabNav => {
+                    this.updateTabArrows(tabNav);
+                });
+            }, 100);
+
+            // Y otro delay más largo por si acaso
+            setTimeout(() => {
+                document.querySelectorAll('.crm-tabs-nav').forEach(tabNav => {
+                    this.updateTabArrows(tabNav);
+                });
+            }, 500);
+        },
+
+        setupTabScroll: function(tabNav) {
+            const leftArrow = tabNav.querySelector('.crm-tab-arrow-left');
+            const rightArrow = tabNav.querySelector('.crm-tab-arrow-right');
+            const tabsContainer = tabNav.querySelector('.crm-tabs-container');
+            const tabsScroll = tabNav.querySelector('.crm-tabs-scroll');
+
+            if (!leftArrow || !rightArrow || !tabsContainer || !tabsScroll) {
+                console.warn('JS: Elementos de tabs no encontrados');
+                return;
+            }
+
+
+            // Limpiar eventos anteriores
+            leftArrow.replaceWith(leftArrow.cloneNode(true));
+            rightArrow.replaceWith(rightArrow.cloneNode(true));
+
+            // Obtener referencias nuevas después del reemplazo
+            const newLeftArrow = tabNav.querySelector('.crm-tab-arrow-left');
+            const newRightArrow = tabNav.querySelector('.crm-tab-arrow-right');
+
+            // Configurar eventos de click en las flechas
+            newLeftArrow.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const scrollAmount = 200;
+                const currentScroll = tabsScroll.scrollLeft;
+                const newScroll = Math.max(0, currentScroll - scrollAmount);
+                tabsScroll.scrollLeft = newScroll;
+                setTimeout(() => this.updateTabArrows(tabNav), 100);
+            });
+
+            newRightArrow.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const scrollAmount = 200;
+                const currentScroll = tabsScroll.scrollLeft;
+                const maxScroll = tabsScroll.scrollWidth - tabsScroll.clientWidth;
+                const newScroll = Math.min(maxScroll, currentScroll + scrollAmount);
+                tabsScroll.scrollLeft = newScroll;
+                setTimeout(() => this.updateTabArrows(tabNav), 100);
+            });
+
+            // Actualizar flechas cuando se hace scroll
+            tabsScroll.addEventListener('scroll', () => {
+                this.updateTabArrows(tabNav);
+            });
+
+            // Actualizar flechas inicialmente
+            this.updateTabArrows(tabNav);
+        },
+
+        updateTabArrows: function(tabNav) {
+            const leftArrow = tabNav.querySelector('.crm-tab-arrow-left');
+            const rightArrow = tabNav.querySelector('.crm-tab-arrow-right');
+            const tabsContainer = tabNav.querySelector('.crm-tabs-container');
+            const tabsScroll = tabNav.querySelector('.crm-tabs-scroll');
+
+
+            if (!leftArrow || !rightArrow || !tabsContainer || !tabsScroll) {
+                console.warn('JS: Elementos de flechas no encontrados');
+                return;
+            }
+
+            const scrollLeft = tabsScroll.scrollLeft;
+            const scrollWidth = tabsScroll.scrollWidth;
+            const containerWidth = tabsContainer.clientWidth;
+            const scrollClientWidth = tabsScroll.clientWidth;
+
+
+            // Verificar si necesita scroll usando el container width
+            const needsScroll = scrollWidth > containerWidth;
+
+            if (!needsScroll) {
+                // No necesita scroll, ocultar flechas
+                leftArrow.style.display = 'none';
+                rightArrow.style.display = 'none';
+                return;
+            }
+
+            // Mostrar flechas si necesita scroll
+            leftArrow.style.display = 'flex';
+            rightArrow.style.display = 'flex';
+
+            // Flecha izquierda - deshabilitada si está al inicio
+            if (scrollLeft <= 1) {
+                leftArrow.disabled = true;
+                leftArrow.classList.add('disabled');
+            } else {
+                leftArrow.disabled = false;
+                leftArrow.classList.remove('disabled');
+            }
+
+            // Flecha derecha - deshabilitada si está al final
+            if (scrollLeft >= scrollWidth - containerWidth - 1) {
+                rightArrow.disabled = true;
+                rightArrow.classList.add('disabled');
+            } else {
+                rightArrow.disabled = false;
+                rightArrow.classList.remove('disabled');
+            }
+        },
+
+        setActiveTab: function(tabId) {
+
+            // Remover clase active de todas las tabs
+            document.querySelectorAll('.crm-tab-header').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Activar el tab correspondiente
+            const activeTab = document.querySelector(`.crm-tab-header[data-tab-id="${tabId}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+
+            // Ocultar todos los contenidos de tabs
+            document.querySelectorAll('.crm-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+
+            // Mostrar el contenido del tab activo
+            const activeContent = document.querySelector(`.crm-tab-content[data-tab-id="${tabId}"]`);
+            if (activeContent) {
+                activeContent.style.display = 'block';
+            }
+        },
+
+        initResponsiveMenu: function() {
+            // Verificar overflow inicialmente
+            setTimeout(() => this.checkMenuOverflow(), 100);
+
+            // Listener para resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    this.checkMenuOverflow();
+                }, 150);
+            });
+        },
+
+        checkMenuOverflow: function() {
+            const commandBars = document.querySelectorAll('.crm-command-bar');
+
+            commandBars.forEach(commandBar => {
+                const container = commandBar.querySelector('.crm-menu-items-container');
+                if (!container) return;
+
+                const menuItems = Array.from(container.querySelectorAll('.crm-menu-item'));
+                if (menuItems.length === 0) return;
+
+                // Mostrar todos los elementos primero
+                menuItems.forEach(item => {
+                    item.style.display = '';
+                });
+
+                // Calcular espacio real disponible
+                const commandBarWidth = commandBar.offsetWidth;
+                const backButton = commandBar.querySelector('.crm-back-button');
+                const backButtonWidth = backButton ? backButton.offsetWidth + 8 : 0; // 8px margin
+
+                const availableWidth = commandBarWidth - backButtonWidth - 32; // 32px padding total
+
+                let currentWidth = 0;
+                const visibleItems = [];
+
+                // Recorrer de izquierda a derecha
+                menuItems.forEach((item, index) => {
+                    const itemWidth = item.offsetWidth + 2; // Mínimo gap
+
+                    if (currentWidth + itemWidth <= availableWidth) {
+                        currentWidth += itemWidth;
+                        visibleItems.push(item);
+                    }
+                });
+
+                // Aplicar visibilidad y marcar los ocultos por overflow
+                menuItems.forEach(item => {
+                    if (visibleItems.includes(item)) {
+                        item.style.display = '';
+                        item.dataset.hiddenByOverflow = 'false'; // Visible
+                    } else {
+                        item.style.display = 'none';
+                        item.dataset.hiddenByOverflow = 'true'; // Oculto por overflow
+                    }
+                });
+
+                // Mostrar/ocultar botón de overflow
+                const overflowButton = commandBar.querySelector('#overflow-button');
+                const hiddenItems = menuItems.filter(item => !visibleItems.includes(item));
+
+                if (overflowButton) {
+                    if (hiddenItems.length > 0) {
+                        overflowButton.style.display = 'block';
+                    } else {
+                        overflowButton.style.display = 'none';
+                    }
+                }
+            });
+        },
+
+        getOverflowHiddenButtons: function() {
+            const hiddenButtons = [];
+            const containers = document.querySelectorAll('.crm-menu-items-container');
+
+            containers.forEach(container => {
+                const menuItems = Array.from(container.querySelectorAll('.crm-menu-item'));
+
+                menuItems.forEach(item => {
+                    // Solo incluir botones de primer nivel ocultos por overflow (no hijos ni Hidden)
+                    if (item.dataset.hiddenByOverflow === 'true' && !item.closest('.crm-dropdown')) {
+                        const buttonId = item.getAttribute('data-button-id');
+                        if (buttonId) {
+                            hiddenButtons.push(buttonId);
+                        }
+                    }
+                });
+            });
+            return hiddenButtons;
+        },
+
+        // Nueva función para marcar qué botones fueron ocultos por overflow vs Hidden
+        markOverflowHiddenButtons: function() {
+            const containers = document.querySelectorAll('.crm-menu-items-container');
+
+            containers.forEach(container => {
+                const menuItems = Array.from(container.querySelectorAll('.crm-menu-item'));
+
+                menuItems.forEach(item => {
+                    if (item.style.display === 'none') {
+                        // Marcar como oculto por overflow (no por Hidden attribute)
+                        item.dataset.hiddenByOverflow = 'true';
+                    }
+                });
+            });
+        }
+    };
+
+</script>

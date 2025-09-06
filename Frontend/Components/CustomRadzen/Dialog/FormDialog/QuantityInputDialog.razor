@@ -1,0 +1,120 @@
+@using Radzen
+@using Radzen.Blazor
+
+<div class="quantity-input-dialog">
+    <div class="mb-3">
+        <RadzenText TextStyle="TextStyle.H6" Style="margin-bottom: 10px;">
+            @GetTitle()
+        </RadzenText>
+        
+        @if (!string.IsNullOrEmpty(Options.Description))
+        {
+            <RadzenText TextStyle="TextStyle.Body2" Style="margin-bottom: 15px; color: var(--rz-text-secondary-color);">
+                @Options.Description
+            </RadzenText>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger mb-3">@ErrorMessage</div>
+    }
+
+    <RadzenFormField Text="@Options.QuantityLabel" Variant="Variant.Outlined" Style="width: 100%">
+        <RadzenNumeric @bind-Value="@QuantityValue"
+                       Min="@Options.MinQuantity"
+                       Max="@Options.MaxQuantity"
+                       Placeholder="@Options.Placeholder"
+                       Style="width: 100%;"
+                       TValue="int"
+                       ShowUpDown="false"
+                       Change="@(args => ValidateInput())" />
+    </RadzenFormField>
+
+    <div class="d-flex justify-content-end mt-3">
+        <RadzenButton ButtonType="ButtonType.Button"
+                      ButtonStyle="ButtonStyle.Light"
+                      Text="@Options.CancelButtonText"
+                      Click="@OnCancel"
+                      Style="margin-right: 10px;" />
+
+        <RadzenButton ButtonType="ButtonType.Button"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Text="@Options.ConfirmButtonText"
+                      Click="@OnConfirm"
+                      Disabled="@(!IsValid())" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public QuantityInputDialogOptions Options { get; set; }
+
+    [Parameter]
+    public DialogService DialogService { get; set; }
+
+    private int QuantityValue { get; set; } = 1;
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        QuantityValue = Options.DefaultQuantity ?? 1;
+        ValidateInput();
+    }
+
+    private string GetTitle()
+    {
+        if (!string.IsNullOrEmpty(Options.Title))
+            return Options.Title;
+            
+        if (!string.IsNullOrEmpty(Options.ItemName))
+            return $"Cantidad de {Options.ItemName}";
+            
+        return "Especificar Cantidad";
+    }
+
+    private void ValidateInput()
+    {
+        ErrorMessage = string.Empty;
+
+        if (QuantityValue < Options.MinQuantity)
+        {
+            ErrorMessage = $"La cantidad mínima es {Options.MinQuantity}";
+            return;
+        }
+
+        if (Options.MaxQuantity.HasValue && QuantityValue > Options.MaxQuantity.Value)
+        {
+            ErrorMessage = $"La cantidad máxima es {Options.MaxQuantity.Value}";
+            return;
+        }
+
+        if (Options.CustomValidator != null)
+        {
+            var validationResult = Options.CustomValidator(QuantityValue);
+            if (!validationResult.IsValid)
+            {
+                ErrorMessage = validationResult.ErrorMessage;
+            }
+        }
+    }
+
+    private bool IsValid()
+    {
+        ValidateInput();
+        return string.IsNullOrEmpty(ErrorMessage);
+    }
+
+    private void OnConfirm()
+    {
+        if (IsValid())
+        {
+            DialogService.Close(QuantityValue);
+        }
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}

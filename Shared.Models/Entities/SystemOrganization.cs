@@ -19,15 +19,19 @@ public partial class SystemOrganization
 
     public bool Active { get; set; }
 
-    public virtual ICollection<SystemPermission> SystemPermissions { get; set; } = new List<SystemPermission>();
+    public virtual ICollection<SystemConfig> SystemConfig { get; set; } = new List<SystemConfig>();
 
-    public virtual ICollection<SystemRole> SystemRoles { get; set; } = new List<SystemRole>();
+    public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();
 
-    public virtual ICollection<SystemRolesPermission> SystemRolesPermissions { get; set; } = new List<SystemRolesPermission>();
+    public virtual ICollection<SystemPermissions> SystemPermissions { get; set; } = new List<SystemPermissions>();
 
-    public virtual ICollection<SystemUser> SystemUsers { get; set; } = new List<SystemUser>();
+    public virtual ICollection<SystemRoles> SystemRoles { get; set; } = new List<SystemRoles>();
 
-    public virtual ICollection<SystemUsersPermission> SystemUsersPermissions { get; set; } = new List<SystemUsersPermission>();
+    public virtual ICollection<SystemRolesPermissions> SystemRolesPermissions { get; set; } = new List<SystemRolesPermissions>();
 
-    public virtual ICollection<SystemUsersRole> SystemUsersRoles { get; set; } = new List<SystemUsersRole>();
+    public virtual ICollection<SystemUsers> SystemUsers { get; set; } = new List<SystemUsers>();
+
+    public virtual ICollection<SystemUsersPermissions> SystemUsersPermissions { get; set; } = new List<SystemUsersPermissions>();
+
+    public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
 }

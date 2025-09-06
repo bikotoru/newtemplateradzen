@@ -22,7 +22,7 @@
             <ModuleExpander Title="@module.Text" 
                            Icon="@module.Icon" 
                            IsExpanded="@moduleExpanded"
-                           IsExpandedChanged="@((bool expanded) => OnModuleExpandedChanged(module.Text, expanded))">
+                           IsExpandedChanged="@(expanded => OnModuleExpandedChanged(module.Text, expanded))">
                 <RadzenPanelMenu>
                     @foreach (var item in GetFilteredMenuItems(module))
                     {
@@ -120,10 +120,34 @@
     private bool HasPermission(List<string> requiredPermissions)
     {
         if (!requiredPermissions.Any()) return true;
-        return requiredPermissions.Any(permission => UserPermissions.Contains(permission));
+        
+        // Si tiene wildcard "*", permitir acceso a cualquiera
+        if (requiredPermissions.Contains("*")) return true;
+        
+        // Verificar permisos exactos
+        foreach (var requiredPermission in requiredPermissions)
+        {
+            // Permiso exacto
+            if (UserPermissions?.Contains(requiredPermission) == true)
+                return true;
+                
+            // Si el permiso requerido tiene wildcard (ej: "CATEGORIA.*")
+            if (requiredPermission.EndsWith(".*"))
+            {
+                var basePermission = requiredPermission.Replace(".*", "");
+                // Verificar si el usuario tiene permisos específicos de ese módulo
+                if (UserPermissions?.Any(up => up.StartsWith(basePermission + ".", StringComparison.OrdinalIgnoreCase)) == true)
+                    return true;
+                // O si tiene el wildcard exacto
+                if (UserPermissions?.Contains(requiredPermission) == true)
+                    return true;
+            }
+        }
+        
+        return false;
     }
 
-    private async Task OnModuleExpandedChanged(string moduleText, bool expanded)
+    private void OnModuleExpandedChanged(string moduleText, bool expanded)
     {
         expandedModules[moduleText] = expanded;
         StateHasChanged();

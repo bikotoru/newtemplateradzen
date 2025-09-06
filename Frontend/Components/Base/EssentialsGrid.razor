@@ -1,0 +1,22 @@
+<div class="essentials-grid">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+<style>
+    .essentials-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 24px;
+    }
+
+    @@media (max-width: 600px) {
+        .essentials-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+</style>

@@ -1,0 +1,187 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Shared.Models.Entities;
+using Shared.Models.Builders;
+using Frontend.Services.Validation;
+using Frontend.Components.Validation;
+using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
+using Radzen;
+
+namespace Frontend.Modules.{{MODULE_NAMESPACE}};
+
+public partial class {{ENTITY_NAME}}Formulario : ComponentBase
+{
+    [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
+    {{LOOKUP_SERVICE_INJECTIONS}}
+    [Parameter] public Guid? Id { get; set; }
+
+    private {{ENTITY_NAME}}Entity entity = new();
+    private bool isLoading = false;
+    private bool isEditMode => Id.HasValue;
+    private bool isFormValid = false;
+    private bool isNewlyCreated = false;
+    {{LOOKUP_SEARCH_FIELDS}}
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (isEditMode && Id.HasValue)
+        {
+            await LoadEntity();
+            
+            if (Navigation.Uri.Contains("created=true"))
+            {
+                isNewlyCreated = true;
+                
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "¡Éxito!",
+                    Detail = "{{ENTITY_DISPLAY_NAME}} creado exitosamente. Ahora puedes editarlo.",
+                    Duration = 5000
+                });
+                
+                Navigation.NavigateTo($"/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario/{Id}", replace: true);
+            }
+        }
+        else
+        {
+            entity = new {{ENTITY_NAME}}Entity 
+            { 
+                Active = true,
+                FechaCreacion = DateTime.Now,
+                FechaModificacion = DateTime.Now
+            };
+        }
+        
+        {{LOOKUP_FIELD_INITIALIZATIONS}}
+    }
+
+    private async Task LoadEntity()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await {{ENTITY_NAME}}Service.GetByIdAsync(Id!.Value);
+            
+            if (response.Success && response.Data != null)
+            {
+                entity = response.Data;
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "No se pudo cargar el {{ENTITY_LOWER}}",
+                    Duration = 5000
+                });
+                Navigation.NavigateTo("/{{MODULE_PATH}}/{{ENTITY_LOWER}}/list");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando {{ENTITY_LOWER}}: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private FormValidationRules GetValidationRules()
+    {
+        return FormValidationRulesBuilder
+            .Create()
+            {{VALIDATION_RULES}}
+            .Build();
+    }
+    
+    private FormValidator? formValidator;
+
+    private async Task SaveForm()
+    {
+        try
+        {
+            isLoading = true;
+
+            {{FIELD_VALIDATIONS}}
+
+            if (isEditMode)
+            {
+                var updateRequest = new UpdateRequestBuilder<{{ENTITY_NAME}}Entity>(entity)
+                    .Build();
+
+                var response = await {{ENTITY_NAME}}Service.UpdateAsync(updateRequest);
+
+                if (response.Success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "¡Éxito!",
+                        Detail = "{{ENTITY_DISPLAY_NAME}} actualizado exitosamente",
+                        Duration = 4000
+                    });
+                }
+                else
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Error",
+                        Detail = response.Message ?? "Error al actualizar {{ENTITY_LOWER}}",
+                        Duration = 5000
+                    });
+                }
+            }
+            else
+            {
+                var createRequest = new CreateRequestBuilder<{{ENTITY_NAME}}Entity>(entity)
+                    .Build();
+
+                var response = await {{ENTITY_NAME}}Service.CreateAsync(createRequest);
+
+                if (response.Success && response.Data != null)
+                {
+                    entity = response.Data;
+                    Navigation.NavigateTo($"/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario/{entity.Id}?created=true");
+                }
+                else
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Error",
+                        Detail = response.Message ?? "Error al crear {{ENTITY_LOWER}}",
+                        Duration = 5000
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error Inesperado",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

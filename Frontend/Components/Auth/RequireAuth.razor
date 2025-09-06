@@ -1,0 +1,237 @@
+@using Frontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+@if (_isLoading)
+{
+    <div class="auth-loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Verificando permisos...</span>
+        </div>
+    </div>
+}
+else if (_isAuthorized)
+{
+    @ChildContent
+}
+else if (!_isAuthenticated)
+{
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">Acceso denegado</h4>
+        <p>Necesitas iniciar sesión para acceder a esta página.</p>
+        <hr>
+        <p class="mb-0">
+            <button class="btn btn-primary" @onclick="RedirectToLogin">
+                Iniciar Sesión
+            </button>
+        </p>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Sin permisos</h4>
+        <p>No tienes los permisos necesarios para acceder a esta página.</p>
+        <hr>
+        <p class="mb-0">
+            <button class="btn btn-secondary" @onclick="GoBack">
+                Volver
+            </button>
+        </p>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Contenido a mostrar si el usuario está autorizado
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Acción del permiso requerido
+    /// </summary>
+    [Parameter] public string Action { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Entidad del permiso requerido
+    /// </summary>
+    [Parameter] public string Entity { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nombre completo del permiso requerido
+    /// </summary>
+    [Parameter] public string Permission { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lista de permisos (AL MENOS UNO requerido)
+    /// </summary>
+    [Parameter] public string[] Permissions { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Rol requerido
+    /// </summary>
+    [Parameter] public string Role { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lista de roles (AL MENOS UNO requerido)
+    /// </summary>
+    [Parameter] public string[] Roles { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Requiere permisos de SuperAdmin
+    /// </summary>
+    [Parameter] public bool RequireSuperAdmin { get; set; } = false;
+
+    /// <summary>
+    /// Requiere permisos de Admin de organización
+    /// </summary>
+    [Parameter] public bool RequireOrgAdmin { get; set; } = false;
+
+    /// <summary>
+    /// URL a la que redirigir si no está autorizado (opcional)
+    /// </summary>
+    [Parameter] public string? RedirectUrl { get; set; }
+
+    private bool _isLoading = true;
+    private bool _isAuthenticated = false;
+    private bool _isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthorizationAsync();
+        
+        // Suscribirse a cambios en el estado de autenticación
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CheckAuthorizationAsync();
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await CheckAuthorizationAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CheckAuthorizationAsync()
+    {
+        try
+        {
+            _isLoading = true;
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _isAuthenticated = authState?.User?.Identity?.IsAuthenticated == true;
+
+            if (!_isAuthenticated)
+            {
+                _isAuthorized = false;
+                _isLoading = false;
+                
+                // Redirigir si se especificó URL
+                if (!string.IsNullOrEmpty(RedirectUrl))
+                {
+                    Navigation.NavigateTo(RedirectUrl);
+                }
+                return;
+            }
+
+            // Usuario autenticado, verificar permisos
+            _isAuthorized = await CheckPermissionsAsync();
+            _isLoading = false;
+
+            // Redirigir si no está autorizado y se especificó URL
+            if (!_isAuthorized && !string.IsNullOrEmpty(RedirectUrl))
+            {
+                Navigation.NavigateTo(RedirectUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _isAuthorized = false;
+            _isAuthenticated = false;
+            _isLoading = false;
+        }
+    }
+
+    private async Task<bool> CheckPermissionsAsync()
+    {
+        try
+        {
+            // Verificar SuperAdmin
+            if (RequireSuperAdmin)
+            {
+                return AuthService.IsSuperAdmin();
+            }
+
+            // Verificar Admin de organización
+            if (RequireOrgAdmin)
+            {
+                return AuthService.IsOrganizationAdmin();
+            }
+
+            // Verificar rol específico
+            if (!string.IsNullOrEmpty(Role))
+            {
+                return await AuthService.HasRoleAsync(Role);
+            }
+
+            // Verificar lista de roles
+            if (Roles.Any())
+            {
+                foreach (var role in Roles)
+                {
+                    if (await AuthService.HasRoleAsync(role))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Verificar permiso específico
+            if (!string.IsNullOrEmpty(Action) && !string.IsNullOrEmpty(Entity))
+            {
+                return await AuthService.HasPermissionAsync(Action, Entity);
+            }
+
+            // Verificar permiso por nombre
+            if (!string.IsNullOrEmpty(Permission))
+            {
+                return await AuthService.HasPermissionAsync(Permission);
+            }
+
+            // Verificar lista de permisos
+            if (Permissions.Any())
+            {
+                return await AuthService.HasAnyPermissionAsync(Permissions);
+            }
+
+            // Si no se especificó ningún criterio, requerir solo autenticación
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
+    }
+
+    private void RedirectToLogin()
+    {
+        // El login se maneja en el index.html, así que recargamos
+        Navigation.NavigateTo("/", true);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}

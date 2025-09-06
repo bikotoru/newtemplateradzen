@@ -1,3 +1,8 @@
+/* Fuente global Sans-serif */
+html, body, * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
 a.ui-button:hover {
     color: #fff;
     text-decoration: none;
@@ -542,37 +547,45 @@ svg.illustration {
     justify-content: center;
 }
 
+/* Loading mejorado */
+#app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
 .loading-progress {
-    position: relative;
-    display: block;
-    width: 8rem;
-    height: 8rem;
-    margin: 20vh auto 1rem auto;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+    animation: spin 1s linear infinite;
 }
 
-.loading-progress circle {
-    fill: none;
-    stroke: #e0e0e0;
-    stroke-width: 0.6rem;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-}
-
-.loading-progress circle:last-child {
-    stroke: #1b6ec2;
-    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-    transition: stroke-dasharray 0.05s ease-in-out;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .loading-progress-text {
-    position: absolute;
     text-align: center;
-    font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: 0.5px;
 }
 
 .loading-progress-text:after {
-    content: var(--blazor-load-percentage-text, "Loading");
+    content: var(--blazor-load-percentage-text, "Cargando aplicación...");
 }
 
 .logo-loading {
@@ -625,4 +638,24 @@ svg.illustration {
     inset-inline-start: 0;
     width: 100%;
     height: 100%;
+}
+
+.full-width-tabs {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+}
+
+
+@@media (max-width: 768px) {
+    .scrollable-content {
+        padding: 1rem;
+    }
 }

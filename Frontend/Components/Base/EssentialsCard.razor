@@ -1,0 +1,165 @@
+@inject IJSRuntime JSRuntime
+    <div class="essentials-card">
+        <div class="card-header" @onclick="ToggleCollapsed">
+            <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
+            @if (!string.IsNullOrEmpty(Icon))
+            {
+                <RadzenIcon Icon="@Icon" Style="@($"margin-right: 8px; font-size: 14px;" + (!string.IsNullOrEmpty(IconColor) ? $" color: {IconColor};" : ""))" />
+            }
+            <span class="header-title">@Title</span>
+            @if (ShowHeaderTemplate && HeaderTemplate != null)
+            {
+                <div class="header-template">
+                    @HeaderTemplate
+                </div>
+            }
+        </div>
+
+        <div class="card-content @(_isCollapsed ? "collapsed" : "")">
+            @if (ShowEssentials && EssentialsTemplate != null)
+            {
+                <div class="essentials-section">
+                    @EssentialsTemplate
+                </div>
+            }
+
+            @if (ChildContent != null)
+            {
+                <div class="@(ShowEssentials && EssentialsTemplate != null ? "form-section" : "")">
+                    @ChildContent
+                </div>
+            }
+        </div>
+    </div>
+
+
+@code {
+    [Parameter] public string Title { get; set; } = "Detalles";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public string IconColor { get; set; } = "";
+    [Parameter] public bool IsCollapsed { get; set; } = false;
+    [Parameter] public bool ShowHeaderTemplate { get; set; } = false;
+    [Parameter] public bool ShowEssentials { get; set; } = false;
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+    [Parameter] public RenderFragment? EssentialsTemplate { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<bool> OnCollapsedChanged { get; set; }
+
+    private bool _isCollapsed;
+
+    protected override void OnInitialized()
+    {
+        _isCollapsed = IsCollapsed;
+    }
+
+    private async Task ToggleCollapsed()
+    {
+        _isCollapsed = !_isCollapsed;
+        if (OnCollapsedChanged.HasDelegate)
+        {
+            await OnCollapsedChanged.InvokeAsync(_isCollapsed);
+        }
+    }
+}
+
+<style>
+    .essentials-card {
+        background: white;
+        border: 1px solid #e1e1e1;
+        border-radius: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+    }
+
+    body.dark-theme .essentials-card,
+    [data-theme="dark"] .essentials-card {
+        background: #1e1e1e;
+        border-color: #3c3c3c;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e1e1e1;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s ease;
+    }
+
+    body.dark-theme .card-header,
+    [data-theme="dark"] .card-header {
+        background: #2d2d2d;
+        border-bottom-color: #3c3c3c;
+    }
+
+    .card-header:hover {
+        background: #f0f2f5;
+    }
+
+    body.dark-theme .card-header:hover,
+    [data-theme="dark"] .card-header:hover {
+        background: #333333;
+    }
+
+    .header-icon {
+        margin-right: 8px;
+        transition: transform 0.3s ease;
+        font-size: 12px;
+        color: #666;
+        flex-shrink: 0;
+    }
+
+    body.dark-theme .header-icon,
+    [data-theme="dark"] .header-icon {
+        color: #999;
+    }
+
+    .header-icon.collapsed {
+        transform: rotate(-90deg);
+    }
+
+    .header-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #323130;
+        flex: 1;
+    }
+
+    body.dark-theme .header-title,
+    [data-theme="dark"] .header-title {
+        color: #e1e1e1;
+    }
+
+    .header-template {
+        margin-left: auto;
+    }
+
+    .card-content {
+        padding: 16px;
+        max-height: 1000px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .card-content.collapsed {
+        max-height: 0;
+        padding: 0 16px;
+    }
+
+    .essentials-section {
+        margin-bottom: 16px;
+    }
+
+    .form-section {
+        border-top: 1px solid #f3f2f1;
+        padding-top: 16px;
+    }
+
+    body.dark-theme .form-section,
+    [data-theme="dark"] .form-section {
+        border-top-color: #3c3c3c;
+    }
+</style>

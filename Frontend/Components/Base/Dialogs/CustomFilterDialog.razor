@@ -1,0 +1,134 @@
+@using Radzen
+@using Radzen.Blazor
+@using System.Reflection
+@using Frontend.Models
+
+<RadzenStack Gap="1rem">
+    <RadzenCard Style="padding: 1rem;">
+        <RadzenText TextStyle="TextStyle.H6" Style="margin-bottom: 0.5rem;">
+            Filtrar campo: @(DisplayName ?? FieldName)
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Caption" Style="margin-bottom: 1rem;" Class="text-muted">
+            Tipo de dato: @DataTypeName
+        </RadzenText>
+        
+        @if (FilterLookup != null)
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetLookupOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator == "Equals" || selectedOperator == "NotEquals")
+                {
+                    @* Lookup Component *@
+                    <div style="margin-top: 10px;">
+                        <DynamicComponent Type="@GetLookupComponentType()"
+                                          Parameters="@GetLookupParameters()" />
+                    </div>
+                }
+            </RadzenStack>
+        }
+        else if (DataType == typeof(string))
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetStringOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator != "IsNull" && selectedOperator != "IsNotNull" && 
+                     selectedOperator != "IsEmpty" && selectedOperator != "IsNotEmpty")
+                {
+                    <RadzenTextBox @bind-Value="filterValue" 
+                                   Placeholder="Valor a filtrar" 
+                                   Style="width: 100%;" />
+                }
+            </RadzenStack>
+        }
+        else if (IsNumericType(DataType))
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetNumericOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator != "IsNull" && selectedOperator != "IsNotNull")
+                {
+                    <RadzenNumeric @bind-Value="numericValue" 
+                                   Placeholder="Valor numérico" 
+                                   Style="width: 100%;" 
+                                   TValue="decimal?" />
+                }
+            </RadzenStack>
+        }
+        else if (DataType == typeof(bool) || DataType == typeof(bool?))
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetBooleanOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator == "Equals" || selectedOperator == "NotEquals")
+                {
+                    <RadzenSelectBar @bind-Value="boolValue" 
+                                     Data="@GetBooleanValues()" 
+                                     TextProperty="Text" 
+                                     ValueProperty="Value" 
+                                     Style="width: 100%;" />
+                }
+            </RadzenStack>
+        }
+        else if (DataType == typeof(DateTime) || DataType == typeof(DateTime?))
+        {
+            <RadzenStack Gap="0.5rem">
+                <RadzenDropDown @bind-Value="selectedOperator" 
+                                Data="@GetDateOperators()" 
+                                TextProperty="Text" 
+                                ValueProperty="Value" 
+                                Placeholder="Seleccionar operador" 
+                                Style="width: 100%;" />
+                
+                @if (selectedOperator != "IsNull" && selectedOperator != "IsNotNull")
+                {
+                    <RadzenDatePicker @bind-Value="dateValue" 
+                                      Placeholder="Seleccionar fecha" 
+                                      Style="width: 100%;" 
+                                      TValue="DateTime?" />
+                }
+            </RadzenStack>
+        }
+        else
+        {
+            <RadzenText TextStyle="TextStyle.Caption" Class="text-warning">
+                Tipo de dato no soportado para filtros customizados
+            </RadzenText>
+        }
+    </RadzenCard>
+    
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cancelar" 
+                      ButtonStyle="ButtonStyle.Light" 
+                      Click="@(() => dialogService.Close(null))"
+                      Style="margin: 10px;" />
+        <RadzenButton Text="Limpiar Filtro" 
+                      ButtonStyle="ButtonStyle.Warning" 
+                      Click="@ClearFilter"
+                      Style="margin: 10px;" />
+        <RadzenButton Text="Aplicar Filtro" 
+                      ButtonStyle="ButtonStyle.Primary" 
+                      Click="@ApplyFilter"
+                      Style="margin: 10px;" />
+    </RadzenStack>
+</RadzenStack>

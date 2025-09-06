@@ -1,0 +1,164 @@
+@using Frontend.Components.FluentUI
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="page-with-commandbar" data-theme="@currentTheme">
+    <div class="page-commandbar-container">
+        <SimpleCommandBar Items="@allItems" FarItems="@FarItems" OverflowItems="@OverflowItems" />
+    </div>
+    
+    <div class="page-content-container">
+        <div class="page-content-scroll">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<SimpleCommandBarItem>? CustomItems { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? FarItems { get; set; }
+    [Parameter] public List<SimpleCommandBarItem>? OverflowItems { get; set; }
+    
+    // Botón Back (siempre presente)
+    [Parameter] public string? BackPath { get; set; }
+    [Parameter] public EventCallback OnBackClick { get; set; }
+    [Parameter] public bool UseHistoryBack { get; set; } = true;
+    
+    // Botón Nuevo (opcional)
+    [Parameter] public bool ShowNew { get; set; } = false;
+    [Parameter] public string? NewPath { get; set; }
+    [Parameter] public EventCallback OnNewClick { get; set; }
+    
+    // Botón Save (opcional)
+    [Parameter] public bool ShowSave { get; set; } = false;
+    [Parameter] public EventCallback OnSaveClick { get; set; }
+    
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private List<SimpleCommandBarItem> allItems = new();
+    private string currentTheme = "light";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCurrentTheme();
+            await SetupThemeListener();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        BuildStandardItems();
+    }
+
+    private async Task LoadCurrentTheme()
+    {
+        try
+        {
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            currentTheme = savedTheme ?? "light";
+            StateHasChanged();
+        }
+        catch
+        {
+            currentTheme = "light";
+        }
+    }
+
+    private async Task SetupThemeListener()
+    {
+        var dotnetRef = DotNetObjectReference.Create(this);
+        
+        await JSRuntime.InvokeVoidAsync("setupPageWithCommandBarThemeListener", dotnetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnThemeChanged(string newTheme)
+    {
+        currentTheme = newTheme ?? "light";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void BuildStandardItems()
+    {
+        allItems.Clear();
+
+        // 1. Back button (siempre presente)
+        allItems.Add(new SimpleCommandBarItem
+        {
+            Text = "",
+            IconName = "arrow_back",
+            Key = "back",
+            OnClick = HandleBackClick
+        });
+
+        // 2. New button (opcional)
+        if (ShowNew)
+        {
+            allItems.Add(new SimpleCommandBarItem
+            {
+                Text = "Nuevo",
+                IconName = "add",
+                Key = "new",
+                OnClick = HandleNewClick
+            });
+        }
+
+        // 3. Save button (opcional)
+        if (ShowSave)
+        {
+            allItems.Add(new SimpleCommandBarItem
+            {
+                Text = "Guardar",
+                IconName = "save",
+                Key = "save",
+                OnClick = HandleSaveClick
+            });
+        }
+
+        // 4. Agregar items personalizados
+        if (CustomItems != null)
+        {
+            allItems.AddRange(CustomItems);
+        }
+    }
+
+    private async void HandleBackClick(SimpleItemClickedArgs args)
+    {
+        // Prioridad: OnBackClick > BackPath > UseHistoryBack
+        if (OnBackClick.HasDelegate)
+        {
+            await OnBackClick.InvokeAsync();
+        }
+        else if (!string.IsNullOrEmpty(BackPath))
+        {
+            NavigationManager.NavigateTo(BackPath);
+        }
+        else if (UseHistoryBack)
+        {
+            await JSRuntime.InvokeVoidAsync("history.back");
+        }
+    }
+
+    private async void HandleNewClick(SimpleItemClickedArgs args)
+    {
+        // Prioridad: OnNewClick > NewPath
+        if (OnNewClick.HasDelegate)
+        {
+            await OnNewClick.InvokeAsync();
+        }
+        else if (!string.IsNullOrEmpty(NewPath))
+        {
+            NavigationManager.NavigateTo(NewPath);
+        }
+    }
+
+    private async void HandleSaveClick(SimpleItemClickedArgs args)
+    {
+        if (OnSaveClick.HasDelegate)
+        {
+            await OnSaveClick.InvokeAsync();
+        }
+    }
+}
