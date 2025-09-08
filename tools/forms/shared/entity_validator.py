@@ -20,14 +20,14 @@ class EntityConfigValidator:
         # Validaciones básicas
         errors.extend(self._validate_basic_requirements(config))
         
-        # Validaciones de coherencia cruzada
-        errors.extend(self._validate_field_coherence(config))
-        
-        # Validaciones de lookups
-        errors.extend(self._validate_lookup_coherence(config))
-        
-        # Validaciones de búsqueda
-        errors.extend(self._validate_search_coherence(config))
+        # Validaciones de coherencia cruzada (solo para targets que definen campos)
+        if config.target in ['db', 'todo']:
+            errors.extend(self._validate_field_coherence(config))
+            errors.extend(self._validate_lookup_coherence(config))
+            errors.extend(self._validate_search_coherence(config))
+        else:
+            # Para target 'interfaz', validaciones más flexibles
+            errors.extend(self._validate_interfaz_requirements(config))
         
         # Validaciones de tablas referenciadas (solo para targets que crean BD)
         if config.target in ['db', 'todo']:
@@ -135,6 +135,27 @@ class EntityConfigValidator:
                 db_field = db_fields_map[field_name]
                 if db_field.field_type != readonly_config.field_type:
                     errors.append(f"readonly-field '{field_name}': tipo '{readonly_config.field_type}' no coincide con BD '{db_field.field_type}'")
+        
+        return errors
+    
+    def _validate_interfaz_requirements(self, config: EntityConfiguration) -> List[str]:
+        """Validar requerimientos específicos para target 'interfaz' (entidad ya existe)"""
+        errors = []
+        
+        # Para target interfaz, no validamos coherencia de campos porque la entidad ya existe
+        # Solo validamos que la configuración de UI tenga sentido básico
+        
+        # Validar que si hay lookups, haga referencia a campos que parecen FKs
+        for lookup_field, lookup_config in config.lookups.items():
+            if not lookup_field.endswith('_id') and not lookup_field.endswith('Id'):
+                errors.append(f"lookup '{lookup_field}' debería ser un campo FK (terminar en '_id' o 'Id')")
+        
+        # Validar que los grid-fields con lookup tengan formato correcto
+        for field_name in config.get_grid_field_names():
+            if '->' in field_name:
+                parts = field_name.split('->')
+                if len(parts) != 2:
+                    errors.append(f"grid-field '{field_name}' con lookup tiene formato inválido (debe ser: campo_id->Tabla.Campo)")
         
         return errors
     
