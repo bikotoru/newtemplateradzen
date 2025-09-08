@@ -19,6 +19,14 @@ public partial class SystemOrganization
 
     public bool Active { get; set; }
 
+    public virtual ICollection<Categoria> Categoria { get; set; } = new List<Categoria>();
+
+    public virtual ICollection<Marca> Marca { get; set; } = new List<Marca>();
+
+    public virtual ICollection<NnventaProductos> NnventaProductos { get; set; } = new List<NnventaProductos>();
+
+    public virtual ICollection<Producto> Producto { get; set; } = new List<Producto>();
+
     public virtual ICollection<SystemConfig> SystemConfig { get; set; } = new List<SystemConfig>();
 
     public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();
@@ -34,4 +42,6 @@ public partial class SystemOrganization
     public virtual ICollection<SystemUsersPermissions> SystemUsersPermissions { get; set; } = new List<SystemUsersPermissions>();
 
     public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
+
+    public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
 }

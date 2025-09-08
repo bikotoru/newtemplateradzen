@@ -1,4 +1,8 @@
 using Frontend.Services;
+using Frontend.Modules.Ventas.Ventas;
+using Frontend.Modules.Catalogo.Productos;
+using Frontend.Modules.Catalogo.Categorias;
+using Frontend.Modules.Catalogo.Marcas;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace Frontend.Services;
@@ -17,6 +21,10 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
 
         // Module Services
+        services.AddScoped<VentaService>();
+        services.AddScoped<ProductoService>();
+        services.AddScoped<CategoriaService>();
+        services.AddScoped<MarcaService>();
 
         return services;
     }

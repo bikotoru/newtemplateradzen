@@ -143,6 +143,58 @@ class DatabaseModelGenerator:
         finally:
             os.chdir(original_cwd)
     
+    def organize_nn_entities(self):
+        """Organiza las entidades NN en carpeta separada con namespace correcto"""
+        print("\n🔗 ORGANIZANDO ENTIDADES NN")
+        print("-" * 40)
+        
+        # Crear carpeta NN si no existe
+        nn_path = self.entities_path / "NN"
+        nn_path.mkdir(exist_ok=True)
+        
+        # Buscar archivos que parecen entidades NN
+        nn_files = []
+        for entity_file in self.entities_path.glob("*.cs"):
+            filename = entity_file.name
+            
+            # Detectar archivos NN: empiezan con "Nn" en PascalCase
+            if filename.startswith('Nn') and filename[2:3].isupper():
+                nn_files.append(entity_file)
+        
+        if not nn_files:
+            print("   ℹ️  No se encontraron entidades NN para organizar")
+            return True
+        
+        print(f"   📂 Moviendo {len(nn_files)} entidades NN a carpeta NN/")
+        
+        # Mover cada archivo NN y actualizar namespace
+        for nn_file in nn_files:
+            try:
+                # Leer contenido original
+                with open(nn_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Actualizar namespace
+                old_namespace = "namespace Shared.Models.Entities"
+                new_namespace = "namespace Shared.Models.Entities.NN"
+                updated_content = content.replace(old_namespace, new_namespace)
+                
+                # Escribir en nueva ubicación
+                new_path = nn_path / nn_file.name
+                with open(new_path, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+                
+                # Eliminar archivo original
+                nn_file.unlink()
+                
+                print(f"   ✅ {nn_file.name} → NN/{nn_file.name}")
+                
+            except Exception as e:
+                print(f"   ⚠️  Error moviendo {nn_file.name}: {e}")
+                return False
+        
+        print(f"   🎯 Entidades NN organizadas en: {nn_path}")
+        return True
     
     def compile_solution(self):
         """Compila la solución para verificar que todo funciona"""
@@ -170,13 +222,23 @@ class DatabaseModelGenerator:
         print("\n📋 RESUMEN DE ARCHIVOS GENERADOS")
         print("=" * 60)
         
-        # Listar entidades
+        # Listar entidades normales
         entity_files = list(self.entities_path.glob("*.cs"))
         if entity_files:
-            print(f"\n📦 Entidades generadas ({len(entity_files)}):")
+            print(f"\n📦 Entidades normales ({len(entity_files)}):")
             print(f"   📂 {self.entities_path}")
             for file in entity_files:
                 print(f"   ✅ {file.name}")
+        
+        # Listar entidades NN
+        nn_path = self.entities_path / "NN"
+        if nn_path.exists():
+            nn_files = list(nn_path.glob("*.cs"))
+            if nn_files:
+                print(f"\n🔗 Entidades NN ({len(nn_files)}):")
+                print(f"   📂 {nn_path}")
+                for file in nn_files:
+                    print(f"   ✅ {file.name}")
         
         # Listar DbContext
         context_files = list(self.data_path.glob("*.cs"))
@@ -212,7 +274,11 @@ class DatabaseModelGenerator:
         if not self.generate_from_database(connection_string):
             return False
             
-        # 4. Compilar para verificar
+        # 4. Organizar entidades NN en carpeta separada
+        if not self.organize_nn_entities():
+            return False
+            
+        # 5. Compilar para verificar
         self.compile_solution()
         
         # 5. Mostrar resumen

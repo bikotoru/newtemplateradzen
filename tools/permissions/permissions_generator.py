@@ -244,6 +244,7 @@ class PermissionsGenerator:
         if alias:
             print(f"🏷️ Alias: {alias}")
         print(f"🏷️ GroupKey: {source_upper} (source table)")
+        print(f"📁 Modelo generado en: Shared.Models/Entities/NN/{entity_name.title().replace('_', '')})")
         print()
         
         # Preparar datos

@@ -33,8 +33,9 @@ tools/forms/entity-generator.py
 
 ## 🚀 Uso Básico
 
-### Comando Base
+### Comandos Base
 
+**Entidad Normal:**
 ```bash
 python3 tools/forms/entity-generator.py \
     --entity "NombreEntidad" \
@@ -42,15 +43,33 @@ python3 tools/forms/entity-generator.py \
     --target [db|interfaz|todo]
 ```
 
+**Relación NN (Muchos-a-Muchos):**
+```bash
+python3 tools/forms/entity-generator.py \
+    --source tabla1 \
+    --to tabla2 \
+    [--alias nombreEspecial] \
+    --module "Modulo.Submodulo" \
+    --target db
+```
+
 ### Parámetros Obligatorios
 
+**Para Entidades Normales:**
 - `--entity`: Nombre de la entidad (ej: `Producto`, `Cliente`)
 - `--module`: Módulo del proyecto (ej: `Inventario.Core`, `Ventas.Facturacion`)
 - `--target`: Qué generar (`db`, `interfaz`, `todo`)
 
+**Para Relaciones NN:**
+- `--source`: Tabla origen de la relación (ej: `venta`)
+- `--to`: Tabla destino de la relación (ej: `productos`)
+- `--module`: Módulo del proyecto
+- `--target`: Solo `db` (las relaciones NN no tienen interfaz)
+
 ### Parámetros Opcionales
 
-- `--plural`: Plural de la entidad (por defecto: `{entidad}s`)
+- `--plural`: Plural de la entidad (por defecto: `{entidad}s`) - *solo para entidades normales*
+- `--alias`: Nombre especial para la relación NN (ej: `promocion`) - *solo para relaciones NN*
 
 ## 📊 Targets Disponibles
 
@@ -338,6 +357,43 @@ python3 tools/forms/entity-generator.py \
               "proveedor_id:proveedor:RazonSocial:required:fast:form,grid" \
     --search-fields "nombre,codigo,descripcion"
 ```
+
+### 🔗 Ejemplo 3: Relación NN (Muchos-a-Muchos) - NUEVA SINTAXIS
+
+**Sintaxis elegante para relaciones Many-to-Many:**
+
+```bash
+# Relación simple Venta ↔ Productos
+python3 tools/forms/entity-generator.py \
+    --source venta \
+    --to productos \
+    --module "Ventas" \
+    --target db \
+    --fields "cantidad:int" \
+             "precio_unitario:decimal:18,2" \
+             "descuento:decimal:5,2" \
+    --fk "venta_id:venta" \
+         "producto_id:producto"
+
+# Relación con alias (para casos especiales)
+python3 tools/forms/entity-generator.py \
+    --source venta \
+    --to productos \
+    --alias promocion \
+    --module "Ventas" \
+    --target db \
+    --fields "cantidad:int" \
+             "precio_promocional:decimal:18,2" \
+             "descuento:decimal:5,2" \
+    --fk "venta_id:venta" \
+         "producto_id:producto"
+```
+
+**Resultado:**
+- **Tabla:** `nn_venta_productos` o `nn_venta_productos_promocion`
+- **Modelo:** `Shared.Models/Entities/NN/NnVentaProductos.cs`
+- **Namespace:** `Shared.Models.Entities.NN`
+- **Permisos especiales:** `VENTA.ADDTARGET`, `VENTA.DELETETARGET`, `VENTA.EDITTARGET`
 
 ### 👤 Ejemplo 3: Cliente con Validaciones Avanzadas
 

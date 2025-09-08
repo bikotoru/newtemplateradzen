@@ -113,8 +113,11 @@ python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" 
 # 3. {ENTIDAD_CON_FK} (Entidad con relaciones - completa)
 python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
 
-# 4. {TABLA_NN} (Tabla N:N - SOLO base de datos)
-python3 tools/forms/entity-generator.py --entity "nn_{tabla1}_{tabla2}" --plural "nn_{tabla1}_{tabla2}" --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK} --nn-relation-entity
+# 4. {TABLA_NN} (Relación N:N - SINTAXIS ELEGANTE)
+python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
+
+# 5. {TABLA_NN_ALIAS} (Relación N:N con alias - SINTAXIS ELEGANTE)  
+python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --alias {nombre_especial} --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
 ```
 
 ## ℹ️ Info:
@@ -135,11 +138,12 @@ python3 tools/forms/entity-generator.py --entity "nn_{tabla1}_{tabla2}" --plural
 - Buscar patrones: "crear entidades:", "- Entidad", nombres propios
 - Extraer campos mencionados: "campos: nombre string, precio int"
 - Detectar relaciones: "marca: Rel: Marca", campos terminados en "_id"
-- **Detectar tablas N:N**: nombres que empiecen con "nn_", "NN_" o contengan "_" entre dos entidades
-  - **FORMATO OBLIGATORIO**: Usar siempre `nn_tablaA_tablaB` (con guiones bajos)
+- **Detectar tablas N:N**: buscar patrones como "NNTabla1_Tabla2", "tabla1 ↔ tabla2", etc.
+  - **SINTAXIS NUEVA**: Usar `--source tabla1 --to tabla2` en lugar de `--entity`
   - **IMPORTANTE**: Las tablas NN solo crean la tabla de BD, NO generan interfaz ni servicios
   - Solo usar `--target db` para tablas NN
-  - Agregar `--nn-relation-entity` para claridad explícita
+  - **Generación automática**: Se crea `nn_tabla1_tabla2` automáticamente
+  - **Con alias**: Usar `--source tabla1 --to tabla2 --alias nombre` para casos especiales
 
 ### Organización de Fases
 ```yaml
@@ -264,34 +268,42 @@ python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "N
 ## 📋 REGLAS ESPECÍFICAS PARA TABLAS N:N
 
 ### ¿Cuándo es una tabla N:N?
-- **FORMATO OBLIGATORIO**: Siempre usar `nn_tabla1_tabla2` (con guiones bajos)
-- Ejemplos: `nn_venta_productos`, `nn_usuario_roles`, `nn_cliente_categorias`
+- Detectar patrones: "NNVenta_Productos", "venta ↔ productos", "tabla1 con tabla2"
 - Representan relaciones Many-to-Many entre dos entidades
-- **NUNCA usar**: `NNVenta_Productos`, `Venta_Productos` - SOLO `nn_venta_productos`
+- **NUEVA SINTAXIS ELEGANTE**: `--source tabla1 --to tabla2` genera automáticamente `nn_tabla1_tabla2`
 
-### Comando para tablas N:N
+### Comando para tablas N:N - NUEVA SINTAXIS
 ```bash
-# FORMATO CORRECTO ✅ para tabla NN:
-python3 tools/forms/entity-generator.py --entity "nn_venta_productos" --plural "nn_venta_productos" --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto" --nn-relation-entity
+# SINTAXIS ELEGANTE ✅ (recomendada):
+python3 tools/forms/entity-generator.py --source venta --to productos --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto"
 
-# INCORRECTO ❌ (formato antiguo)
-# python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --target todo --lookups "..." 
+# Con alias para casos especiales ✅:
+python3 tools/forms/entity-generator.py --source venta --to productos --alias promocion --module "Ventas" --target db --fields "cantidad:int" "precio_especial:decimal:10,2" --fk "venta_id:venta" "producto_id:producto"
+
+# FORMATO ANTIGUO ❌ (aún soportado pero no recomendado):
+# python3 tools/forms/entity-generator.py --entity "nn_venta_productos" --target db ...
 ```
 
+**Resultado automático:**
+- **Tabla BD:** `nn_venta_productos` o `nn_venta_productos_promocion`
+- **Modelo:** `Shared.Models/Entities/NN/NnVentaProductos.cs`
+- **Namespace:** `Shared.Models.Entities.NN`
+- **Permisos:** `VENTA.ADDTARGET`, `VENTA.DELETETARGET`, `VENTA.EDITTARGET`
+
 ### Lo que NO hacer con tablas NN:
+- ❌ NO usar `--entity` (usar `--source --to` en su lugar)
 - ❌ NO usar `--target todo` o `--target interfaz`
-- ❌ NO usar `--lookups`
-- ❌ NO usar `--form-fields`
-- ❌ NO usar `--grid-fields`
-- ❌ NO usar `--search-fields`
+- ❌ NO usar `--lookups`, `--form-fields`, `--grid-fields`, `--search-fields`
+- ❌ NO usar formato antiguo `--entity "nn_tabla1_tabla2"`
 
 ### Lo que SÍ hacer con tablas NN:
+- ✅ **NUEVA SINTAXIS**: `--source tabla1 --to tabla2`
 - ✅ Usar `--target db` únicamente
 - ✅ Usar `--fields` para campos propios de la relación
 - ✅ Usar `--fk` para las dos claves foráneas
-- ✅ Usar `--nn-relation-entity` para claridad explícita
-- ✅ Usar formato `nn_tabla1_tabla2` OBLIGATORIO
+- ✅ Usar `--alias nombre` para casos especiales (opcional)
 - ✅ Colocar al final del orden de creación
+- ✅ **Generación automática**: tabla `nn_source_to[_alias]` y modelo en `NN/`
 
 ## 🚨 REGLAS CRÍTICAS
 

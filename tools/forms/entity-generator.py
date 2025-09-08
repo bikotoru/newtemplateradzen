@@ -495,11 +495,21 @@ Ejemplo completo:
     --search-fields "nombre,codigo"
         """)
     
-    # Argumentos básicos
-    parser.add_argument('--entity', required=True,
+    # Argumentos básicos - Entidad normal
+    parser.add_argument('--entity',
                        help='Nombre de la entidad (ej: Producto)')
     parser.add_argument('--plural', 
                        help='Plural de la entidad (ej: Productos)')
+    
+    # Argumentos para relaciones NN (muchos-a-muchos)
+    parser.add_argument('--source',
+                       help='Tabla source para relación NN (ej: venta)')
+    parser.add_argument('--to',
+                       help='Tabla target para relación NN (ej: productos)')
+    parser.add_argument('--alias',
+                       help='Alias opcional para relación NN (ej: promocion)')
+    
+    # Argumentos comunes
     parser.add_argument('--module', required=True,
                        help='Módulo donde crear la entidad (ej: Inventario.Core)')
     parser.add_argument('--target', choices=['db', 'interfaz', 'todo'], required=True,
@@ -525,19 +535,42 @@ Ejemplo completo:
     parser.add_argument('--search-fields', 
                        help='Campos de búsqueda: "campo1,campo2,campo3"')
     
-    # Argumentos para tablas NN (muchos-a-muchos)
-    parser.add_argument('--nn-source', 
-                       help='Tabla source para NN: "venta"')
-    parser.add_argument('--nn-target',
-                       help='Tabla target para NN: "producto"')
-    parser.add_argument('--nn-alias',
-                       help='Alias para NN (opcional): "promocion"')
+    # Parámetros legacy (mantenidos por compatibilidad)
     parser.add_argument('--nn-relation-entity', action='store_true',
-                       help='Indica que es una tabla NN (muchos-a-muchos) para generar permisos especiales')
+                       help='[DEPRECATED] Usa --source --to en su lugar')
     
     args = parser.parse_args()
     
-    # Validaciones básicas
+    # Validaciones de modo de operación
+    is_nn_mode = bool(args.source and args.to)
+    is_entity_mode = bool(args.entity)
+    
+    if not is_nn_mode and not is_entity_mode:
+        print("❌ ERROR: Debes especificar:")
+        print("   • Entidad normal: --entity NombreEntidad")  
+        print("   • Relación NN: --source tabla1 --to tabla2 [--alias nombre]")
+        sys.exit(1)
+    
+    if is_nn_mode and is_entity_mode:
+        print("❌ ERROR: No puedes usar --entity junto con --source --to")
+        print("💡 Usa una de estas opciones:")
+        print("   • Entidad normal: --entity NombreEntidad")  
+        print("   • Relación NN: --source tabla1 --to tabla2")
+        sys.exit(1)
+    
+    if is_nn_mode:
+        if not args.source or not args.to:
+            print("❌ ERROR: Para relaciones NN necesitas --source y --to")
+            print("💡 Ejemplo: --source venta --to productos")
+            sys.exit(1)
+            
+        # En modo NN, forzar target db (las relaciones NN no tienen interfaz)
+        if args.target != 'db':
+            print("❌ ERROR: Las relaciones NN solo soportan --target db")
+            print("💡 Usa: --source venta --to productos --target db")
+            sys.exit(1)
+    
+    # Validaciones básicas para target db/todo
     if args.target in ['db', 'todo']:
         if not args.fields and not args.fk:
             print("❌ ERROR: --fields o --fk requerido para targets 'db' y 'todo'")

@@ -1,0 +1,39 @@
+@page "/catalogo/marca/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities
+@using Radzen
+
+<PageTitle>Marcas</PageTitle>
+
+<PageWithCommandBar BackPath="/"
+                    ShowNew
+                    NewPath="/catalogo/marca/formulario"
+                    >
+
+    <RadzenCard>
+        <EntityTable T="Marca" 
+                     @ref="entityTable"
+                     @key="@GetGridKey()"
+                     ShowSearchBar="true"
+                     ShowExcelExport="true"
+                     ShowRefreshButton="true"
+                     ShowAutoRefresh="true"
+                     ShowColumnConfig="true"
+                     ShowActions="true"
+                     SearchPlaceholder="Buscar marcas..."
+                     BaseQuery="@currentView.QueryBuilder"
+                     ColumnConfigs="@currentView.ColumnConfigs"
+                     ForceOrderByIndex="true"
+                     EnableSelectOptimization="true"
+                     SelectOnlyVisibleColumns="true"
+                     ViewConfigurations="@ViewConfigurationsTyped"
+                     CurrentView="@currentView"
+                     OnViewChanged="@OnViewChanged"
+                     ViewDisplayNameProperty="DisplayName"
+                     OnEdit="@HandleEdit"
+                     OnDelete="@HandleDelete">
+        </EntityTable>
+    </RadzenCard>
+
+</PageWithCommandBar>

@@ -1,0 +1,92 @@
+@using Frontend.Components.Base
+@using Frontend.Components.Validation
+@using Shared.Models.Entities
+@using Frontend.Modules.Catalogo
+@inherits ComponentBase
+
+<EssentialsCard Title="Nuevo Producto" 
+               Icon="add" 
+               IconColor="#0078d4">
+    <ChildContent>
+        <FormValidator Entity="entity" Rules="@GetValidationRules()">
+            <RadzenStack Gap="1rem">
+                <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+    <RadzenFormField Text="Nombre">
+        <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                       Value="@entity.Nombre"
+                       Placeholder="Ingrese nombre" />
+    </RadzenFormField>
+</ValidatedInput>
+                <ValidatedInput FieldName="Codigosku" Value="@entity.Codigosku">
+    <RadzenFormField Text="Codigosku">
+        <RadzenTextBox @oninput="@(v => entity.Codigosku = v.Value?.ToString())" 
+                       Value="@entity.Codigosku"
+                       Placeholder="Ingrese codigosku" />
+    </RadzenFormField>
+</ValidatedInput>
+                <ValidatedInput FieldName="Precioventa" Value="@entity.Precioventa">
+    <RadzenFormField Text="Precioventa">
+        <RadzenNumeric @bind-Value="entity.Precioventa" 
+                       Placeholder="0"
+                       
+                       ShowUpDown="false" />
+    </RadzenFormField>
+</ValidatedInput>
+                <ValidatedInput FieldName="Preciocompra" Value="@entity.Preciocompra">
+    <RadzenFormField Text="Preciocompra">
+        <RadzenNumeric @bind-Value="entity.Preciocompra" 
+                       Placeholder="0"
+                       
+                       ShowUpDown="false" />
+    </RadzenFormField>
+</ValidatedInput>
+                <ValidatedInput FieldName="MarcaId" Value="@entity.MarcaId">
+    <RadzenFormField Text="Marca">
+        <Lookup TEntity="Marca" 
+               TValue="Guid?" 
+               @bind-Value="entity.MarcaId"
+               Service="MarcaService"
+               DisplayProperty="Nombre"
+               EntityDisplayName="Marca"
+               SearchableFields="@marcaSearchFields"
+               EnableCache="true" />
+    </RadzenFormField>
+</ValidatedInput>
+                <ValidatedInput FieldName="CategoriaId" Value="@entity.CategoriaId">
+    <RadzenFormField Text="Categoría">
+        <Lookup TEntity="Categoria" 
+               TValue="Guid?" 
+               @bind-Value="entity.CategoriaId"
+               Service="CategoriaService"
+               DisplayProperty="Nombre"
+               EntityDisplayName="Categoria"
+               SearchableFields="@categoriaSearchFields"
+               EnableCache="true" />
+    </RadzenFormField>
+</ValidatedInput>
+                
+            </RadzenStack>
+        </FormValidator>
+        
+        <div class="mt-3">
+            <RadzenButton Text="Crear Producto" 
+                          Icon="save" 
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@SaveEntity" 
+                          IsBusy="@isLoading" />
+            <RadzenButton Text="Cancelar" 
+                          Icon="cancel" 
+                          ButtonStyle="ButtonStyle.Light"
+                          Click="@Cancel" 
+                          class="ms-2" />
+        </div>
+        
+    </ChildContent>
+</EssentialsCard>
+
+<style>
+    .fast-form {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+</style>

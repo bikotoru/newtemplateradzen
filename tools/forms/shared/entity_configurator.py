@@ -198,37 +198,60 @@ class EntityConfigurator:
         """
         Crear configuración completa desde argumentos de línea de comandos
         """
-        # Crear configuración base
-        config = EntityConfiguration(
-            entity_name=args.entity,
-            entity_plural=args.plural or f"{args.entity}s",
-            module=args.module,
-            target=args.target,
-            is_nn_relation=getattr(args, 'nn_relation_entity', False)
-        )
+        # Detectar modo de operación
+        is_nn_mode = bool(getattr(args, 'source', None) and getattr(args, 'to', None))
         
-        # Detectar y configurar tabla NN si es necesario
-        if config.is_nn_table():
-            if hasattr(args, 'nn_source') and args.nn_source and hasattr(args, 'nn_target') and args.nn_target:
-                # Usar argumentos de línea de comandos
-                alias = getattr(args, 'nn_alias', None)
-                config.nn_config = NNTableConfig(
-                    source_table=args.nn_source,
-                    target_table=args.nn_target,
-                    alias=alias
-                )
-                print("🔗 CONFIGURACIÓN NN DESDE ARGUMENTOS:")
-                print(f"   🎯 Source: {args.nn_source}")
-                print(f"   🎯 Target: {args.nn_target}")
-                if alias:
-                    print(f"   🏷️ Alias: {alias}")
-                print()
-            else:
-                # Configurar interactivamente
-                config.nn_config = self.configure_nn_table(args.entity)
+        if is_nn_mode:
+            # Modo NN: Generar nombre automáticamente
+            source = args.source.lower()
+            to = args.to.lower()
+            alias = getattr(args, 'alias', None)
             
-            # Actualizar el nombre de la entidad con la configuración NN
-            config.entity_name = config.get_nn_table_name()
+            if alias:
+                entity_name = f"nn_{source}_{to}_{alias.lower()}"
+            else:
+                entity_name = f"nn_{source}_{to}"
+            
+            print(f"🔗 MODO RELACIÓN NN DETECTADO:")
+            print(f"   🎯 Source: {source}")
+            print(f"   🎯 Target: {to}")
+            if alias:
+                print(f"   🏷️ Alias: {alias}")
+            print(f"   📝 Tabla generada: {entity_name}")
+            print()
+            
+            # Crear configuración NN
+            config = EntityConfiguration(
+                entity_name=entity_name,
+                entity_plural=entity_name,  # Para NN, plural es igual
+                module=args.module,
+                target=args.target,
+                is_nn_relation=True
+            )
+            
+            # Configurar NN automáticamente
+            config.nn_config = NNTableConfig(
+                source_table=source,
+                target_table=to,
+                alias=alias
+            )
+            
+        else:
+            # Modo entidad normal
+            config = EntityConfiguration(
+                entity_name=args.entity,
+                entity_plural=args.plural or f"{args.entity}s",
+                module=args.module,
+                target=args.target,
+                is_nn_relation=getattr(args, 'nn_relation_entity', False)
+            )
+        
+        # Solo para entidades normales que detectamos como NN por nombre (legacy)
+        if not is_nn_mode and config.is_nn_table() and not config.nn_config:
+            print("⚠️ ADVERTENCIA: Detectada tabla NN por nombre pero sin configuración --source --to")
+            print("💡 Se recomienda usar: --source tabla1 --to tabla2 en lugar de --entity nn_tabla1_tabla2")
+            # Configurar interactivamente como fallback
+            config.nn_config = self.configure_nn_table(config.entity_name)
         
         # Parsear campos de base de datos
         if hasattr(args, 'fields') and args.fields:
