@@ -12,7 +12,6 @@ public partial class AppDbContext : DbContext
     {
     }
 
-
     public virtual DbSet<SystemConfig> SystemConfig { get; set; }
 
     public virtual DbSet<SystemConfigValues> SystemConfigValues { get; set; }
@@ -31,13 +30,10 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemUsersRoles> SystemUsersRoles { get; set; }
 
-
     public virtual DbSet<ZToken> ZToken { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-
         modelBuilder.Entity<SystemConfig>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC079F2EF73E");
@@ -385,7 +381,6 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_users_roles_UserId");
         });
 
-    
         modelBuilder.Entity<ZToken>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__z_token__3213E83F3E7F66CC");

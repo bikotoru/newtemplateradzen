@@ -3,7 +3,6 @@
 
 // Entidades principales
 global using Shared.Models.Entities;
-global using Shared.Models.Entities.NN;
 global using Shared.Models.Entities.SystemEntities;
 
 // DTOs y modelos de datos

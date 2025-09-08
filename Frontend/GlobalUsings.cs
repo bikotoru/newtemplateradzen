@@ -5,19 +5,18 @@
 global using Frontend.Services;
 global using Frontend.Services.Validation;
 global using Frontend.Components.Base.Tables;
-global using Frontend.Components.Validation;
+// global using Frontend.Components.Validation; // Comentado temporalmente hasta que exista
 
 // System (específico para resolver conflictos) 
 global using FrontendValidationResult = Frontend.Services.Validation.ValidationResult;
 
 // Shared Models
 global using Shared.Models.Entities;
-global using Shared.Models.Entities.NN;
-global using Shared.Models.Entities.SystemEntities;
 global using Shared.Models.Requests;
 global using Shared.Models.Responses;
 global using Shared.Models.Builders;
 global using Shared.Models.QueryModels;
+global using Shared.Models.Entities.SystemEntities;
 
 
 // Components
