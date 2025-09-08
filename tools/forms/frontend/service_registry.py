@@ -16,7 +16,7 @@ class FrontendServiceRegistry:
         registry_file = self.root_path / "Frontend" / "Services" / "ServiceRegistry.cs"
         
         if not registry_file.exists():
-            print(f"❌ Frontend ServiceRegistry no encontrado: {registry_file}")
+            print(f"ERROR Frontend ServiceRegistry no encontrado: {registry_file}")
             return False
         
         try:
@@ -41,7 +41,7 @@ class FrontendServiceRegistry:
                 
                 lines.insert(insert_index, using_line)
                 content = '\n'.join(lines)
-                print(f"✅ Frontend Using agregado: {using_line}")
+                print(f"OK Frontend Using agregado: {using_line}")
             
             # 2. Agregar registro del servicio
             service_registration = f"        services.AddScoped<{entity_name}Service>();"
@@ -53,12 +53,12 @@ class FrontendServiceRegistry:
                         # Insertar después del comentario
                         lines.insert(i + 1, service_registration)
                         content = '\n'.join(lines)
-                        print(f"✅ Frontend Servicio registrado: {entity_name}Service")
+                        print(f"OK Frontend Servicio registrado: {entity_name}Service")
                         break
             
             # Escribir archivo actualizado
             registry_file.write_text(content, encoding='utf-8')
-            print(f"✅ Frontend ServiceRegistry actualizado")
+            print(f"OK Frontend ServiceRegistry actualizado")
             
             # Actualizar GlobalUsings.cs
             self.update_global_usings(entity_name, module)
@@ -66,7 +66,7 @@ class FrontendServiceRegistry:
             return True
             
         except Exception as e:
-            print(f"❌ ERROR actualizando frontend ServiceRegistry: {e}")
+            print(f"ERROR actualizando frontend ServiceRegistry: {e}")
             return False
     
     def update_global_usings(self, entity_name, module):
@@ -88,11 +88,43 @@ class FrontendServiceRegistry:
                         if line.startswith('global using Frontend.Modules.'):
                             insert_index = i + 1
                     
+                    # Si no hay módulos existentes, buscar después de "// Components" o antes de "// Radzen"
+                    if insert_index == -1:
+                        for i, line in enumerate(lines):
+                            if line.strip() == '// Components':
+                                insert_index = i
+                                break
+                            elif line.strip() == '// Radzen':
+                                insert_index = i
+                                break
+                    
+                    # Si aún no encuentra, insertar después de los Shared Models
+                    if insert_index == -1:
+                        for i, line in enumerate(lines):
+                            if line.startswith('global using Shared.Models.'):
+                                insert_index = i + 1
+                    
+                    # Si todo falla, insertar antes de Components
+                    if insert_index == -1:
+                        for i, line in enumerate(lines):
+                            if line.startswith('global using Microsoft.AspNetCore.Components'):
+                                insert_index = i
+                                break
+                    
                     if insert_index > -1:
+                        # Agregar comentario si es el primer módulo
+                        module_exists = any(line.startswith('global using Frontend.Modules.') for line in lines)
+                        if not module_exists:
+                            lines.insert(insert_index, "")
+                            lines.insert(insert_index + 1, "// Module Services")
+                            insert_index += 2
+                        
                         lines.insert(insert_index, using_line)
                         global_usings_file.write_text('\n'.join(lines), encoding='utf-8')
-                        print(f"✅ Frontend GlobalUsings actualizado: {using_line}")
+                        print(f"OK Frontend GlobalUsings actualizado: {using_line}")
+                    else:
+                        print(f"WARNING: No se pudo encontrar dónde insertar en Frontend GlobalUsings")
                         
         except Exception as e:
-            print(f"⚠️ Warning actualizando Frontend GlobalUsings: {e}")
+            print(f"WARNING actualizando Frontend GlobalUsings: {e}")
             # No es crítico, continuar

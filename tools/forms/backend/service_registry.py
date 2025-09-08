@@ -16,7 +16,7 @@ class BackendServiceRegistry:
         registry_file = self.root_path / "Backend" / "Services" / "ServiceRegistry.cs"
         
         if not registry_file.exists():
-            print(f"❌ ServiceRegistry no encontrado: {registry_file}")
+            print(f"ERROR ServiceRegistry no encontrado: {registry_file}")
             return False
         
         try:
@@ -41,7 +41,7 @@ class BackendServiceRegistry:
                 
                 lines.insert(insert_index, using_line)
                 content = '\n'.join(lines)
-                print(f"✅ Using agregado: {using_line}")
+                print(f"OK Using agregado: {using_line}")
             
             # 2. Agregar registro del servicio
             service_registration = f"        services.AddScoped<{entity_name}Service>();"
@@ -53,12 +53,12 @@ class BackendServiceRegistry:
                         # Insertar después del comentario
                         lines.insert(i + 1, service_registration)
                         content = '\n'.join(lines)
-                        print(f"✅ Servicio registrado: {entity_name}Service")
+                        print(f"OK Servicio registrado: {entity_name}Service")
                         break
             
             # Escribir archivo actualizado
             registry_file.write_text(content, encoding='utf-8')
-            print(f"✅ Backend ServiceRegistry actualizado")
+            print(f"OK Backend ServiceRegistry actualizado")
             
             # Actualizar GlobalUsings.cs
             self.update_global_usings(entity_name, module)
@@ -66,7 +66,7 @@ class BackendServiceRegistry:
             return True
             
         except Exception as e:
-            print(f"❌ ERROR actualizando backend ServiceRegistry: {e}")
+            print(f"ERROR actualizando backend ServiceRegistry: {e}")
             return False
     
     def update_global_usings(self, entity_name, module):
@@ -91,8 +91,8 @@ class BackendServiceRegistry:
                     if insert_index > -1:
                         lines.insert(insert_index, using_line)
                         global_usings_file.write_text('\n'.join(lines), encoding='utf-8')
-                        print(f"✅ Backend GlobalUsings actualizado: {using_line}")
+                        print(f"OK Backend GlobalUsings actualizado: {using_line}")
                         
         except Exception as e:
-            print(f"⚠️ Warning actualizando Backend GlobalUsings: {e}")
+            print(f"WARNING actualizando Backend GlobalUsings: {e}")
             # No es crítico, continuar
