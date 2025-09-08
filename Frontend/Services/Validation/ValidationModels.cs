@@ -119,6 +119,51 @@ public class LengthRule : IValidationRule
     }
 }
 
+public class RangeRule : IValidationRule
+{
+    private readonly double? _min;
+    private readonly double? _max;
+    private readonly string _errorMessage;
+    
+    public RangeRule(double? min = null, double? max = null, string? errorMessage = null)
+    {
+        _min = min;
+        _max = max;
+        _errorMessage = errorMessage ?? GenerateDefaultMessage();
+    }
+    
+    private string GenerateDefaultMessage()
+    {
+        if (_min.HasValue && _max.HasValue)
+            return $"Debe estar entre {_min} y {_max}";
+        if (_min.HasValue)
+            return $"Debe ser mayor o igual a {_min}";
+        if (_max.HasValue)
+            return $"Debe ser menor o igual a {_max}";
+        return "Valor fuera del rango permitido";
+    }
+    
+    public Task<ValidationResult> ValidateAsync(object? value)
+    {
+        if (value == null)
+            return Task.FromResult(ValidationResult.Success());
+        
+        double numericValue;
+        
+        // Intentar convertir el valor a double
+        if (!double.TryParse(value.ToString(), out numericValue))
+            return Task.FromResult(ValidationResult.Error("Debe ser un número válido"));
+        
+        if (_min.HasValue && numericValue < _min)
+            return Task.FromResult(ValidationResult.Error(_errorMessage));
+        
+        if (_max.HasValue && numericValue > _max)
+            return Task.FromResult(ValidationResult.Error(_errorMessage));
+        
+        return Task.FromResult(ValidationResult.Success());
+    }
+}
+
 public class FieldValidationBuilder
 {
     private readonly string _fieldName;
@@ -149,6 +194,12 @@ public class FieldValidationBuilder
     public FieldValidationBuilder MaxLength(int maxLength, string? errorMessage = null)
     {
         return Length(null, maxLength, errorMessage);
+    }
+    
+    public FieldValidationBuilder Range(double? min = null, double? max = null, string? errorMessage = null)
+    {
+        _rules.Add(new RangeRule(min, max, errorMessage));
+        return this;
     }
     
     internal List<IValidationRule> Build() => _rules;
