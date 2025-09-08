@@ -4,6 +4,7 @@ using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Radzen;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
+using System.Linq.Expressions;
 
 namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
@@ -11,6 +12,7 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
 {
     [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
+    {{LOOKUP_SERVICE_INJECTIONS}}
     [Parameter] public EventCallback<{{ENTITY_NAME}}Entity> OnEntityCreated { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
@@ -21,6 +23,7 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
         FechaModificacion = DateTime.Now
     };
     private bool isLoading = false;
+    {{LOOKUP_SEARCH_FIELDS}}
 
     private FormValidationRules GetValidationRules()
     {

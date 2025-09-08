@@ -143,11 +143,17 @@ class FrontendGenerator:
             validation_rules.append(self.fast_generator.generate_validation_rule(field))
             field_validations.append(self.fast_generator.generate_field_validation_check(field))
         
+        # Recopilar dependencias de lookups
+        lookup_deps = self.formulario_generator.collect_lookup_dependencies(fields)
+        
         # Agregar a variables
         variables.update({
             'FORM_FIELDS': '\n                '.join(form_fields),
             'VALIDATION_RULES': '\n            '.join(validation_rules),
-            'FIELD_VALIDATIONS': '\n\n            '.join(field_validations)
+            'FIELD_VALIDATIONS': '\n\n            '.join(field_validations),
+            'LOOKUP_SERVICE_INJECTIONS': lookup_deps['service_injections'],
+            'LOOKUP_SEARCH_FIELDS': lookup_deps['search_fields'],
+            'LOOKUP_FIELD_INITIALIZATIONS': lookup_deps['initializations']
         })
     
     def _prepare_formulario_variables(self, entity_name, variables):

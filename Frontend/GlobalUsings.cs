@@ -21,6 +21,7 @@ global using Shared.Models.QueryModels;
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Web;
 global using Microsoft.AspNetCore.Components.Authorization;
+global using System.Linq.Expressions;
 
 // Radzen
 global using Radzen;

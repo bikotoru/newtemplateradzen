@@ -164,7 +164,7 @@ class FormularioFieldGenerator:
                     
                     # Campo de búsqueda
                     search_field_name = f"{entity_name.lower()}SearchFields"
-                    lookup_search_fields.append(f"private string[] {search_field_name} = new[] {{ \"Nombre\" }};")
+                    lookup_search_fields.append(f"private Expression<Func<{entity_name}, object>>[] {search_field_name} = new Expression<Func<{entity_name}, object>>[] {{ x => x.Nombre }};")
                     
                     # No necesitamos inicialización especial por ahora
         

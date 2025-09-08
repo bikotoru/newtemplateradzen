@@ -6,6 +6,7 @@ using Frontend.Services.Validation;
 using Frontend.Components.Validation;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
 using Radzen;
+using System.Linq.Expressions;
 
 namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
