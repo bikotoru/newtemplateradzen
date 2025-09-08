@@ -3,10 +3,6 @@
 
 // Auth Services
 global using Backend.Modules.Auth.Login;
-global using Backend.Modules.Catalogo.Marcas;
-global using Backend.Modules.Catalogo.Categorias;
-global using Backend.Modules.Catalogo.Productos;
-global using Backend.Modules.Ventas.Ventas;
 
 // Utils Services
 global using Backend.Utils.Security;

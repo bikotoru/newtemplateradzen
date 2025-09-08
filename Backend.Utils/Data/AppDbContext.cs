@@ -12,13 +12,6 @@ public partial class AppDbContext : DbContext
     {
     }
 
-    public virtual DbSet<Categoria> Categoria { get; set; }
-
-    public virtual DbSet<Marca> Marca { get; set; }
-
-    public virtual DbSet<NnventaProductos> NnventaProductos { get; set; }
-
-    public virtual DbSet<Producto> Producto { get; set; }
 
     public virtual DbSet<SystemConfig> SystemConfig { get; set; }
 
@@ -38,154 +31,12 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemUsersRoles> SystemUsersRoles { get; set; }
 
-    public virtual DbSet<Venta> Venta { get; set; }
 
     public virtual DbSet<ZToken> ZToken { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Categoria>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__categori__3214EC0797382A2A");
 
-            entity.ToTable("categoria");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.Codigointerno)
-                .HasMaxLength(50)
-                .HasColumnName("codigointerno");
-            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(255)
-                .HasColumnName("nombre");
-
-            entity.HasOne(d => d.Creador).WithMany(p => p.CategoriaCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_categoria_CreadorId");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.CategoriaModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_categoria_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.Categoria)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_categoria_OrganizationId");
-        });
-
-        modelBuilder.Entity<Marca>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__marca__3214EC07E9F2CB20");
-
-            entity.ToTable("marca");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.Codigointerno)
-                .HasMaxLength(50)
-                .HasColumnName("codigointerno");
-            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(255)
-                .HasColumnName("nombre");
-
-            entity.HasOne(d => d.Creador).WithMany(p => p.MarcaCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_marca_CreadorId");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.MarcaModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_marca_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.Marca)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_marca_OrganizationId");
-        });
-
-        modelBuilder.Entity<NnventaProductos>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__nnventa___3214EC07D67840EA");
-
-            entity.ToTable("nnventa_productos");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
-            entity.Property(e => e.Descuentopeso).HasColumnName("descuentopeso");
-            entity.Property(e => e.Descuentoporcentaje)
-                .HasColumnType("decimal(5, 2)")
-                .HasColumnName("descuentoporcentaje");
-            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Montototal).HasColumnName("montototal");
-            entity.Property(e => e.Precioneto).HasColumnName("precioneto");
-            entity.Property(e => e.ProductoId).HasColumnName("producto_id");
-            entity.Property(e => e.VentaId).HasColumnName("venta_id");
-
-            entity.HasOne(d => d.Creador).WithMany(p => p.NnventaProductosCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_nnventa_productos_CreadorId");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.NnventaProductosModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_nnventa_productos_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.NnventaProductos)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_nnventa_productos_OrganizationId");
-
-            entity.HasOne(d => d.Producto).WithMany(p => p.NnventaProductos)
-                .HasForeignKey(d => d.ProductoId)
-                .HasConstraintName("FK_nnventa_productos_producto_id");
-
-            entity.HasOne(d => d.Venta).WithMany(p => p.NnventaProductos)
-                .HasForeignKey(d => d.VentaId)
-                .HasConstraintName("FK_nnventa_productos_venta_id");
-        });
-
-        modelBuilder.Entity<Producto>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__producto__3214EC07D1A0033D");
-
-            entity.ToTable("producto");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.CategoriaId).HasColumnName("categoria_id");
-            entity.Property(e => e.Codigosku)
-                .HasMaxLength(100)
-                .HasColumnName("codigosku");
-            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.MarcaId).HasColumnName("marca_id");
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(255)
-                .HasColumnName("nombre");
-            entity.Property(e => e.Preciocompra).HasColumnName("preciocompra");
-            entity.Property(e => e.Precioventa).HasColumnName("precioventa");
-
-            entity.HasOne(d => d.Categoria).WithMany(p => p.Producto)
-                .HasForeignKey(d => d.CategoriaId)
-                .HasConstraintName("FK_producto_categoria_id");
-
-            entity.HasOne(d => d.Creador).WithMany(p => p.ProductoCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_producto_CreadorId");
-
-            entity.HasOne(d => d.Marca).WithMany(p => p.Producto)
-                .HasForeignKey(d => d.MarcaId)
-                .HasConstraintName("FK_producto_marca_id");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.ProductoModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_producto_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.Producto)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_producto_OrganizationId");
-        });
 
         modelBuilder.Entity<SystemConfig>(entity =>
         {
@@ -534,32 +385,7 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_system_users_roles_UserId");
         });
 
-        modelBuilder.Entity<Venta>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__venta__3214EC070FF0D9AE");
-
-            entity.ToTable("venta");
-
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.Active).HasDefaultValue(true);
-            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Montototal).HasColumnName("montototal");
-            entity.Property(e => e.Numventa).HasColumnName("numventa");
-
-            entity.HasOne(d => d.Creador).WithMany(p => p.VentaCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_venta_CreadorId");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.VentaModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_venta_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.Venta)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_venta_OrganizationId");
-        });
-
+    
         modelBuilder.Entity<ZToken>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__z_token__3213E83F3E7F66CC");

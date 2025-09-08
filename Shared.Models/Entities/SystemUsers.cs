@@ -27,9 +27,6 @@ public partial class SystemUsers
 
     public bool Active { get; set; }
 
-    public virtual ICollection<Categoria> CategoriaCreador { get; set; } = new List<Categoria>();
-
-    public virtual ICollection<Categoria> CategoriaModificador { get; set; } = new List<Categoria>();
 
     public virtual SystemUsers? Creador { get; set; }
 
@@ -37,21 +34,12 @@ public partial class SystemUsers
 
     public virtual ICollection<SystemUsers> InverseModificador { get; set; } = new List<SystemUsers>();
 
-    public virtual ICollection<Marca> MarcaCreador { get; set; } = new List<Marca>();
-
-    public virtual ICollection<Marca> MarcaModificador { get; set; } = new List<Marca>();
 
     public virtual SystemUsers? Modificador { get; set; }
 
-    public virtual ICollection<NnventaProductos> NnventaProductosCreador { get; set; } = new List<NnventaProductos>();
-
-    public virtual ICollection<NnventaProductos> NnventaProductosModificador { get; set; } = new List<NnventaProductos>();
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual ICollection<Producto> ProductoCreador { get; set; } = new List<Producto>();
-
-    public virtual ICollection<Producto> ProductoModificador { get; set; } = new List<Producto>();
 
     public virtual ICollection<SystemConfig> SystemConfigCreador { get; set; } = new List<SystemConfig>();
 
@@ -85,7 +73,4 @@ public partial class SystemUsers
 
     public virtual ICollection<SystemUsersRoles> SystemUsersRolesSystemUsers { get; set; } = new List<SystemUsersRoles>();
 
-    public virtual ICollection<Venta> VentaCreador { get; set; } = new List<Venta>();
-
-    public virtual ICollection<Venta> VentaModificador { get; set; } = new List<Venta>();
 }

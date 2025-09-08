@@ -18,11 +18,6 @@ global using Shared.Models.Builders;
 global using Shared.Models.QueryModels;
 
 
-// Module Services
-global using Frontend.Modules.Catalogo.Marcas;
-global using Frontend.Modules.Catalogo.Categorias;
-global using Frontend.Modules.Catalogo.Productos;
-global using Frontend.Modules.Ventas.Ventas;
 // Components
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Web;
