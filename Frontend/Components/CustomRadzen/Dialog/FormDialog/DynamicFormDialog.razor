@@ -286,7 +286,7 @@
             try
             {
                 var validationResult = field.Validator(formData[field.Name]);
-                if (validationResult != null && validationResult != System.ComponentModel.DataAnnotations.ValidationResult.Success)
+                if (validationResult != null && !validationResult.IsValid)
                 {
                     validationErrors[field.Name] = validationResult.ErrorMessage;
                     isValid = false;

@@ -93,7 +93,7 @@ namespace Frontend.Componentes.CustomRadzen.Dialog
         /// <summary>
         /// Función de validación personalizada (debe devolver ValidationResult)
         /// </summary>
-        public Func<object, ValidationResult> Validator { get; set; }
+        public Func<object, Frontend.Services.Validation.ValidationResult> Validator { get; set; }
 
         /// <summary>
         /// Función de validación personalizada simple (devuelve true si es válido, false si no)
@@ -111,7 +111,7 @@ namespace Frontend.Componentes.CustomRadzen.Dialog
                     Validator = (obj) =>
                     {
                         bool isValid = value(obj);
-                        return isValid ? ValidationResult.Success : new ValidationResult(SimpleValidatorMessage ?? "El valor no es válido");
+                        return isValid ? Frontend.Services.Validation.ValidationResult.Success() : Frontend.Services.Validation.ValidationResult.Error(SimpleValidatorMessage ?? "El valor no es válido");
                     };
                 }
             }
