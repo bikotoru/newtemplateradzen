@@ -115,9 +115,6 @@ python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" 
 
 # 4. {TABLA_NN} (Relación N:N - SINTAXIS ELEGANTE)
 python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
-
-# 5. {TABLA_NN_ALIAS} (Relación N:N con alias - SINTAXIS ELEGANTE)  
-python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --alias {nombre_especial} --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
 ```
 
 ## ℹ️ Info:
@@ -143,7 +140,9 @@ python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --alias 
   - **IMPORTANTE**: Las tablas NN solo crean la tabla de BD, NO generan interfaz ni servicios
   - Solo usar `--target db` para tablas NN
   - **Generación automática**: Se crea `nn_tabla1_tabla2` automáticamente
-  - **Con alias**: Usar `--source tabla1 --to tabla2 --alias nombre` para casos especiales
+  - **ALIAS solo para casos especiales**: `--alias` únicamente cuando necesitas múltiples relaciones entre las mismas tablas
+    - ❌ MAL: `--source venta --to producto --alias productos` (redundante)
+    - ✅ BIEN: `--source producto --to categoria --alias principal` (para diferenciar de `categoria_secundaria`)
 
 ### Organización de Fases
 ```yaml
@@ -275,20 +274,27 @@ python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "N
 ### Comando para tablas N:N - NUEVA SINTAXIS
 ```bash
 # SINTAXIS ELEGANTE ✅ (recomendada):
-python3 tools/forms/entity-generator.py --source venta --to productos --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto"
+python3 tools/forms/entity-generator.py --source venta --to producto --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto"
 
-# Con alias para casos especiales ✅:
-python3 tools/forms/entity-generator.py --source venta --to productos --alias promocion --module "Ventas" --target db --fields "cantidad:int" "precio_especial:decimal:10,2" --fk "venta_id:venta" "producto_id:producto"
+# Con alias SOLO para casos especiales ✅:
+python3 tools/forms/entity-generator.py --source producto --to categoria --alias principal --module "Catalogo" --target db --fields "orden:int" "activo:bool" --fk "producto_id:producto" "categoria_id:categoria"
 
 # FORMATO ANTIGUO ❌ (aún soportado pero no recomendado):
 # python3 tools/forms/entity-generator.py --entity "nn_venta_productos" --target db ...
 ```
 
 **Resultado automático:**
-- **Tabla BD:** `nn_venta_productos` o `nn_venta_productos_promocion`
-- **Modelo:** `Shared.Models/Entities/NN/NnVentaProductos.cs`
+- **Tabla BD:** `nn_venta_producto` o `nn_producto_categoria_principal` (con alias)
+- **Modelo:** `Shared.Models/Entities/NN/NnVentaProducto.cs` o `NnProductoCategoriaPrincipal.cs`
 - **Namespace:** `Shared.Models.Entities.NN`
-- **Permisos:** `VENTA.ADDTARGET`, `VENTA.DELETETARGET`, `VENTA.EDITTARGET`
+- **Permisos:** `VENTA.ADDTARGET`, `VENTA.DELETETARGET`, `VENTA.EDITTARGET` (basados en source table)
+
+### 📋 Cuándo usar --alias:
+- ✅ **SÍ usar**: Múltiples relaciones entre las mismas tablas
+  - `producto ↔ categoria (principal)` y `producto ↔ categoria (secundaria)`
+  - `usuario ↔ proyecto (owner)` y `usuario ↔ proyecto (colaborador)`
+- ❌ **NO usar**: Para hacer plural o "mejorar" el nombre
+  - `--source venta --to producto` → `nn_venta_producto` (perfecto así)
 
 ### Lo que NO hacer con tablas NN:
 - ❌ NO usar `--entity` (usar `--source --to` en su lugar)
