@@ -126,10 +126,18 @@ class EntityGenerator:
             is_nn_relation=getattr(config, 'is_nn_relation', False)
         )
         
+        # Paso 3: Si es relación NN, verificar y actualizar GlobalUsings
+        if getattr(config, 'is_nn_relation', False):
+            print("🔗 PASO 3: Verificando GlobalUsings para entidades NN...")
+            self.ensure_nn_global_usings()
+        
         print()
         print("🎉 TARGET DB COMPLETADO EXITOSAMENTE!")
-        print("📋 SIGUIENTE PASO (opcional):")
-        print(f"   python tools/forms/entity-generator.py --entity \"{config.entity_name}\" --module \"{config.module}\" --target interfaz")
+        if not getattr(config, 'is_nn_relation', False):
+            print("📋 SIGUIENTE PASO (opcional):")
+            print(f"   python tools/forms/entity-generator.py --entity \"{config.entity_name}\" --module \"{config.module}\" --target interfaz")
+        else:
+            print("📁 Modelo NN se organizará automáticamente en Shared.Models/Entities/NN/ al ejecutar sync")
         
         return success and permissions_success
     
@@ -162,6 +170,69 @@ class EntityGenerator:
             print("💡 Los permisos se pueden generar manualmente:")
             print(f"   python tools/permissions/permissions_generator.py --entity {entity_name}")
             return False
+    
+    def ensure_nn_global_usings(self):
+        """Verificar y agregar 'using Shared.Models.Entities.NN;' a GlobalUsings.cs si no existe"""
+        try:
+            backend_global = self.root_path / "Backend" / "GlobalUsings.cs"
+            frontend_global = self.root_path / "Frontend" / "GlobalUsings.cs"
+            nn_using = "global using Shared.Models.Entities.NN;"
+            
+            updated_files = []
+            
+            # Verificar y actualizar Backend/GlobalUsings.cs
+            if backend_global.exists():
+                with open(backend_global, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                if nn_using not in content:
+                    # Buscar la línea de Shared.Models.Entities para insertar después
+                    lines = content.split('\n')
+                    new_lines = []
+                    inserted = False
+                    
+                    for line in lines:
+                        new_lines.append(line)
+                        if "global using Shared.Models.Entities;" in line and not inserted:
+                            new_lines.append(nn_using)
+                            inserted = True
+                    
+                    if inserted:
+                        with open(backend_global, 'w', encoding='utf-8') as f:
+                            f.write('\n'.join(new_lines))
+                        updated_files.append("Backend/GlobalUsings.cs")
+            
+            # Verificar y actualizar Frontend/GlobalUsings.cs
+            if frontend_global.exists():
+                with open(frontend_global, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                if nn_using not in content:
+                    # Buscar la línea de Shared.Models.Entities para insertar después
+                    lines = content.split('\n')
+                    new_lines = []
+                    inserted = False
+                    
+                    for line in lines:
+                        new_lines.append(line)
+                        if "global using Shared.Models.Entities;" in line and not inserted:
+                            new_lines.append(nn_using)
+                            inserted = True
+                    
+                    if inserted:
+                        with open(frontend_global, 'w', encoding='utf-8') as f:
+                            f.write('\n'.join(new_lines))
+                        updated_files.append("Frontend/GlobalUsings.cs")
+            
+            if updated_files:
+                print(f"✅ GlobalUsings actualizados: {', '.join(updated_files)}")
+                print(f"   → Agregado: {nn_using}")
+            else:
+                print("ℹ️  GlobalUsings ya contienen el namespace NN o no se encontraron")
+                
+        except Exception as e:
+            print(f"⚠️ Error actualizando GlobalUsings: {e}")
+            print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
     def target_interfaz(self, config):
         """TARGET INTERFAZ: Generar solo backend + frontend (requiere tabla existente)"""
