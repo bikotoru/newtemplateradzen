@@ -104,20 +104,29 @@ def crear_archivos_implementacion(fases):
 ## 📋 Comandos (copiar y pegar uno por uno):
 
 ```bash
-# 1. {ENTIDAD1}
+# 1. {ENTIDAD1} (Entidad normal - completa)
 python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
 
-# 2. {ENTIDAD2}
+# 2. {ENTIDAD2} (Entidad normal - completa)
 python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
 
-# 3. {ENTIDAD_CON_FK}
+# 3. {ENTIDAD_CON_FK} (Entidad con relaciones - completa)
 python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
+
+# 4. {TABLA_NN} (Tabla N:N - SOLO base de datos)
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
 ```
 
 ## ℹ️ Info:
-- Ejecutar uno por uno en orden
-- Cada comando crea: tabla BD + backend + frontend
-- URLs: `/modulo/entidad/list` y `/modulo/entidad/formulario`
+- **Ejecutar uno por uno en orden**
+- **Entidades normales** (`--target todo`): crea tabla BD + backend + frontend completo
+- **Tablas NN** (`--target db`): crea SOLO tabla en base de datos (sin interfaz)
+- URLs generadas: `/modulo/entidad/list` y `/modulo/entidad/formulario` (solo para entidades normales)
+
+## 📝 Notas específicas:
+- Las tablas NN (Many-to-Many) son solo para almacenar relaciones
+- No tienen interfaz de usuario propia
+- Se gestionan a través de las entidades principales relacionadas
 ```
 
 ## 🔧 LÓGICA DE DETECCIÓN
@@ -126,7 +135,9 @@ python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" 
 - Buscar patrones: "crear entidades:", "- Entidad", nombres propios
 - Extraer campos mencionados: "campos: nombre string, precio int"
 - Detectar relaciones: "marca: Rel: Marca", campos terminados en "_id"
-- Detectar tablas N:N: nombres que empiecen con "nn_" o contengan "NN"
+- **Detectar tablas N:N**: nombres que empiecen con "nn_", "NN" o contengan "_" entre dos entidades
+  - **IMPORTANTE**: Las tablas NN solo crean la tabla de BD, NO generan interfaz ni servicios
+  - Solo usar `--target db` para tablas NN
 
 ### Organización de Fases
 ```yaml
@@ -162,12 +173,15 @@ MAPEO_AUTOMÁTICO:
 
 ### Generación de Comandos
 - Usar parámetros de `docs/auto-generacion-with-python-script.md`
-- Crear comandos completos con `--target todo`
+- **Entidades normales**: usar `--target todo` (completo con interfaz)
+- **Tablas NN/N:N**: usar `--target db` (solo tabla, sin interfaz)
 - **IMPORTANTE**: Comandos en UNA SOLA LÍNEA (no usar `\` multilínea)
 - Incluir `--fields`, `--fk`, `--form-fields`, `--grid-fields`, etc.
 - **Orden secuencial** - las dependencias se resuelven automáticamente si se ejecuta en orden
 
-## 🔧 EJEMPLO DE RESPUESTA
+## 🔧 EJEMPLOS DE RESPUESTA
+
+### **EJEMPLO 1**: Sistema con tabla NN
 
 **ENTRADA**: "crear entidades: Marca, Categoria, Producto, Venta, NNVenta_Productos"
 
@@ -176,30 +190,103 @@ MAPEO_AUTOMÁTICO:
 Perfecto, voy a crear un sistema de ventas con 5 entidades:
 
 📋 **ENTIDADES A CREAR:**
-• Marca - campos: nombre, codigointerno (Módulo: Catalogo)
-• Categoria - campos: nombre, codigointerno (Módulo: Catalogo)  
-• Producto - campos: nombre, codigosku, precioventa, preciocompra + relaciones → Marca, Categoria (Módulo: Catalogo)
-• Venta - campos: numventa (autoincremental), montototal (Módulo: Ventas)
-• NNVenta_Productos - tabla N:N con cantidad, precioneto, descuentopeso, etc. (Módulo: Ventas)
+• **Marca** - campos: nombre, codigointerno (Módulo: Catalogo)
+• **Categoria** - campos: nombre, codigointerno (Módulo: Catalogo)  
+• **Producto** - campos: nombre, codigosku, precioventa, preciocompra + relaciones → Marca, Categoria (Módulo: Catalogo)
+• **Venta** - campos: numventa (autoincremental), montototal (Módulo: Ventas)
+• **NNVenta_Productos** - tabla N:N con cantidad, precioneto, descuentopeso, etc. (Módulo: Ventas)
+  ⚠️ *Solo tabla BD, sin interfaz*
 
 🔧 **QUÉ VOY A GENERAR:**
 - 5 tablas en la base de datos
-- 8 controladores y servicios en Backend/
-- 24 archivos de interfaz en Frontend/  
-- 30 permisos del sistema automáticos
+- 4 controladores y servicios en Backend/ (Marca, Categoria, Producto, Venta)
+- 12 archivos de interfaz en Frontend/ (4 entidades × 3 componentes c/u)
+- 24 permisos del sistema automáticos (6 por cada entidad normal)
 
 ⚡ **ORDEN DE CREACIÓN:**
-**Fase 1 - Entidades del Sistema de Ventas**: Marca, Categoria, Producto, Venta, NNVenta_Productos
+**Fase 1 - Sistema de Ventas**: Marca, Categoria, Producto, Venta, NNVenta_Productos
 (Se ejecutan en orden secuencial para resolver dependencias automáticamente)
 
 📁 **ARCHIVOS DE IMPLEMENTACIÓN:**
-Voy a crear la carpeta `implementation/` con los comandos:
-- implementation/fase1.md (comandos listos para copiar/pegar + info mínima)
-
-**Formato simple**: Comandos en una sola línea arriba, explicación breve abajo.
+Voy a crear la carpeta `implementation/` con los comandos organizados por fases.
 
 ¿Procedo con la creación de los archivos de implementación? (s/n)
 ```
+
+### **EJEMPLO 2**: Sistema simple sin NN
+
+**ENTRADA**: "crear entidades: Cliente, Factura con campos numero, fecha, total"
+
+**SALIDA ESPERADA**:
+```
+Perfecto, voy a crear un sistema de facturación con 2 entidades:
+
+📋 **ENTIDADES A CREAR:**
+• **Cliente** - campos: nombre, telefono, email (Módulo: Ventas)
+• **Factura** - campos: numero, fecha, total + relación → Cliente (Módulo: Ventas)
+
+🔧 **QUÉ VOY A GENERAR:**
+- 2 tablas en la base de datos
+- 2 controladores y servicios en Backend/
+- 6 archivos de interfaz en Frontend/
+- 12 permisos del sistema automáticos
+
+⚡ **ORDEN DE CREACIÓN:**
+**Fase 1 - Sistema Facturación**: Cliente, Factura
+(Cliente primero, luego Factura por dependencia)
+
+¿Procedo con la creación de los archivos de implementación? (s/n)
+```
+
+### **EJEMPLO 3**: Tu solicitud específica corregida
+
+**ENTRADA**: Tu comando actual problemático
+```bash
+python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "NNVenta_Productos" --module "Ventas" --target todo --fields "cantidad:int" "precioneto:int" "descuentopeso:int" "descuentoporcentaje:decimal:5,2" "montototal:int" --fk "venta_id:venta" "producto_id:producto" --form-fields "cantidad:required:min=1:placeholder=Cantidad" --lookups "venta_id:venta:Numventa:required:fast:form,grid" --grid-fields "venta_id->Venta.Numventa:120px:left:f"
+```
+
+**COMANDO CORREGIDO**:
+```bash
+# CORRECTO ✅ - Solo tabla NN, sin interfaz
+python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "NNVenta_Productos" --module "Ventas" --target db --fields "cantidad:int" "precioneto:int" "descuentopeso:int" "descuentoporcentaje:decimal:5,2" "montototal:int" --fk "venta_id:venta" "producto_id:producto"
+```
+
+**Lo que cambió**:
+- ❌ `--target todo` → ✅ `--target db`
+- ❌ Eliminé `--form-fields`
+- ❌ Eliminé `--lookups` 
+- ❌ Eliminé `--grid-fields`
+
+**Resultado**: Solo se crea la tabla en BD para almacenar la relación Many-to-Many entre Venta y Productos, sin generar interfaz de usuario.
+
+## 📋 REGLAS ESPECÍFICAS PARA TABLAS N:N
+
+### ¿Cuándo es una tabla N:N?
+- Nombres que empiecen con "NN", "nn_" o contengan "_" entre dos entidades
+- Ejemplos: `NNVenta_Productos`, `nn_usuario_roles`, `Venta_Productos`
+- Representan relaciones Many-to-Many entre dos entidades
+
+### Comando para tablas N:N
+```bash
+# FORMATO CORRECTO para tabla NN:
+python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "NNVenta_Productos" --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto"
+
+# INCORRECTO ❌ (no usar --target todo, ni --lookups, ni --form-fields, ni --grid-fields)
+# python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --target todo --lookups "..." 
+```
+
+### Lo que NO hacer con tablas NN:
+- ❌ NO usar `--target todo` o `--target interfaz`
+- ❌ NO usar `--lookups`
+- ❌ NO usar `--form-fields`
+- ❌ NO usar `--grid-fields`
+- ❌ NO usar `--search-fields`
+
+### Lo que SÍ hacer con tablas NN:
+- ✅ Usar `--target db` únicamente
+- ✅ Usar `--fields` para campos propios de la relación
+- ✅ Usar `--fk` para las dos claves foráneas
+- ✅ Colocar al final del orden de creación
 
 ## 🚨 REGLAS CRÍTICAS
 
