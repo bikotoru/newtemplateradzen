@@ -175,7 +175,9 @@ class EntityGenerator:
         """Verificar y agregar 'using Shared.Models.Entities.NN;' a GlobalUsings.cs si no existe"""
         try:
             backend_global = self.root_path / "Backend" / "GlobalUsings.cs"
-            frontend_global = self.root_path / "Frontend" / "GlobalUsings.cs"
+            frontend_global = self.root_path / "Frontend" / "GlobalUsings.cs" 
+            shared_global = self.root_path / "Shared.Models" / "GlobalUsings.cs"
+            utils_global = self.root_path / "Backend.Utils" / "GlobalUsings.cs"
             nn_using = "global using Shared.Models.Entities.NN;"
             
             updated_files = []
@@ -224,11 +226,55 @@ class EntityGenerator:
                             f.write('\n'.join(new_lines))
                         updated_files.append("Frontend/GlobalUsings.cs")
             
+            # Verificar y actualizar Shared.Models/GlobalUsings.cs
+            if shared_global.exists():
+                with open(shared_global, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                if nn_using not in content:
+                    # Buscar la línea de Shared.Models.Entities para insertar después
+                    lines = content.split('\n')
+                    new_lines = []
+                    inserted = False
+                    
+                    for line in lines:
+                        new_lines.append(line)
+                        if "global using Shared.Models.Entities;" in line and not inserted:
+                            new_lines.append(nn_using)
+                            inserted = True
+                    
+                    if inserted:
+                        with open(shared_global, 'w', encoding='utf-8') as f:
+                            f.write('\n'.join(new_lines))
+                        updated_files.append("Shared.Models/GlobalUsings.cs")
+            
+            # Verificar y actualizar Backend.Utils/GlobalUsings.cs
+            if utils_global.exists():
+                with open(utils_global, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                if nn_using not in content:
+                    # Buscar la línea de Shared.Models.Entities para insertar después
+                    lines = content.split('\n')
+                    new_lines = []
+                    inserted = False
+                    
+                    for line in lines:
+                        new_lines.append(line)
+                        if "global using Shared.Models.Entities;" in line and not inserted:
+                            new_lines.append(nn_using)
+                            inserted = True
+                    
+                    if inserted:
+                        with open(utils_global, 'w', encoding='utf-8') as f:
+                            f.write('\n'.join(new_lines))
+                        updated_files.append("Backend.Utils/GlobalUsings.cs")
+            
             if updated_files:
                 print(f"✅ GlobalUsings actualizados: {', '.join(updated_files)}")
                 print(f"   → Agregado: {nn_using}")
             else:
-                print("ℹ️  GlobalUsings ya contienen el namespace NN o no se encontraron")
+                print("ℹ️  GlobalUsings ya contienen el namespace NN")
                 
         except Exception as e:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
