@@ -71,16 +71,16 @@ class PermissionsGenerator:
         # Permisos especiales para tablas NN (muchos-a-muchos)
         self.nn_permissions = [
             {
-                'action': 'ADDTARGET',
-                'description': 'Agregar {target_table} a {source_table}'
+                'action': 'ADD',
+                'description': 'Agregar {target_display} a {source_table}'
             },
             {
-                'action': 'DELETETARGET',
-                'description': 'Quitar {target_table} de {source_table}'
+                'action': 'DELETE',
+                'description': 'Quitar {target_display} de {source_table}'
             },
             {
-                'action': 'EDITTARGET',
-                'description': 'Editar {target_table} en {source_table}'
+                'action': 'EDIT',
+                'description': 'Editar {target_display} en {source_table}'
             }
         ]
     
@@ -278,18 +278,22 @@ class PermissionsGenerator:
             # Generar cada permiso NN
             for perm_template in self.nn_permissions:
                 if alias:
-                    # Con alias: SOURCE.ALIASACTION
-                    action_key = f"{source_upper}.{alias.upper()}{perm_template['action']}"
+                    # Con alias: SOURCE.ACTION + TARGET + ALIAS
+                    target_display_key = f"{target_table.upper()}{alias.upper()}"
+                    action_key = f"{source_upper}.{perm_template['action']}{target_display_key}"
+                    target_display = f"{target_table} ({alias})"
                     description = perm_template['description'].format(
                         source_table=source_table, 
-                        target_table=f"{target_table} ({alias})"
+                        target_display=target_display
                     )
                 else:
-                    # Sin alias: SOURCE.ACTION + TARGET 
-                    action_key = f"{source_upper}.{perm_template['action']}"
+                    # Sin alias: SOURCE.ACTION + TARGET
+                    target_display_key = target_table.upper()
+                    action_key = f"{source_upper}.{perm_template['action']}{target_display_key}"
+                    target_display = target_table
                     description = perm_template['description'].format(
                         source_table=source_table, 
-                        target_table=target_table
+                        target_display=target_display
                     )
                 
                 permission_name = action_key
