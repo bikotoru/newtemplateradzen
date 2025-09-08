@@ -11,6 +11,8 @@ global using Backend.Utils.Services;
 
 // Shared Models
 global using Shared.Models.Entities;
+global using Shared.Models.Entities.NN;
+global using Shared.Models.Entities.SystemEntities;
 global using Shared.Models.DTOs.Auth;
 global using Shared.Models.Requests;
 global using Shared.Models.Responses;

@@ -196,6 +196,57 @@ class DatabaseModelGenerator:
         print(f"   🎯 Entidades NN organizadas en: {nn_path}")
         return True
     
+    def organize_system_entities(self):
+        """Organiza las entidades System* en carpeta separada con namespace correcto"""
+        print("\n🛡️  ORGANIZANDO ENTIDADES DEL SISTEMA")
+        print("-" * 40)
+        
+        # Crear carpeta SystemEntities si no existe
+        system_path = self.entities_path / "SystemEntities"
+        system_path.mkdir(exist_ok=True)
+        
+        # Buscar archivos que empiecen con "System"
+        system_files = []
+        for entity_file in self.entities_path.glob("System*.cs"):
+            # Solo mover archivos que empiecen con "System" y no estén en subdirectorios
+            if entity_file.parent == self.entities_path:
+                system_files.append(entity_file)
+        
+        if not system_files:
+            print("   ℹ️  No se encontraron entidades System* para organizar")
+            return True
+        
+        print(f"   📂 Moviendo {len(system_files)} entidades System* a carpeta SystemEntities/")
+        
+        # Mover cada archivo System* y actualizar namespace
+        for system_file in system_files:
+            try:
+                # Leer contenido original
+                with open(system_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Actualizar namespace - usar punto y coma exacto para evitar matches parciales
+                old_namespace = "namespace Shared.Models.Entities;"
+                new_namespace = "namespace Shared.Models.Entities.SystemEntities;"
+                updated_content = content.replace(old_namespace, new_namespace)
+                
+                # Escribir en nueva ubicación
+                new_path = system_path / system_file.name
+                with open(new_path, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+                
+                # Eliminar archivo original
+                system_file.unlink()
+                
+                print(f"   ✅ {system_file.name} → SystemEntities/{system_file.name}")
+                
+            except Exception as e:
+                print(f"   ⚠️  Error moviendo {system_file.name}: {e}")
+                return False
+        
+        print(f"   🎯 Entidades del sistema organizadas en: {system_path}")
+        return True
+    
     def compile_solution(self):
         """Compila la solución para verificar que todo funciona"""
         print("\n🔨 COMPILANDO SOLUCIÓN")
@@ -240,6 +291,16 @@ class DatabaseModelGenerator:
                 for file in nn_files:
                     print(f"   ✅ {file.name}")
         
+        # Listar entidades del sistema
+        system_path = self.entities_path / "SystemEntities"
+        if system_path.exists():
+            system_files = list(system_path.glob("*.cs"))
+            if system_files:
+                print(f"\n🛡️  Entidades del Sistema ({len(system_files)}):")
+                print(f"   📂 {system_path}")
+                for file in system_files:
+                    print(f"   ✅ {file.name}")
+        
         # Listar DbContext
         context_files = list(self.data_path.glob("*.cs"))
         if context_files:
@@ -278,7 +339,11 @@ class DatabaseModelGenerator:
         if not self.organize_nn_entities():
             return False
             
-        # 5. Compilar para verificar
+        # 5. Organizar entidades System* en carpeta separada
+        if not self.organize_system_entities():
+            return False
+            
+        # 6. Compilar para verificar
         self.compile_solution()
         
         # 5. Mostrar resumen
