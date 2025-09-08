@@ -59,8 +59,40 @@ class BackendServiceRegistry:
             # Escribir archivo actualizado
             registry_file.write_text(content, encoding='utf-8')
             print(f"✅ Backend ServiceRegistry actualizado")
+            
+            # Actualizar GlobalUsings.cs
+            self.update_global_usings(entity_name, module)
+            
             return True
             
         except Exception as e:
             print(f"❌ ERROR actualizando backend ServiceRegistry: {e}")
             return False
+    
+    def update_global_usings(self, entity_name, module):
+        """Actualizar GlobalUsings.cs del backend"""
+        try:
+            global_usings_file = self.root_path / "Backend" / "GlobalUsings.cs"
+            entity_plural = f"{entity_name}s" if not entity_name.endswith('s') else entity_name
+            using_line = f"global using Backend.Modules.{module}.{entity_plural};"
+            
+            if global_usings_file.exists():
+                content = global_usings_file.read_text(encoding='utf-8')
+                if using_line not in content:
+                    # Buscar la sección correcta para insertar
+                    lines = content.split('\n')
+                    insert_index = -1
+                    
+                    # Buscar después del último "global using Backend.Modules"
+                    for i, line in enumerate(lines):
+                        if line.startswith('global using Backend.Modules.'):
+                            insert_index = i + 1
+                    
+                    if insert_index > -1:
+                        lines.insert(insert_index, using_line)
+                        global_usings_file.write_text('\n'.join(lines), encoding='utf-8')
+                        print(f"✅ Backend GlobalUsings actualizado: {using_line}")
+                        
+        except Exception as e:
+            print(f"⚠️ Warning actualizando Backend GlobalUsings: {e}")
+            # No es crítico, continuar
