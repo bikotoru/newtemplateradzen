@@ -34,11 +34,18 @@ class TemplateEngine:
         # Convertir módulo a ruta de API (Inventario.Core -> inventario/core)
         module_route = module.replace('.', '/').lower()
         
+        # Generar plural de la entidad
+        entity_plural = f"{entity_name}s" if not entity_name.endswith('s') else entity_name
+        
         return {
             'ENTITY_NAME': entity_name,
             'ENTITY_NAME_LOWER': entity_name.lower(),
+            'ENTITY_PLURAL': entity_plural,
             'MODULE': module,
             'MODULE_PATH': module.replace('.', '/'),
             'MODULE_ROUTE': module_route,
-            'NAMESPACE': f"Backend.Modules.{module}"
+            'BACKEND_NAMESPACE': f"Backend.Modules.{module}.{entity_plural}",
+            'FRONTEND_NAMESPACE': f"Frontend.Modules.{module}.{entity_plural}",
+            'MODULE_WITH_ENTITY': f"{module}.{entity_plural}",  # Solo la parte del módulo con entidad
+            'NAMESPACE': f"Backend.Modules.{module}.{entity_plural}"  # Para compatibilidad
         }

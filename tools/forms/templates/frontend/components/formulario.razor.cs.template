@@ -7,7 +7,7 @@ using Frontend.Components.Validation;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
 using Radzen;
 
-namespace Frontend.Modules.{{MODULE_NAMESPACE}};
+namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
 public partial class {{ENTITY_NAME}}Formulario : ComponentBase
 {

@@ -5,7 +5,7 @@ using Shared.Models.Responses;
 using Shared.Models.Builders;
 using Shared.Models.QueryModels;
 
-namespace Frontend.Modules.{{MODULE}}
+namespace {{FRONTEND_NAMESPACE}}
 {
     public class {{ENTITY_NAME}}Service : BaseApiService<Shared.Models.Entities.{{ENTITY_NAME}}>
     {

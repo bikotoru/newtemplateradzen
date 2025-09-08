@@ -2,7 +2,7 @@ using Frontend.Components.Base.Tables;
 using Frontend.Services;
 using Radzen;
 
-namespace Frontend.Modules.{{MODULE}}
+namespace {{FRONTEND_NAMESPACE}}
 {
     public class {{ENTITY_NAME}}ViewManager
     {

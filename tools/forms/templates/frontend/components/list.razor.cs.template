@@ -5,7 +5,7 @@ using Frontend.Services;
 using Radzen;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
 
-namespace Frontend.Modules.{{MODULE_NAMESPACE}};
+namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
 public partial class {{ENTITY_NAME}}List : ComponentBase
 {

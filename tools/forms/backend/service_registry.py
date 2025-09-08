@@ -23,8 +23,11 @@ class BackendServiceRegistry:
             # Leer contenido actual
             content = registry_file.read_text(encoding='utf-8')
             
+            # Generar plural de la entidad
+            entity_plural = f"{entity_name}s" if not entity_name.endswith('s') else entity_name
+            
             # 1. Agregar using al inicio
-            using_line = f"using Backend.Modules.{module};"
+            using_line = f"using Backend.Modules.{module}.{entity_plural};"
             if using_line not in content:
                 # Buscar donde insertar el using
                 lines = content.split('\n')
