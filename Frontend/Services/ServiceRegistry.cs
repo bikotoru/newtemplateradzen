@@ -1,4 +1,6 @@
 using Frontend.Services;
+using Frontend.Modules.Admin.SystemRoles;
+using Frontend.Modules.Admin.SystemPermissions;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace Frontend.Services;
@@ -17,6 +19,8 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
 
         // Module Services
+        services.AddScoped<SystemRoleService>();
+        services.AddScoped<SystemPermissionService>();
 
         return services;
     }

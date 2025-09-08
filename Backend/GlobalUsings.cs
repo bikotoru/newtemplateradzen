@@ -3,6 +3,8 @@
 
 // Auth Services
 global using Backend.Modules.Auth.Login;
+global using Backend.Modules.Admin.SystemPermissions;
+global using Backend.Modules.Admin.SystemRoles;
 
 // Utils Services
 global using Backend.Utils.Security;
