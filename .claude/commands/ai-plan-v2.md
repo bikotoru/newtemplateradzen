@@ -114,7 +114,7 @@ python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" 
 python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
 
 # 4. {TABLA_NN} (Tabla N:N - SOLO base de datos)
-python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
+python3 tools/forms/entity-generator.py --entity "nn_{tabla1}_{tabla2}" --plural "nn_{tabla1}_{tabla2}" --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK} --nn-relation-entity
 ```
 
 ## ℹ️ Info:
@@ -135,9 +135,11 @@ python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" 
 - Buscar patrones: "crear entidades:", "- Entidad", nombres propios
 - Extraer campos mencionados: "campos: nombre string, precio int"
 - Detectar relaciones: "marca: Rel: Marca", campos terminados en "_id"
-- **Detectar tablas N:N**: nombres que empiecen con "nn_", "NN" o contengan "_" entre dos entidades
+- **Detectar tablas N:N**: nombres que empiecen con "nn_", "NN_" o contengan "_" entre dos entidades
+  - **FORMATO OBLIGATORIO**: Usar siempre `nn_tablaA_tablaB` (con guiones bajos)
   - **IMPORTANTE**: Las tablas NN solo crean la tabla de BD, NO generan interfaz ni servicios
   - Solo usar `--target db` para tablas NN
+  - Agregar `--nn-relation-entity` para claridad explícita
 
 ### Organización de Fases
 ```yaml
@@ -262,16 +264,17 @@ python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "N
 ## 📋 REGLAS ESPECÍFICAS PARA TABLAS N:N
 
 ### ¿Cuándo es una tabla N:N?
-- Nombres que empiecen con "NN", "nn_" o contengan "_" entre dos entidades
-- Ejemplos: `NNVenta_Productos`, `nn_usuario_roles`, `Venta_Productos`
+- **FORMATO OBLIGATORIO**: Siempre usar `nn_tabla1_tabla2` (con guiones bajos)
+- Ejemplos: `nn_venta_productos`, `nn_usuario_roles`, `nn_cliente_categorias`
 - Representan relaciones Many-to-Many entre dos entidades
+- **NUNCA usar**: `NNVenta_Productos`, `Venta_Productos` - SOLO `nn_venta_productos`
 
 ### Comando para tablas N:N
 ```bash
-# FORMATO CORRECTO para tabla NN:
-python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "NNVenta_Productos" --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto"
+# FORMATO CORRECTO ✅ para tabla NN:
+python3 tools/forms/entity-generator.py --entity "nn_venta_productos" --plural "nn_venta_productos" --module "Ventas" --target db --fields "cantidad:int" "precio:decimal:10,2" "descuento:decimal:5,2" --fk "venta_id:venta" "producto_id:producto" --nn-relation-entity
 
-# INCORRECTO ❌ (no usar --target todo, ni --lookups, ni --form-fields, ni --grid-fields)
+# INCORRECTO ❌ (formato antiguo)
 # python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --target todo --lookups "..." 
 ```
 
@@ -286,6 +289,8 @@ python3 tools/forms/entity-generator.py --entity "NNVenta_Productos" --plural "N
 - ✅ Usar `--target db` únicamente
 - ✅ Usar `--fields` para campos propios de la relación
 - ✅ Usar `--fk` para las dos claves foráneas
+- ✅ Usar `--nn-relation-entity` para claridad explícita
+- ✅ Usar formato `nn_tabla1_tabla2` OBLIGATORIO
 - ✅ Colocar al final del orden de creación
 
 ## 🚨 REGLAS CRÍTICAS

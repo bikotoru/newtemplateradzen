@@ -186,27 +186,45 @@ class PermissionsGenerator:
     
     def is_nn_table(self, entity_name):
         """Detectar si es una tabla NN (muchos-a-muchos)"""
-        return entity_name.lower().startswith('nn_')
+        name_lower = entity_name.lower()
+        return (name_lower.startswith('nn_') or 
+                name_lower.startswith('nn') and ('_' in name_lower or name_lower == 'nn'))
     
     def parse_nn_table_name(self, entity_name):
         """Parsear nombre de tabla NN para extraer source, target y alias"""
-        if not self.is_nn_table(entity_name):
-            return None
-        
-        # Formato: nn_source_target o nn_source_target_alias
         name_lower = entity_name.lower()
-        parts = name_lower.split('_')[1:]  # Remover 'nn'
         
-        if len(parts) >= 2:
-            source_table = parts[0]
-            target_table = parts[1]
-            alias = '_'.join(parts[2:]) if len(parts) > 2 else None
+        # Caso 1: Formato correcto nn_source_target
+        if name_lower.startswith('nn_'):
+            parts = name_lower.split('_')[1:]  # Remover 'nn'
             
-            return {
-                'source_table': source_table,
-                'target_table': target_table,
-                'alias': alias
-            }
+            if len(parts) >= 2:
+                source_table = parts[0]
+                target_table = parts[1]
+                alias = '_'.join(parts[2:]) if len(parts) > 2 else None
+                
+                return {
+                    'source_table': source_table,
+                    'target_table': target_table,
+                    'alias': alias
+                }
+        
+        # Caso 2: Formato legacy NNSource_Target (sin guión después de NN)
+        elif name_lower.startswith('nn') and '_' in name_lower:
+            # Remover 'nn' del inicio
+            without_nn = entity_name[2:]  # Preservar mayúsculas originales
+            
+            # Buscar el primer guión bajo para separar source y target
+            if '_' in without_nn:
+                parts = without_nn.split('_', 1)
+                source_table = parts[0].lower()
+                target_table = parts[1].lower()
+                
+                return {
+                    'source_table': source_table,
+                    'target_table': target_table,
+                    'alias': None
+                }
         
         return None
     
@@ -410,15 +428,26 @@ VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, '1', ?, ?, ?)"""
         
         return True
     
-    def generate_permissions(self, entity_name, entity_plural=None, preview=False):
+    def generate_permissions(self, entity_name, entity_plural=None, preview=False, force_nn=False):
         """Generar permisos para una entidad con verificación inteligente"""
         
-        # Verificar si es tabla NN
-        is_nn = self.is_nn_table(entity_name)
+        # Verificar si es tabla NN (por detección o forzado)
+        is_nn = self.is_nn_table(entity_name) or force_nn
         nn_info = self.parse_nn_table_name(entity_name) if is_nn else None
         
-        if is_nn and nn_info:
-            return self.generate_nn_permissions(entity_name, nn_info, preview)
+        if is_nn:
+            if nn_info:
+                return self.generate_nn_permissions(entity_name, nn_info, preview)
+            else:
+                print(f"⚠️ Tabla marcada como NN pero no se pudo parsear el nombre: {entity_name}")
+                print(f"💡 Se recomienda usar formato: nn_tabla1_tabla2")
+                # Intentar generar permisos NN genéricos
+                fake_nn_info = {
+                    'source_table': 'source',
+                    'target_table': 'target',
+                    'alias': None
+                }
+                return self.generate_nn_permissions(entity_name, fake_nn_info, preview)
         else:
             return self.generate_regular_permissions(entity_name, entity_plural, preview)
     

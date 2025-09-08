@@ -203,7 +203,8 @@ class EntityConfigurator:
             entity_name=args.entity,
             entity_plural=args.plural or f"{args.entity}s",
             module=args.module,
-            target=args.target
+            target=args.target,
+            is_nn_relation=getattr(args, 'nn_relation_entity', False)
         )
         
         # Detectar y configurar tabla NN si es necesario

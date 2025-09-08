@@ -120,7 +120,11 @@ class EntityGenerator:
         
         # Paso 2: Generar permisos con verificación
         print("🔐 PASO 2: Verificando y generando permisos...")
-        permissions_success = self.generate_permissions_smart(config.entity_name, config.entity_plural)
+        permissions_success = self.generate_permissions_smart(
+            config.entity_name, 
+            config.entity_plural, 
+            is_nn_relation=getattr(config, 'is_nn_relation', False)
+        )
         
         print()
         print("🎉 TARGET DB COMPLETADO EXITOSAMENTE!")
@@ -129,7 +133,7 @@ class EntityGenerator:
         
         return success and permissions_success
     
-    def generate_permissions_smart(self, entity_name, entity_plural=None):
+    def generate_permissions_smart(self, entity_name, entity_plural=None, is_nn_relation=False):
         """Generar permisos con verificación inteligente"""
         try:
             if not entity_plural:
@@ -138,11 +142,17 @@ class EntityGenerator:
             # Verificar permisos existentes primero
             print(f"🔍 Verificando permisos existentes para {entity_name}...")
             
+            # Si se marcó explícitamente como relación NN, forzar formato correcto
+            if is_nn_relation and not entity_name.lower().startswith('nn_'):
+                print(f"⚠️ ADVERTENCIA: Se marcó como tabla NN pero el nombre '{entity_name}' no sigue el formato 'nn_tabla1_tabla2'")
+                print(f"💡 Se recomienda usar formato: nn_{entity_name.lower().replace('nn', '').replace('_productos', '').replace('venta', 'venta_productos')}")
+            
             # Usar el permissions generator para verificar y crear
             permissions_success = self.permissions_generator.generate_permissions(
                 entity_name=entity_name,
                 entity_plural=entity_plural,
-                preview=False
+                preview=False,
+                force_nn=is_nn_relation
             )
             
             return permissions_success
@@ -522,6 +532,8 @@ Ejemplo completo:
                        help='Tabla target para NN: "producto"')
     parser.add_argument('--nn-alias',
                        help='Alias para NN (opcional): "promocion"')
+    parser.add_argument('--nn-relation-entity', action='store_true',
+                       help='Indica que es una tabla NN (muchos-a-muchos) para generar permisos especiales')
     
     args = parser.parse_args()
     

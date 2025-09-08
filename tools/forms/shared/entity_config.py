@@ -116,6 +116,7 @@ class EntityConfiguration:
     
     # Configuración NN (muchos-a-muchos)
     nn_config: Optional[NNTableConfig] = None
+    is_nn_relation: bool = False
     
     def get_all_db_fields(self) -> Set[str]:
         """Obtener todos los campos que van a la BD"""
