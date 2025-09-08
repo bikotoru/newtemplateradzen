@@ -1,0 +1,39 @@
+@page "/admin/systemuser/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities
+@using Radzen
+
+<PageTitle>SystemUsers</PageTitle>
+
+<PageWithCommandBar BackPath="/"
+                    ShowNew
+                    NewPath="/admin/systemuser/formulario"
+                    >
+
+    <RadzenCard>
+        <EntityTable T="Shared.Models.Entities.SystemEntities.SystemUsers"
+                     @ref="entityTable"
+                     @key="@GetGridKey()"
+                     ShowSearchBar="true"
+                     ShowExcelExport="true"
+                     ShowRefreshButton="true"
+                     ShowAutoRefresh="true"
+                     ShowColumnConfig="true"
+                     ShowActions="true"
+                     SearchPlaceholder="Buscar systemusers..."
+                     BaseQuery="@currentView.QueryBuilder"
+                     ColumnConfigs="@currentView.ColumnConfigs"
+                     ForceOrderByIndex="true"
+                     EnableSelectOptimization="true"
+                     SelectOnlyVisibleColumns="true"
+                     ViewConfigurations="@ViewConfigurationsTyped"
+                     CurrentView="@currentView"
+                     OnViewChanged="@OnViewChanged"
+                     ViewDisplayNameProperty="DisplayName"
+                     OnEdit="@HandleEdit"
+                     OnDelete="@HandleDelete">
+        </EntityTable>
+    </RadzenCard>
+
+</PageWithCommandBar>

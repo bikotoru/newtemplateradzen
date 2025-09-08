@@ -23,6 +23,7 @@ global using Shared.Models.Entities.SystemEntities;
 // Module Services
 global using Frontend.Modules.Admin.SystemPermissions;
 global using Frontend.Modules.Admin.SystemRoles;
+global using Frontend.Modules.Admin.SystemUsers;
 // Components
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Web;
