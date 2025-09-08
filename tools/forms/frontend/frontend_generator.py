@@ -46,12 +46,17 @@ class FrontendGenerator:
             print(f"❌ ERROR generando Frontend Service: {e}")
             return False
     
-    def create_module_directory(self, module):
-        """Crear directorio del módulo frontend (manejar subdirectorios con punto)"""
+    def create_module_directory(self, module, entity_name):
+        """Crear directorio del módulo frontend con subcarpeta por entidad"""
         module_parts = module.split('.')
         frontend_module_path = self.root_path / "Frontend" / "Modules"
         for part in module_parts:
             frontend_module_path = frontend_module_path / part
+        
+        # Agregar subcarpeta por entidad (usar plural)
+        entity_plural = f"{entity_name}s" if not entity_name.endswith('s') else entity_name
+        frontend_module_path = frontend_module_path / entity_plural
+        
         frontend_module_path.mkdir(parents=True, exist_ok=True)
         return frontend_module_path
     
@@ -66,7 +71,7 @@ class FrontendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
@@ -184,7 +189,7 @@ class FrontendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
@@ -208,7 +213,7 @@ class FrontendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
@@ -236,7 +241,7 @@ class FrontendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
@@ -268,7 +273,7 @@ class FrontendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service

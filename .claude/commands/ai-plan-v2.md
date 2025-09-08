@@ -99,69 +99,25 @@ def crear_archivos_implementacion(fases):
 
 #### Template de Archivo de Fase
 ```markdown
-# Fase {NUMERO}: {DESCRIPCION}
+# {DESCRIPCION}
 
-## 🎯 Entidades de esta Fase
-{LISTA_ENTIDADES_CON_JUSTIFICACION}
+## 📋 Comandos (copiar y pegar uno por uno):
 
-## 📋 Comandos a Ejecutar
-
-**IMPORTANTE**: Los comandos están basados en la documentación de entity-generator.py.
-**Ejecuta cada comando UNO POR UNO en el orden indicado** - las dependencias se resuelven automáticamente.
-
-### 1. {ENTIDAD1}
 ```bash
-python3 tools/forms/entity-generator.py \
-    --entity "{NOMBRE}" \
-    --plural "{PLURAL}" \
-    --module "{MODULO}" \
-    --target todo \
-    --fields {CAMPOS_PERSONALIZADOS} \
-    --form-fields {CONFIGURACION_FORMULARIO} \
-    --grid-fields {CONFIGURACION_GRILLA} \
-    --search-fields "{CAMPOS_BUSQUEDA}"
+# 1. {ENTIDAD1}
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
+
+# 2. {ENTIDAD2}
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
+
+# 3. {ENTIDAD_CON_FK}
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
 ```
 
-### 2. {ENTIDAD2}
-```bash
-python3 tools/forms/entity-generator.py \
-    --entity "{NOMBRE}" \
-    --plural "{PLURAL}" \
-    --module "{MODULO}" \
-    --target todo \
-    --fields {CAMPOS_PERSONALIZADOS} \
-    --form-fields {CONFIGURACION_FORMULARIO} \
-    --grid-fields {CONFIGURACION_GRILLA} \
-    --search-fields "{CAMPOS_BUSQUEDA}"
-```
-
-### 3. {ENTIDAD_CON_FK}
-```bash
-python3 tools/forms/entity-generator.py \
-    --entity "{NOMBRE}" \
-    --plural "{PLURAL}" \
-    --module "{MODULO}" \
-    --target todo \
-    --fields {CAMPOS_PERSONALIZADOS} \
-    --fk {FOREIGN_KEYS} \
-    --form-fields {CONFIGURACION_FORMULARIO} \
-    --grid-fields {CONFIGURACION_GRILLA} \
-    --lookups {CONFIGURACION_LOOKUPS} \
-    --search-fields "{CAMPOS_BUSQUEDA}"
-```
-
-{CONTINUAR_HASTA_COMPLETAR_TODAS}
-
-## ✅ Validación Post-Ejecución
-Después de ejecutar TODOS los comandos:
-- [ ] Compilar: `dotnet build --no-restore`
-- [ ] Verificar que se crearon las tablas en BD
-- [ ] Verificar que se generaron los permisos
-- [ ] Probar las URLs generadas
-
-## 📝 Notas
-- Si un comando falla, revisa que la entidad anterior se haya creado correctamente
-- Las dependencias (FK) se resuelven automáticamente al seguir el orden
+## ℹ️ Info:
+- Ejecutar uno por uno en orden
+- Cada comando crea: tabla BD + backend + frontend
+- URLs: `/modulo/entidad/list` y `/modulo/entidad/formulario`
 ```
 
 ## 🔧 LÓGICA DE DETECCIÓN
@@ -207,6 +163,7 @@ MAPEO_AUTOMÁTICO:
 ### Generación de Comandos
 - Usar parámetros de `docs/auto-generacion-with-python-script.md`
 - Crear comandos completos con `--target todo`
+- **IMPORTANTE**: Comandos en UNA SOLA LÍNEA (no usar `\` multilínea)
 - Incluir `--fields`, `--fk`, `--form-fields`, `--grid-fields`, etc.
 - **Orden secuencial** - las dependencias se resuelven automáticamente si se ejecuta en orden
 
@@ -237,7 +194,9 @@ Perfecto, voy a crear un sistema de ventas con 5 entidades:
 
 📁 **ARCHIVOS DE IMPLEMENTACIÓN:**
 Voy a crear la carpeta `implementation/` con los comandos:
-- implementation/fase1.md (todas las entidades en orden secuencial)
+- implementation/fase1.md (comandos listos para copiar/pegar + info mínima)
+
+**Formato simple**: Comandos en una sola línea arriba, explicación breve abajo.
 
 ¿Procedo con la creación de los archivos de implementación? (s/n)
 ```
@@ -258,6 +217,8 @@ Voy a crear la carpeta `implementation/` con los comandos:
 - **NO ejecutar comandos** - solo crear archivos .md
 - Crear carpeta `implementation/`
 - Crear archivos `fase1.md`, `fase2.md`, etc.
+- **Formato simple**: Comandos arriba para copiar/pegar, explicación mínima abajo
+- **Una sola línea por comando** (no multilínea con `\`)
 - El usuario ejecuta manualmente los comandos
 
 ### 4. SER ESPECÍFICO Y CLARO

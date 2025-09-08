@@ -59,12 +59,17 @@ class BackendGenerator:
             print(f"❌ ERROR generando Controller: {e}")
             return False
     
-    def create_module_directory(self, module):
-        """Crear directorio del módulo (manejar subdirectorios con punto)"""
+    def create_module_directory(self, module, entity_name):
+        """Crear directorio del módulo con subcarpeta por entidad"""
         module_parts = module.split('.')
         backend_module_path = self.root_path / "Backend" / "Modules"
         for part in module_parts:
             backend_module_path = backend_module_path / part
+        
+        # Agregar subcarpeta por entidad (usar plural)
+        entity_plural = f"{entity_name}s" if not entity_name.endswith('s') else entity_name
+        backend_module_path = backend_module_path / entity_plural
+        
         backend_module_path.mkdir(parents=True, exist_ok=True)
         return backend_module_path
     
@@ -75,7 +80,7 @@ class BackendGenerator:
             print(f"📁 Módulo: {module}")
             
             # 1. Crear directorio
-            module_path = self.create_module_directory(module)
+            module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
