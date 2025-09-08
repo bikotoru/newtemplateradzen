@@ -21,11 +21,15 @@ class BackendGenerator:
         templates_path = self.forms_path / "templates"
         self.template_engine = TemplateEngine(templates_path)
     
-    def generate_service(self, entity_name, module, module_path):
+    def generate_service(self, entity_name, module, module_path, model_namespace=None):
         """Generar archivo Service del backend usando template"""
         try:
             # Preparar variables para el template
             variables = self.template_engine.prepare_entity_variables(entity_name, module)
+            
+            # Agregar namespace del modelo si se proporciona
+            if model_namespace:
+                variables['model_namespace'] = model_namespace
             
             # Renderizar template
             service_content = self.template_engine.render_template("backend/service.cs.template", variables)
@@ -40,11 +44,15 @@ class BackendGenerator:
             print(f"❌ ERROR generando Service: {e}")
             return False
     
-    def generate_controller(self, entity_name, module, module_path):
+    def generate_controller(self, entity_name, module, module_path, model_namespace=None):
         """Generar archivo Controller del backend usando template"""
         try:
             # Preparar variables para el template
             variables = self.template_engine.prepare_entity_variables(entity_name, module)
+            
+            # Agregar namespace del modelo si se proporciona
+            if model_namespace:
+                variables['model_namespace'] = model_namespace
             
             # Renderizar template
             controller_content = self.template_engine.render_template("backend/controller.cs.template", variables)
@@ -73,22 +81,24 @@ class BackendGenerator:
         backend_module_path.mkdir(parents=True, exist_ok=True)
         return backend_module_path
     
-    def generate(self, entity_name, module):
+    def generate(self, entity_name, module, model_namespace=None):
         """Generar backend completo"""
         try:
             print(f"🔧 Generando backend para entidad: {entity_name}")
             print(f"📁 Módulo: {module}")
+            if model_namespace:
+                print(f"📦 Namespace del modelo: {model_namespace}")
             
             # 1. Crear directorio
             module_path = self.create_module_directory(module, entity_name)
             print(f"📁 Directorio creado: {module_path}")
             
             # 2. Generar Service
-            if not self.generate_service(entity_name, module, module_path):
+            if not self.generate_service(entity_name, module, module_path, model_namespace):
                 return False
             
             # 3. Generar Controller
-            if not self.generate_controller(entity_name, module, module_path):
+            if not self.generate_controller(entity_name, module, module_path, model_namespace):
                 return False
             
             return True

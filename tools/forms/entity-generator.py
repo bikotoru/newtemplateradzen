@@ -280,16 +280,54 @@ class EntityGenerator:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
             print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
+    def find_model_namespace(self, entity_name):
+        """Buscar el modelo en Shared.Models y extraer su namespace"""
+        try:
+            shared_models_path = self.root_path / "Shared.Models"
+            model_file_name = f"{entity_name}.cs"
+            
+            print(f"🔍 Buscando modelo: {model_file_name} en Shared.Models...")
+            
+            # Buscar recursivamente en Shared.Models
+            for cs_file in shared_models_path.rglob("*.cs"):
+                if cs_file.name == model_file_name:
+                    # Leer el archivo y extraer el namespace
+                    with open(cs_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Buscar línea de namespace
+                    for line in content.split('\n'):
+                        line = line.strip()
+                        if line.startswith('namespace ') and line.endswith(';'):
+                            namespace = line.replace('namespace ', '').replace(';', '').strip()
+                            print(f"✅ Modelo encontrado: {cs_file.relative_to(self.root_path)}")
+                            print(f"📦 Namespace detectado: {namespace}")
+                            return namespace
+            
+            # Si no se encuentra, usar namespace por defecto
+            print(f"⚠️ Modelo {model_file_name} no encontrado en Shared.Models")
+            print(f"💡 Usando namespace por defecto: Shared.Models.Entities")
+            return "Shared.Models.Entities"
+            
+        except Exception as e:
+            print(f"⚠️ Error buscando modelo: {e}")
+            return "Shared.Models.Entities"
+    
     def target_interfaz(self, config):
         """TARGET INTERFAZ: Generar solo backend + frontend (requiere tabla existente)"""
         self.print_header("INTERFAZ")
         print(f"🎨 GENERANDO INTERFAZ para: {config.entity_name}")
         print()
         
+        # Paso 1: Buscar namespace del modelo existente
+        print("🔍 PASO 1: Detectando namespace del modelo...")
+        model_namespace = self.find_model_namespace(config.entity_name)
+        print()
+        
         try:
-            # Paso 1: Generar Backend
-            print("🔧 PASO 1: Generando Backend...")
-            if not self.backend_generator.generate(config.entity_name, config.module):
+            # Paso 2: Generar Backend con namespace dinámico
+            print("🔧 PASO 2: Generando Backend...")
+            if not self.backend_generator.generate(config.entity_name, config.module, model_namespace):
                 return False
             
             if not self.backend_registry.update(config.entity_name, config.module):

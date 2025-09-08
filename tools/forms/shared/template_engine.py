@@ -47,5 +47,6 @@ class TemplateEngine:
             'BACKEND_NAMESPACE': f"Backend.Modules.{module}.{entity_plural}",
             'FRONTEND_NAMESPACE': f"Frontend.Modules.{module}.{entity_plural}",
             'MODULE_WITH_ENTITY': f"{module}.{entity_plural}",  # Solo la parte del módulo con entidad
-            'NAMESPACE': f"Backend.Modules.{module}.{entity_plural}"  # Para compatibilidad
+            'NAMESPACE': f"Backend.Modules.{module}.{entity_plural}",  # Para compatibilidad
+            'MODEL_NAMESPACE': "Shared.Models.Entities"  # Namespace por defecto del modelo
         }
