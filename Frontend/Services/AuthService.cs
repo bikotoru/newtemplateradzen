@@ -14,7 +14,6 @@ public class AuthService
     private readonly HttpClient _httpClient;
     
     // Estado interno
-    private bool _isAuthenticated = false;
     private bool _isInitialized = false;
     private string _authToken = string.Empty;
     private SessionDataDto? _session;
@@ -126,7 +125,6 @@ public class AuthService
     public async Task SetAuthenticatedAsync(string token, string? encryptedData = null)
     {
         _authToken = token;
-        _isAuthenticated = true;
 
         if (!string.IsNullOrEmpty(encryptedData))
         {
@@ -144,7 +142,6 @@ public class AuthService
         try
         {
             // Limpiar estado interno
-            _isAuthenticated = false;
             _authToken = string.Empty;
             _session = null;
 
@@ -274,7 +271,7 @@ public class AuthService
     /// </summary>
     public bool HasPermission(string permission)
     {
-        if (!_isAuthenticated || _session?.Permisos.Count == 0) return false;
+        if (!IsAuthenticated || _session?.Permisos.Count == 0) return false;
 
         // Verificar permiso exacto
         if (_session.Permisos.Contains(permission, StringComparer.OrdinalIgnoreCase))
@@ -300,7 +297,7 @@ public class AuthService
     /// </summary>
     public bool HasAnyPermission(params string[] permissions)
     {
-        if (!_isAuthenticated || _session?.Permisos.Count == 0) return false;
+        if (_session?.Permisos.Count == 0) return false;
         return permissions.Any(p => HasPermission(p));
     }
 
@@ -320,7 +317,7 @@ public class AuthService
         await EnsureInitializedAsync();
         
         // Asegurar que el contexto esté cargado
-        if (_session == null && _isAuthenticated)
+        if (_session == null && IsAuthenticated)
         {
             await LoadUserContextFromServer();
         }
@@ -333,7 +330,7 @@ public class AuthService
     public async Task<bool> HasPermissionAsync(string permission)
     {
         // Asegurar que el contexto esté cargado
-        if (_session == null && _isAuthenticated)
+        if (_session == null && IsAuthenticated)
         {
             await LoadUserContextFromServer();
         }
@@ -346,7 +343,7 @@ public class AuthService
     public async Task<bool> HasAnyPermissionAsync(params string[] permissions)
     {
         // Asegurar que el contexto esté cargado
-        if (_session == null && _isAuthenticated)
+        if (_session == null && IsAuthenticated)
         {
             await LoadUserContextFromServer();
         }
@@ -368,7 +365,7 @@ public class AuthService
     /// </summary>
     public bool HasRole(string roleName)
     {
-        if (!_isAuthenticated || _session?.Roles.Count == 0) return false;
+        if (!IsAuthenticated || _session?.Roles.Count == 0) return false;
         return _session.Roles.Any(r => string.Equals(r.Nombre, roleName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -402,7 +399,7 @@ public class AuthService
     public async Task<bool> HasRoleAsync(string roleName)
     {
         // Asegurar que el contexto esté cargado
-        if (_session == null && _isAuthenticated)
+        if (_session == null && IsAuthenticated)
         {
             await LoadUserContextFromServer();
         }
@@ -415,7 +412,7 @@ public class AuthService
     public async Task<List<string>> GetUserRolesAsync()
     {
         // Asegurar que el contexto esté cargado
-        if (_session == null && _isAuthenticated)
+        if (_session == null && IsAuthenticated)
         {
             await LoadUserContextFromServer();
         }
@@ -457,7 +454,6 @@ public class AuthService
     public async Task SetTokenAsync(string token)
     {
         _authToken = token;
-        _isAuthenticated = !string.IsNullOrEmpty(token);
 
         try
         {
@@ -477,7 +473,6 @@ public class AuthService
     public async Task RemoveTokenAsync()
     {
         _authToken = string.Empty;
-        _isAuthenticated = false;
         _session = null;
 
         try

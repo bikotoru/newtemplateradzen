@@ -1,10 +1,8 @@
-﻿@using Frontend.Services
+﻿@using Frontend.Components.Auth
 @using Frontend.Components.Base
 @using Frontend.Layout.Menu
 @using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
-@inject AuthService AuthService
-@implements IDisposable
 
 <RadzenLayout>
     <RadzenHeader>
@@ -19,15 +17,21 @@
                 
                 <AuthorizeView>
                     <Authorized>
-                        <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
-                            Hola, @GetDisplayName()
-                        </RadzenText>
-                        <RadzenDropDown Data="@userMenuItems" 
-                                       @bind-Value="@selectedMenuItem"
-                                       Change="@OnMenuItemSelected"
-                                       Placeholder="⚙️"
-                                       Style="width: 40px;"
-                                       AllowClear="false" />
+                        <RadzenProfileMenu Click="@ProfileMenuClick">
+                            <Template>
+                                <span style="white-space: nowrap;">@GetDisplayName()</span>
+                            </Template>
+                            <ChildContent>
+                                @if (HasAdminPermissions())
+                                {
+                                    <RadzenProfileMenuItem Path="/admin/systemuser/list" Icon="group" Text="Usuarios" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMUSER.VIEW", "SYSTEMUSER.VIEWMENU" })) />
+                                    <RadzenProfileMenuItem Path="/admin/systemrole/list" Icon="admin_panel_settings" Text="Roles" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMROLE.VIEW", "SYSTEMROLE.VIEWMENU" })) />
+                                    <RadzenProfileMenuItem Path="/admin/systempermission/list" Icon="verified_user" Text="Permisos" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.VIEWMENU" })) />
+                                }
+                                
+                                <RadzenProfileMenuItem Text="Cerrar Sesión" Value="Logout" Icon="power_settings_new" />
+                            </ChildContent>
+                        </RadzenProfileMenu>
                     </Authorized>
                     <NotAuthorized>
                         <RadzenLink Path="/" Text="Iniciar Sesión" />
@@ -49,80 +53,3 @@
 </RadzenLayout>
 
 <RadzenComponents @rendermode="RenderMode.InteractiveWebAssembly" />
-
-@code {
-    bool sidebar1Expanded = true;
-    
-    private List<string> userMenuItems = new() { "Mi Perfil", "Configuración", "Cerrar Sesión" };
-    private string? selectedMenuItem;
-
-    protected override void OnInitialized()
-    {
-        try 
-        {
-            // Solo suscribirse a cambios en el estado de auth
-            // NO inicializar el AuthService aquí para evitar bloqueos
-            AuthService.OnAuthStateChanged += OnAuthStateChanged;
-        }
-        catch (Exception ex)
-        {
-        }
-    }
-
-    private async void OnAuthStateChanged()
-    {
-        try 
-        {
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-        }
-    }
-
-    private string GetDisplayName()
-    {
-        try
-        {
-            var name = AuthService.GetDisplayName();
-            return name;
-        }
-        catch (Exception ex)
-        {
-            return "Usuario";
-        }
-    }
-
-    private async Task OnMenuItemSelected(object value)
-    {
-        var menuItem = value?.ToString();
-        
-        switch (menuItem)
-        {
-            case "Mi Perfil":
-                // Navegar a perfil
-                break;
-            case "Configuración":
-                // Navegar a configuración
-                break;
-            case "Cerrar Sesión":
-                await AuthService.LogoutAsync();
-                break;
-        }
-        
-        // Resetear selección
-        selectedMenuItem = null;
-    }
-
-
-    public void Dispose()
-    {
-        try
-        {
-            AuthService.OnAuthStateChanged -= OnAuthStateChanged;
-        }
-        catch (Exception ex)
-        {
-        }
-    }
-}
