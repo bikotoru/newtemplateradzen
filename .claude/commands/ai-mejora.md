@@ -37,6 +37,54 @@ Shared.Models/
 
 ## ⚡ PRIORIDADES DE DESARROLLO
 
+### 📋 METODOLOGÍA DE TRABAJO
+
+**IMPORTANTE: Antes de implementar cualquier tarea, SIEMPRE debo:**
+
+1. **📝 CREAR PLAN DETALLADO**
+   - Explicar en alto nivel qué se va a hacer
+   - Desglosar las tareas específicas paso a paso
+   - Identificar archivos que se van a crear/modificar
+   - Estimar complejidad y posibles dependencias
+
+2. **⚙️ SOLICITAR CONFIGURACIÓN DEL USUARIO**
+   - Confirmar el alcance del trabajo
+   - Validar el nombre de entidades/módulos
+   - Verificar permisos y área de la aplicación
+   - Preguntar por requisitos específicos o personalizaciones
+
+3. **✅ OBTENER APROBACIÓN**
+   - Mostrar el plan completo al usuario
+   - Esperar confirmación antes de proceder
+   - Hacer ajustes si es necesario
+
+**Ejemplo de Plan:**
+```
+PLAN: Crear módulo SystemUsers
+
+ALTO NIVEL:
+Vamos a crear un módulo completo para gestión de usuarios del sistema con CRUD completo, 
+validaciones, permisos y integración con el sistema de autenticación existente.
+
+TAREAS ESPECÍFICAS:
+1. Crear entidad SystemUsers en Shared.Models
+2. Crear controlador y servicio backend con herencia de BaseQuery
+3. Crear servicio frontend heredando BaseApiService
+4. Crear ViewManager con configuraciones de columnas
+5. Crear componente List con EntityTable
+6. Crear componente Formulario con validaciones
+7. Crear componente Fast para creación rápida
+8. Configurar permisos y navegación
+
+CONFIGURACIÓN NECESARIA:
+- ¿Qué campos específicos necesita la entidad SystemUsers?
+- ¿Qué validaciones especiales requiere?
+- ¿Qué permisos debe tener (ADMIN.SYSTEMUSERS.*)?
+- ¿Alguna integración especial con autenticación?
+
+¿Confirmas que proceda con este plan?
+```
+
 ### Jerarquía de Componentes (ORDEN DE PRIORIDAD)
 
 **🥇 1. COMPONENTES CUSTOM (Primera Opción)**
@@ -286,9 +334,126 @@ GET    /api/[area]/[entity]/health        // Health check
 
 ## 🌐 ARQUITECTURA FRONTEND SERVICES
 
+### API - Servicio HTTP Genérico Central
+**Ubicación:** `Frontend/Services/API.cs`
+**Propósito:** Servicio HTTP genérico centralizado con autenticación automática
+
+#### Características Principales:
+- ✅ **Autenticación automática:** Se inyecta AuthService y maneja tokens
+- ✅ **Métodos múltiples:** GET, POST, PUT, DELETE con variantes
+- ✅ **Tipos de respuesta flexibles:** String, ApiResponse<T>, T directo
+- ✅ **Con/sin autenticación:** Variantes NoAuth para endpoints públicos
+- ✅ **Manejo de archivos:** PostFileAsync/GetFileAsync para binarios
+- ✅ **Procesamiento de respuestas:** Métodos helper para manejar ApiResponse<T>
+
+#### Tipos de Métodos Disponibles:
+
+**Para cada verbo HTTP (GET, POST, PUT, DELETE):**
+```csharp
+// Retorna string simple
+Task<string> GetStringAsync(string endpoint)
+Task<string> GetStringNoAuthAsync(string endpoint)
+
+// Retorna ApiResponse<T> tipado
+Task<ApiResponse<T>> GetAsync<T>(string endpoint)
+Task<ApiResponse<T>> GetNoAuthAsync<T>(string endpoint)
+
+// Retorna T directamente (sin wrapper)
+Task<T?> GetDirectAsync<T>(string endpoint)
+Task<T?> GetDirectNoAuthAsync<T>(string endpoint)
+```
+
+#### Métodos de Procesamiento de ApiResponse:
+```csharp
+// Procesamiento condicional
+Task ProcessResponseAsync<T>(ApiResponse<T> response, Func<T, Task> onSuccess, Func<ApiResponse<T>, Task>? onError)
+void ProcessResponse<T>(ApiResponse<T> response, Action<T> onSuccess, Action<ApiResponse<T>>? onError)
+
+// Extracción de datos
+T? GetDataOrDefault<T>(ApiResponse<T> response, T? defaultValue = default)
+T GetDataOrThrow<T>(ApiResponse<T> response)
+
+// Transformación
+ApiResponse<TResult> TransformResponse<T, TResult>(ApiResponse<T> response, Func<T, TResult> transform)
+ApiResponse<List<T>> CombineResponses<T>(params ApiResponse<T>[] responses)
+
+// Helpers de estado
+bool IsSuccessWithData<T>(ApiResponse<T> response)
+bool HasErrors<T>(ApiResponse<T> response)
+string GetErrorMessages<T>(ApiResponse<T> response)
+
+// Acciones condicionales
+ApiResponse<T> OnSuccess<T>(ApiResponse<T> response, Action<T> action)
+ApiResponse<T> OnError<T>(ApiResponse<T> response, Action<ApiResponse<T>> action)
+```
+
+#### Ejemplo de Uso de API (RECOMENDADO):
+```csharp
+public partial class MyComponent : ComponentBase
+{
+    [Inject] private API API { get; set; } = null!;
+
+    private async Task LoadDataAsync()
+    {
+        // ✅ OPCIÓN RECOMENDADA: ApiResponse<T> con manejo manual
+        var response = await API.GetAsync<List<MyEntity>>("/api/myentities/all");
+        if (response.Success && response.Data != null)
+        {
+            entities = response.Data;
+            ShowNotification("Datos cargados exitosamente", NotificationSeverity.Success);
+        }
+        else
+        {
+            errorMessage = API.GetErrorMessages(response);
+            ShowNotification($"Error: {errorMessage}", NotificationSeverity.Error);
+        }
+    }
+
+    private async Task SaveEntityAsync()
+    {
+        // ✅ OPCIÓN RECOMENDADA: POST con ApiResponse<T>
+        var response = await API.PostAsync<MyEntity>("/api/myentities/create", newEntity);
+        
+        // Usar ProcessResponse helper para código más limpio
+        await API.ProcessResponseAsync(response,
+            onSuccess: async savedEntity => 
+            {
+                entities.Add(savedEntity);
+                ShowNotification("Entidad guardada exitosamente", NotificationSeverity.Success);
+                await CloseDialog();
+            },
+            onError: async error => 
+            {
+                errorMessage = API.GetErrorMessages(error);
+                ShowNotification($"Error al guardar: {errorMessage}", NotificationSeverity.Error);
+            });
+    }
+
+    private async Task UpdateEntityAsync()
+    {
+        // ✅ OPCIÓN RECOMENDADA: PUT con ApiResponse<T>
+        var response = await API.PutAsync<MyEntity>($"/api/myentities/update", entityToUpdate);
+        
+        // Validar respuesta y actuar
+        if (API.IsSuccessWithData(response))
+        {
+            // Actualizar en lista local
+            var index = entities.FindIndex(e => e.Id == response.Data!.Id);
+            if (index >= 0) entities[index] = response.Data;
+            
+            ShowNotification("Entidad actualizada exitosamente", NotificationSeverity.Success);
+        }
+        else
+        {
+            ShowNotification(API.GetErrorMessages(response), NotificationSeverity.Error);
+        }
+    }
+}
+```
+
 ### BaseApiService<T>
 **Ubicación:** `Frontend/Services/BaseApiService.cs`
-**Propósito:** Cliente HTTP base para comunicación con API
+**Propósito:** Cliente HTTP base especializado para entidades específicas (hereda de API)
 
 #### Métodos Automáticos:
 ```csharp
@@ -538,14 +703,106 @@ dotnet build
 
 ## 📚 MEJORES PRÁCTICAS
 
-### 1. **Creación de Nuevos Módulos**
+### 1. **Inyección de Servicios en Componentes**
+
+**Servicios Principales a Inyectar:**
+```csharp
+// En componentes (.razor.cs)
+[Inject] private API API { get; set; } = null!;                          // Servicio HTTP genérico
+[Inject] private NavigationManager Navigation { get; set; } = null!;      // Navegación
+[Inject] private DialogService DialogService { get; set; } = null!;       // Dialogs de Radzen
+[Inject] private NotificationService NotificationService { get; set; } = null!; // Notificaciones
+[Inject] private QueryService QueryService { get; set; } = null!;         // Constructor de queries
+
+// Servicios específicos de entidad (opcional, alternativa a API)
+[Inject] private SystemPermissionService SystemPermissionService { get; set; } = null!;
+```
+
+**PRIORIDAD: Usar API genérico > Servicios específicos**
+- **✅ PREFERIR:** `API.GetAsync<T>("/endpoint")` con ApiResponse<T>
+- **⚠️ ALTERNATIVA:** `EntityService.GetAsync()` (solo si necesitas métodos muy específicos)
+
+**PRIORIDAD en Métodos de API:**
+1. **🥇 PRIMERA OPCIÓN - Métodos con ApiResponse<T>:**
+   ```csharp
+   Task<ApiResponse<T>> GetAsync<T>(string endpoint)
+   Task<ApiResponse<T>> PostAsync<T>(string endpoint, object? data = null)
+   Task<ApiResponse<T>> PutAsync<T>(string endpoint, object? data = null)
+   Task<ApiResponse<T>> DeleteAsync<T>(string endpoint)
+   ```
+
+2. **🥈 SEGUNDA OPCIÓN - Métodos directos (solo si es necesario):**
+   ```csharp
+   Task<T?> GetDirectAsync<T>(string endpoint)
+   Task<T?> PostDirectAsync<T>(string endpoint, object? data = null)
+   ```
+
+3. **🥉 TERCERA OPCIÓN - Métodos string (casos muy específicos):**
+   ```csharp
+   Task<string> GetStringAsync(string endpoint)
+   Task<string> PostStringAsync(string endpoint, object? data = null)
+   ```
+
+**¿Por qué priorizar ApiResponse<T>?**
+- ✅ Manejo consistente de errores
+- ✅ Información detallada de éxito/fallo
+- ✅ Mensajes de error estructurados
+- ✅ Integración con helpers de procesamiento
+
+### 🚫 PROHIBICIÓN ABSOLUTA: NO USAR `dynamic`
+
+**❌ PROHIBIDO - Jamás usar `dynamic`:**
+```csharp
+// ❌ NUNCA HACER ESTO
+var response = await API.PostAsync<dynamic>("/api/endpoint", data);
+dynamic result = response.Data;
+var value = result.SomeProperty; // ❌ Sin tipado fuerte
+
+// ❌ NUNCA HACER ESTO
+public async Task<dynamic> GetDataAsync() { }
+var data = await GetDataAsync();
+```
+
+**✅ OBLIGATORIO - Siempre usar Modelos tipados:**
+```csharp
+// ✅ CORRECTO - Usar modelo específico
+var response = await API.PostAsync<MyEntity>("/api/endpoint", data);
+MyEntity result = response.Data;
+var value = result.SomeProperty; // ✅ Tipado fuerte
+
+// ✅ CORRECTO - Definir modelos para respuestas
+public class ApiResponseModel
+{
+    public string Name { get; set; }
+    public int Count { get; set; }
+    public DateTime Date { get; set; }
+}
+
+var response = await API.GetAsync<ApiResponseModel>("/api/endpoint");
+```
+
+**Razones por las que `dynamic` está PROHIBIDO:**
+- ❌ **Sin IntelliSense:** No hay autocompletado de propiedades
+- ❌ **Sin validación en compilación:** Errores solo en runtime
+- ❌ **Difícil debugging:** No se puede inspeccionar fácilmente
+- ❌ **Sin documentación:** No se sabe qué propiedades existen
+- ❌ **Mantenimiento complejo:** Cambios causan errores ocultos
+- ❌ **Sin refactoring seguro:** Renombrar propiedades no actualiza referencias
+
+**Alternativas correctas:**
+1. **Crear modelos específicos** en `Shared.Models/`
+2. **Usar clases parciales** si el modelo es muy grande
+3. **Usar records** para datos simples de solo lectura
+4. **Usar DTOs** para transferencia de datos específica
+
+### 2. **Creación de Nuevos Módulos**
 1. Crear entidad en `Shared.Models/Entities/`
 2. Crear controlador y servicio backend heredando de `BaseQueryController<T>` y `BaseQueryService<T>`
 3. Crear servicio frontend heredando de `BaseApiService<T>`
 4. Crear ViewManager implementando `IViewManager<T>`
 5. Crear componentes List, Formulario y Fast siguiendo los patrones establecidos
 
-### 2. **Validación de Formularios**
+### 3. **Validación de Formularios**
 ```csharp
 // En código:
 var validationRules = FormValidationRulesBuilder.Create<Entity>()
