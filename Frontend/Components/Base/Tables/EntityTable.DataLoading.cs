@@ -37,7 +37,50 @@ public partial class EntityTable<T>
                 bool hasSearch = !string.IsNullOrWhiteSpace(searchTerm);
                 bool hasFilters = args.Filters != null && args.Filters.Any();
                 
-                if (hasFilters && !hasSearch)
+                // Si tiene ApiEndpoint personalizado, usar llamada directa a API
+                if (!string.IsNullOrEmpty(ApiEndpoint))
+                {
+                    var API = ServiceProvider.GetRequiredService<Frontend.Services.API>();
+                    
+                    // Construir query con filtros y paginación
+                    var queryRequest = new QueryRequest
+                    {
+                        Skip = args.Skip ?? 0,
+                        Take = args.Top ?? PageSize,
+                        OrderBy = args.OrderBy,
+                        Filters = args.Filters?.Select(f => new Shared.Models.QueryModels.FilterDescriptor
+                        {
+                            Member = f.Property,
+                            Operator = f.FilterOperator.ToString(),
+                            Value = f.FilterValue
+                        }).ToList()
+                    };
+                    
+                    // Si tiene BaseQuery, incluir sus filtros
+                    if (queryWithFilters != null)
+                    {
+                        var baseQueryRequest = queryWithFilters.ToQueryRequest();
+                        if (baseQueryRequest.Filters?.Any() == true)
+                        {
+                            queryRequest.Filters = queryRequest.Filters ?? new List<Shared.Models.QueryModels.FilterDescriptor>();
+                            queryRequest.Filters.AddRange(baseQueryRequest.Filters);
+                        }
+                    }
+                    
+                    var response = await API.PostAsync<Shared.Models.Responses.PagedResponse<T>>(ApiEndpoint, queryRequest);
+                    
+                    if (response.Success && response.Data != null)
+                    {
+                        entities = response.Data.Data;
+                        totalCount = response.Data.TotalCount;
+                    }
+                    else
+                    {
+                        entities = new List<T>();
+                        totalCount = 0;
+                    }
+                }
+                else if (hasFilters && !hasSearch)
                 {
                     
                     var response = await apiService.LoadDataAsync(args);

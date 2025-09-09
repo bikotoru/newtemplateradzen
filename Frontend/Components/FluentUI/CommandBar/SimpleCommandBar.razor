@@ -387,3 +387,244 @@
         }
     }
 }
+
+        <style>
+    .ms-CommandBar {
+        display: flex;
+        height: 44px;
+        align-items: center;
+        background-color: #ffffff;
+        border-bottom: 1px solid #e1e1e1;
+        padding: 0 8px;
+        position: relative;
+        overflow: visible;
+    }
+
+    .ms-CommandBar-primarySet {
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        gap: 2px;
+        overflow: visible;
+    }
+
+    .ms-CommandBar-secondarySet {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .ms-CommandBar-item {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        min-width: 32px;
+        padding: 0 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 2px;
+        transition: background-color 0.15s ease;
+        white-space: nowrap;
+        font-size: 14px;
+        font-family: "Segoe UI", sans-serif;
+        color: #323130;
+    }
+
+        .ms-CommandBar-item:hover {
+            background-color: #f3f2f1;
+        }
+
+        .ms-CommandBar-item:active {
+            background-color: #edebe9;
+        }
+
+        .ms-CommandBar-item:disabled {
+            color: #a19f9d;
+            cursor: default;
+            background: transparent !important;
+        }
+
+    .ms-CommandBar-item--checked {
+        background-color: #edebe9;
+        color: #323130;
+    }
+
+        .ms-CommandBar-item--checked:hover {
+            background-color: #e1dfdd;
+        }
+
+    .ms-CommandBar-item--radio {
+        position: relative;
+    }
+
+    .ms-CommandBar-icon {
+        font-size: 16px;
+        line-height: 1;
+        margin-right: 4px;
+        user-select: none;
+    }
+
+    .ms-CommandBar-text {
+        font-size: 14px;
+        line-height: 1;
+        user-select: none;
+    }
+
+    .ms-CommandBar-overflowButton {
+        min-width: 32px;
+        padding: 0 4px;
+    }
+
+    .ms-CommandBar-overflowMenu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 180px;
+        background: #ffffff;
+        border: 1px solid #e1e1e1;
+        border-radius: 2px;
+        box-shadow: 0 6.4px 14.4px 0 rgba(0, 0, 0, 0.132), 0 1.2px 3.6px 0 rgba(0, 0, 0, 0.108);
+        z-index: 1000;
+        overflow: visible;
+        animation: slideDown 0.15s ease-out;
+    }
+
+    .ms-CommandBar-farOverflowMenu {
+        right: 0;
+        left: auto;
+    }
+
+    @@keyframes slideDown {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    .ms-CommandBar-overflowItem {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 36px;
+        padding: 0 12px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+        font-size: 14px;
+        font-family: "Segoe UI", sans-serif;
+        color: #323130;
+        transition: background-color 0.15s ease;
+    }
+
+        .ms-CommandBar-overflowItem:hover {
+            background-color: #f3f2f1;
+        }
+
+        .ms-CommandBar-overflowItem:active {
+            background-color: #edebe9;
+        }
+
+        .ms-CommandBar-overflowItem:disabled {
+            color: #a19f9d;
+            cursor: default;
+            background: transparent !important;
+        }
+
+        .ms-CommandBar-overflowItem .ms-CommandBar-icon {
+            margin-right: 8px;
+        }
+
+    /* Submenús */
+    .ms-CommandBar-submenuArrow {
+        margin-left: auto;
+        font-size: 16px;
+    }
+
+    /* Dark theme support */
+    [data-theme="dark"] .ms-CommandBar {
+        background-color: #2d2d30;
+        border-bottom-color: #3e3e42;
+    }
+
+    [data-theme="dark"] .ms-CommandBar-item {
+        color: #ffffff;
+    }
+
+        [data-theme="dark"] .ms-CommandBar-item:hover {
+            background-color: #3e3e42;
+        }
+
+        [data-theme="dark"] .ms-CommandBar-item:active {
+            background-color: #4a4a4f;
+        }
+
+        [data-theme="dark"] .ms-CommandBar-item:disabled {
+            color: #8a8886;
+        }
+
+    [data-theme="dark"] .ms-CommandBar-item--checked {
+        background-color: #4a4a4f;
+        color: #ffffff;
+    }
+
+    [data-theme="dark"] .ms-CommandBar-overflowMenu {
+        background: #2d2d30;
+        border-color: #3e3e42;
+    }
+
+    [data-theme="dark"] .ms-CommandBar-overflowItem {
+        color: #ffffff;
+    }
+
+        [data-theme="dark"] .ms-CommandBar-overflowItem:hover {
+            background-color: #3e3e42;
+        }
+
+    /* Responsive behavior */
+    @@media (max-width: 768px) {
+        .ms-CommandBar
+
+    {
+        padding: 0 4px;
+    }
+
+    .ms-CommandBar-primarySet {
+        gap: 1px;
+    }
+
+    .ms-CommandBar-item {
+        padding: 0 6px;
+        min-width: 28px;
+        height: 28px;
+    }
+
+    }
+
+    /* Material Icons font support */
+    .material-symbols-outlined {
+        font-family: 'Material Symbols Outlined';
+        font-weight: normal;
+        font-style: normal;
+        font-size: 16px;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-block;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+        font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+    }
+</style>

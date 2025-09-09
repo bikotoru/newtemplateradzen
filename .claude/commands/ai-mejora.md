@@ -934,15 +934,71 @@ protected readonly string _baseUrl;  // ✅ Usar este, NO _endpoint
 // protected readonly string _endpoint;  // ❌ NO EXISTE
 ```
 
-#### **EntityTable<T> - Propiedades Disponibles:**
+#### **EntityTable<T> - Propiedades Disponibles REALES:**
 ```csharp
 // ✅ CORRECTO - Estas propiedades SÍ existen:
-[Parameter] public string? ApiEndpoint { get; set; }  // ✅ En EntityTable, NO en ViewConfiguration
-[Parameter] public BaseApiService<T>? Service { get; set; }
-[Parameter] public QueryBuilder<T> BaseQuery { get; set; }
+[Parameter] public string? ApiEndpoint { get; set; }         // ✅ AGREGADO - Para endpoints personalizados
+[Parameter] public BaseApiService<T>? ApiService { get; set; } // ✅ CORRECTO - NO "Service"
+[Parameter] public string ExcelFileName { get; set; } = "";   // ✅ CORRECTO - NO "ExportFileName"
+[Parameter] public QueryBuilder<T>? BaseQuery { get; set; }   // ✅ Existe
 
-// ❌ INCORRECTO - Usar en ViewConfiguration:
-// ViewConfiguration NO tiene ApiEndpoint  // ❌ Usar en EntityTable directamente
+// ❌ INCORRECTO - Estos parámetros NO existen:
+// [Parameter] public BaseApiService<T>? Service { get; set; }     // ❌ Usar ApiService
+// [Parameter] public string ExportFileName { get; set; }          // ❌ Usar ExcelFileName
+
+// 📝 NOTA: ApiEndpoint se usa cuando necesitas un endpoint personalizado que mantenga
+// todas las funciones de filtrado, ordenamiento y paginación de EntityTable
+```
+
+### **Patrón de ApiEndpoint Personalizado:**
+
+#### **Cuándo usar ApiEndpoint:**
+```razor
+<!-- ✅ Usar ApiEndpoint cuando necesitas lógica personalizada pero mantienes funcionalidad completa -->
+<EntityTable T="MyEntity"
+             ApiEndpoint="/api/custom/my-filtered-endpoint"
+             ApiService="@MyEntityService"  <!-- Requerido para otras operaciones -->
+             BaseQuery="@currentView.QueryBuilder"  <!-- Se combina con endpoint -->
+             ExcelFileName="CustomExport" />
+```
+
+#### **Implementación Backend para ApiEndpoint:**
+```csharp
+// ✅ CORRECTO - Controller SIN lógica de negocio, solo validación y delegación
+[HttpPost("custom-filtered-view")]
+public async Task<IActionResult> GetCustomFilteredView([FromBody] QueryRequest queryRequest)
+{
+    // "*" para endpoints sin restricciones, "view" para permisos específicos
+    var (user, hasPermission, errorResult) = await ValidatePermissionAsync("*");
+    if (errorResult != null) return errorResult;
+
+    try
+    {
+        // SOLO pasar QueryRequest y SessionDataDto - NO lógica de negocio aquí
+        var result = await _service.GetCustomFilteredPagedAsync(queryRequest, user);
+        return Ok(ApiResponse<PagedResponse<MyEntity>>.SuccessResponse(result));
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in custom endpoint");
+        return StatusCode(500, ApiResponse<PagedResponse<MyEntity>>.ErrorResponse("Error interno"));
+    }
+}
+```
+
+#### **Implementación Service Backend:**
+```csharp
+// ✅ CORRECTO - TODA la lógica de negocio en el service para reutilización
+public async Task<PagedResponse<MyEntity>> GetCustomFilteredPagedAsync(QueryRequest queryRequest, SessionDataDto sessionData)
+{
+    // TODA la lógica de filtros de negocio aquí - puede reutilizarse
+    var baseQuery = _dbSet.Where(x => x.OrganizationId == sessionData.OrganizationId || x.OrganizationId == null)
+                          .Where(x => x.Active)  // Otros filtros de negocio
+                          .Include(x => x.RelatedEntity);
+    
+    // QueryPagedAsync maneja filtros, ordenamiento, paginación automáticamente
+    return await QueryPagedAsync(queryRequest, sessionData, baseQuery);
+}
 ```
 
 ### **Patrones de Obtención de Usuario/Organización:**
@@ -972,24 +1028,92 @@ public async Task<bool> ValidateActionKeyAsync(string actionKey, Guid? organizat
 }
 ```
 
+### **🚨 PRINCIPIOS FUNDAMENTALES (NUNCA ROMPER):**
+
+#### **1. Controllers = Solo Validación + Delegación**
+```csharp
+// ✅ CORRECTO - Controller limpio
+[HttpPost("my-endpoint")]
+public async Task<IActionResult> MyEndpoint([FromBody] QueryRequest queryRequest)
+{
+    var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+    if (errorResult != null) return errorResult;
+    
+    // SOLO delegación - NO lógica de negocio
+    var result = await _service.MyBusinessLogicAsync(queryRequest, user);
+    return Ok(ApiResponse<T>.SuccessResponse(result));
+}
+
+// ❌ PROHIBIDO - Lógica en controller
+public async Task<IActionResult> BadExample()
+{
+    var result = await _service.GetData();
+    // ❌ NO hacer filtrado/validaciones/transformaciones aquí
+    var filtered = result.Where(x => x.SomeCondition);
+    return Ok(filtered);  // ❌ Esta lógica debe estar en service
+}
+```
+
+#### **2. Services = Toda la Lógica de Negocio**
+```csharp
+// ✅ CORRECTO - Service con lógica reutilizable
+public async Task<PagedResponse<T>> MyBusinessLogicAsync(QueryRequest queryRequest, SessionDataDto sessionData)
+{
+    // TODA la lógica de negocio aquí - puede llamarse desde otros lugares
+    var baseQuery = _dbSet.Where(x => x.OrganizationId == sessionData.OrganizationId)
+                          .Where(x => x.Active)
+                          .Include(x => x.Relations);
+    
+    return await QueryPagedAsync(queryRequest, sessionData, baseQuery);
+}
+```
+
+#### **3. Permisos: "*" para Sin Restricciones**
+```csharp
+// ✅ Para endpoints públicos o sin restricciones
+var (user, hasPermission, errorResult) = await ValidatePermissionAsync("*");
+
+// ✅ Para endpoints con permisos específicos  
+var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+```
+
+#### **4. Parámetros: Solo QueryRequest + SessionDataDto**
+```csharp
+// ✅ CORRECTO - Pasar user completo, NO extraer campos
+public async Task<PagedResponse<T>> MyMethodAsync(QueryRequest queryRequest, SessionDataDto sessionData)
+{
+    // Usar sessionData.OrganizationId dentro del método
+}
+
+// ❌ PROHIBIDO - Extraer campos en controller
+public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Guid organizationId)
+{
+    // ❌ NO hacer esto - pasar SessionDataDto completo
+}
+```
+
 ### **Checklist de Validación Antes de Implementar:**
 
 **Backend Controllers:**
 - [ ] ¿Estoy usando `ValidatePermissionAsync()` para obtener usuario?
-- [ ] ¿Estoy pasando `SessionDataDto` a métodos de servicio?
-- [ ] ¿Estoy usando `user?.OrganizationId` para organización actual?
+- [ ] ¿Estoy pasando SOLO `QueryRequest` y `SessionDataDto` al service?
+- [ ] ¿NO tengo lógica de negocio en el controller? (debe estar en service)
+- [ ] ¿Uso `"*"` para endpoints sin restricciones de permisos?
 
 **Backend Services:**  
-- [ ] ¿Mis métodos reciben `SessionDataDto` si necesito info del usuario?
+- [ ] ¿TODA mi lógica de negocio está en el service (no en controller)?
+- [ ] ¿Mis métodos reciben `QueryRequest` y `SessionDataDto` como parámetros?
 - [ ] ¿Estoy heredando correctamente de `BaseQueryService<T>`?
-- [ ] ¿Mis métodos custom reciben parámetros en lugar de acceder directamente a usuario?
+- [ ] ¿Mis métodos pueden reutilizarse desde otros lugares?
 
 **Frontend Services:**
 - [ ] ¿Estoy usando `_baseUrl` y no `_endpoint`?
 - [ ] ¿Estoy heredando de `BaseApiService<T>` correctamente?
 
 **Frontend Components:**
-- [ ] ¿Estoy usando `ApiEndpoint` en `EntityTable` y no en `ViewConfiguration`?
+- [ ] ¿Estoy usando `ApiService` (no `Service`) en EntityTable?
+- [ ] ¿Estoy usando `ExcelFileName` (no `ExportFileName`) para nombres de archivos Excel?
+- [ ] ¿Si uso `ApiEndpoint`, mi backend devuelve `PagedResponse<T>` con la misma estructura que query estándar?
 - [ ] ¿Estoy inyectando servicios con nombres correctos?
 
 ---
@@ -1008,10 +1132,12 @@ public async Task<bool> ValidateActionKeyAsync(string actionKey, Guid? organizat
    - ✅ Solución: Todos los métodos de BaseQueryService requieren SessionDataDto
    - ✅ Obtener de: `var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");`
 
-3. **Errores de Propiedades No Encontradas**
-   - ❌ Error: `'ViewConfiguration' does not contain a definition for 'ApiEndpoint'`
-   - ✅ Solución: `ApiEndpoint` se usa en `EntityTable`, no en `ViewConfiguration`
-   - ✅ Verificar: `grep -n "ApiEndpoint" Frontend/Components/Base/Tables/EntityTable.razor`
+3. **Errores de Parámetros Incorrectos en EntityTable**
+   - ❌ Error: `'EntityTable' does not contain a definition for 'Service'`
+   - ✅ Solución: Usar `ApiService` en lugar de `Service`
+   - ❌ Error: `'EntityTable' does not contain a definition for 'ExportFileName'`
+   - ✅ Solución: Usar `ExcelFileName` en lugar de `ExportFileName`
+   - ✅ Verificar: `grep -n "ApiService\|ExcelFileName" Frontend/Components/Base/Tables/EntityTable.razor.cs`
 
 4. **Errores de Campos Protegidos**
    - ❌ Error: `The name '_endpoint' does not exist in the current context`

@@ -52,6 +52,7 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
     #region Parameters - Data Loading
 
     [Parameter] public BaseApiService<T>? ApiService { get; set; }
+    [Parameter] public string? ApiEndpoint { get; set; }
     [Parameter] public QueryBuilder<T>? BaseQuery { get; set; }
     [Parameter] public EventCallback<LoadDataArgs> OnLoadData { get; set; }
     [Parameter] public EventCallback<LoadDataArgs> OnAfterLoadData { get; set; }
