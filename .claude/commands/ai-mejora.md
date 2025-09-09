@@ -41,26 +41,61 @@ Shared.Models/
 
 **IMPORTANTE: Antes de implementar cualquier tarea, SIEMPRE debo:**
 
-1. **📝 CREAR PLAN DETALLADO**
+1. **🔍 INVESTIGACIÓN TÉCNICA PREVIA (OBLIGATORIO)**
+   - **Validar métodos de servicios existentes**: Usar Grep/Read para verificar qué métodos están disponibles en servicios que voy a usar
+   - **Revisar firmas de métodos base**: Confirmar parámetros exactos de BaseQueryService, BaseApiService, etc.
+   - **Verificar propiedades de componentes**: Comprobar qué propiedades están disponibles en componentes base
+   - **Validar campos protegidos**: Revisar nombres exactos de campos como _baseUrl, _endpoint, etc.
+   - **Comprobar dependencias**: Verificar qué servicios/interfaces están disponibles e inyectados
+
+2. **📝 CREAR PLAN DETALLADO**
    - Explicar en alto nivel qué se va a hacer
    - Desglosar las tareas específicas paso a paso
    - Identificar archivos que se van a crear/modificar
    - Estimar complejidad y posibles dependencias
 
-2. **⚙️ SOLICITAR CONFIGURACIÓN DEL USUARIO**
+3. **⚙️ SOLICITAR CONFIGURACIÓN DEL USUARIO**
    - Confirmar el alcance del trabajo
    - Validar el nombre de entidades/módulos
    - Verificar permisos y área de la aplicación
    - Preguntar por requisitos específicos o personalizaciones
 
-3. **✅ OBTENER APROBACIÓN**
+4. **✅ OBTENER APROBACIÓN**
    - Mostrar el plan completo al usuario
    - Esperar confirmación antes de proceder
    - Hacer ajustes si es necesario
 
+**Ejemplo de Investigación Previa:**
+```bash
+# 1. VALIDAR MÉTODOS DE SERVICIOS EXISTENTES
+grep -n "GetCurrentUser\|GetUser" Backend.Utils/Security/PermissionService.cs
+find . -name "*PermissionService*" -type f | xargs grep -n "public.*Get"
+
+# 2. REVISAR FIRMAS DE MÉTODOS BASE  
+grep -n "CreateAsync.*SessionDataDto" Backend.Utils/Services/BaseQueryService.cs
+grep -n "public.*CreateAsync" Backend.Utils/Services/BaseQueryService.cs
+
+# 3. VERIFICAR PROPIEDADES DE COMPONENTES
+grep -n "ApiEndpoint" Frontend/Components/Base/Tables/ViewConfiguration.cs
+find Frontend/Components -name "*ViewConfiguration*" | xargs grep -n "public.*string"
+
+# 4. VALIDAR CAMPOS PROTEGIDOS
+grep -n "_endpoint\|_baseUrl" Frontend/Services/BaseApiService.cs
+read Frontend/Services/BaseApiService.cs | head -30
+
+# 5. COMPROBAR DEPENDENCIAS
+find . -name "*Controller*" -type f | head -5 | xargs grep -n "ValidatePermissionAsync"
+```
+
 **Ejemplo de Plan:**
 ```
 PLAN: Crear módulo SystemUsers
+
+INVESTIGACIÓN PREVIA REALIZADA: ✅
+- ✅ Confirmé que PermissionService tiene método GetUserAsync() con SessionDataDto
+- ✅ Validé que BaseQueryService.CreateAsync() requiere SessionDataDto como parámetro
+- ✅ Verifiqué que ViewConfiguration no tiene ApiEndpoint, se usa en EntityTable
+- ✅ Confirmé que BaseApiService usa _baseUrl (no _endpoint)
 
 ALTO NIVEL:
 Vamos a crear un módulo completo para gestión de usuarios del sistema con CRUD completo, 
@@ -845,26 +880,160 @@ public class EntityViewManager : IViewManager<Entity>
 
 ---
 
+## 🔧 REFERENCIA TÉCNICA CRÍTICA
+
+### **Firmas Exactas de Servicios Base (OBLIGATORIO CONSULTAR)**
+
+#### **BaseQueryService<T> - Firmas Reales:**
+```csharp
+// ✅ CORRECTO - Todos requieren SessionDataDto
+public virtual async Task<T> CreateAsync(CreateRequest<T> request, SessionDataDto sessionData)
+public virtual async Task<T> UpdateAsync(UpdateRequest<T> request, SessionDataDto sessionData)
+public virtual async Task<List<T>> GetAllUnpagedAsync(SessionDataDto sessionData)
+public virtual async Task<PagedResponse<T>> GetAllPagedAsync(int page, int pageSize, SessionDataDto sessionData)
+public virtual async Task<T?> GetByIdAsync(Guid id, SessionDataDto sessionData)
+public virtual async Task<bool> DeleteAsync(Guid id, SessionDataDto sessionData)
+
+// ❌ INCORRECTO - Estos métodos NO existen sin SessionDataDto
+// Task<T> CreateAsync(CreateRequest<T> request) // ❌ NO EXISTE
+```
+
+#### **BaseQueryController<T> - Método ValidatePermissionAsync:**
+```csharp
+// ✅ CORRECTO - Método disponible que retorna user, permission y errorResult
+protected async Task<(SessionDataDto? user, bool hasPermission, IActionResult? errorResult)> ValidatePermissionAsync(string action)
+
+// ✅ EJEMPLOS DE USO CORRECTO:
+var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");
+if (errorResult != null) return errorResult;
+// user contiene SessionDataDto con OrganizationId
+
+var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+if (errorResult != null) return errorResult;
+```
+
+#### **PermissionService - Métodos REALES Disponibles:**
+```csharp
+// ❌ ESTOS MÉTODOS NO EXISTEN:
+// GetCurrentUserAsync() // ❌ NO EXISTE
+// GetUserAsync() // ❌ NO EXISTE
+
+// ✅ MÉTODOS QUE SÍ EXISTEN (verificar con Grep antes de usar):
+public async Task<List<string>> GetUserPermissionsAsync(Guid userId, Guid organizationId)
+// Otros métodos se deben verificar con: grep -n "public.*async" Backend.Utils/Security/PermissionService.cs
+```
+
+#### **BaseApiService<T> - Campos Protegidos:**
+```csharp
+// ✅ CORRECTO - Campos que SÍ existen:
+protected readonly API _api;
+protected readonly ILogger<BaseApiService<T>> _logger;
+protected readonly string _baseUrl;  // ✅ Usar este, NO _endpoint
+
+// ❌ INCORRECTO - Campos que NO existen:
+// protected readonly string _endpoint;  // ❌ NO EXISTE
+```
+
+#### **EntityTable<T> - Propiedades Disponibles:**
+```csharp
+// ✅ CORRECTO - Estas propiedades SÍ existen:
+[Parameter] public string? ApiEndpoint { get; set; }  // ✅ En EntityTable, NO en ViewConfiguration
+[Parameter] public BaseApiService<T>? Service { get; set; }
+[Parameter] public QueryBuilder<T> BaseQuery { get; set; }
+
+// ❌ INCORRECTO - Usar en ViewConfiguration:
+// ViewConfiguration NO tiene ApiEndpoint  // ❌ Usar en EntityTable directamente
+```
+
+### **Patrones de Obtención de Usuario/Organización:**
+
+#### **En Controllers (Backend):**
+```csharp
+// ✅ CORRECTO - Obtener usuario actual via ValidatePermissionAsync:
+var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");
+if (errorResult != null) return errorResult;
+
+var organizationId = user?.OrganizationId;  // ✅ SessionDataDto tiene OrganizationId
+```
+
+#### **En Services Backend (si necesitas usuario):**
+```csharp
+// ✅ CORRECTO - Recibir SessionDataDto del controller:
+public async Task<bool> ValidateActionKeyAsync(string actionKey, Guid? organizationId, Guid? excludeId = null)
+{
+    // Usar organizationId pasado como parámetro
+    var query = _dbSet.Where(p => p.ActionKey == actionKey && 
+                             (p.OrganizationId == null || p.OrganizationId == organizationId));
+    
+    if (excludeId.HasValue)
+        query = query.Where(p => p.Id != excludeId.Value);
+    
+    return !await query.AnyAsync();
+}
+```
+
+### **Checklist de Validación Antes de Implementar:**
+
+**Backend Controllers:**
+- [ ] ¿Estoy usando `ValidatePermissionAsync()` para obtener usuario?
+- [ ] ¿Estoy pasando `SessionDataDto` a métodos de servicio?
+- [ ] ¿Estoy usando `user?.OrganizationId` para organización actual?
+
+**Backend Services:**  
+- [ ] ¿Mis métodos reciben `SessionDataDto` si necesito info del usuario?
+- [ ] ¿Estoy heredando correctamente de `BaseQueryService<T>`?
+- [ ] ¿Mis métodos custom reciben parámetros en lugar de acceder directamente a usuario?
+
+**Frontend Services:**
+- [ ] ¿Estoy usando `_baseUrl` y no `_endpoint`?
+- [ ] ¿Estoy heredando de `BaseApiService<T>` correctamente?
+
+**Frontend Components:**
+- [ ] ¿Estoy usando `ApiEndpoint` en `EntityTable` y no en `ViewConfiguration`?
+- [ ] ¿Estoy inyectando servicios con nombres correctos?
+
+---
+
 ## 🔍 TROUBLESHOOTING
 
 ### Problemas Comunes
 
-1. **EntityTable no carga datos**
+1. **Errores de Compilación por Métodos Inexistentes**
+   - ❌ Error: `'PermissionService' does not contain a definition for 'GetCurrentUserAsync'`
+   - ✅ Solución: Usar `ValidatePermissionAsync()` en controllers para obtener usuario
+   - ✅ Verificar: `grep -n "GetCurrentUser" Backend.Utils/Security/PermissionService.cs`
+
+2. **Errores de SessionDataDto Faltante**
+   - ❌ Error: `There is no argument given that corresponds to the required parameter 'sessionData'`
+   - ✅ Solución: Todos los métodos de BaseQueryService requieren SessionDataDto
+   - ✅ Obtener de: `var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");`
+
+3. **Errores de Propiedades No Encontradas**
+   - ❌ Error: `'ViewConfiguration' does not contain a definition for 'ApiEndpoint'`
+   - ✅ Solución: `ApiEndpoint` se usa en `EntityTable`, no en `ViewConfiguration`
+   - ✅ Verificar: `grep -n "ApiEndpoint" Frontend/Components/Base/Tables/EntityTable.razor`
+
+4. **Errores de Campos Protegidos**
+   - ❌ Error: `The name '_endpoint' does not exist in the current context`
+   - ✅ Solución: Usar `_baseUrl` en lugar de `_endpoint` en BaseApiService
+   - ✅ Verificar: `grep -n "_baseUrl\|_endpoint" Frontend/Services/BaseApiService.cs`
+
+5. **EntityTable no carga datos**
    - Verificar que el Service esté inyectado correctamente
    - Revisar que BaseQuery no tenga filtros inválidos
    - Comprobar permisos del usuario para la entidad
 
-2. **Validaciones no funcionan**
+6. **Validaciones no funcionan**
    - Asegurar que FormValidator envuelva los ValidatedInput
    - Verificar que ValidationRules esté configurado correctamente
    - Revisar que FieldName coincida con la propiedad de la entidad
 
-3. **Lookups lentos**
+7. **Lookups lentos**
    - Habilitar cache si los datos no cambian frecuentemente
    - Optimizar SearchableFields para usar índices de DB
    - Considerar paginación server-side vs client-side
 
-4. **Problemas de permisos**
+8. **Problemas de permisos**
    - Verificar configuración en ModularMenu
    - Comprobar que el backend valide los mismos permisos
    - Revisar logs de permisos en el backend
