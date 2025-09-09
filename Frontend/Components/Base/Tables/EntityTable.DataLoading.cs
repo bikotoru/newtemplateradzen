@@ -117,7 +117,7 @@ public partial class EntityTable<T>
                         Skip = args.Skip ?? 0,
                         Take = args.Top ?? PageSize,
                         OrderBy = args.OrderBy,
-                        SearchFields = effectiveSearchFields?.ToArray(),
+                        SearchFields = GetEffectiveSearchFields().ToArray(),
                         BaseQuery = queryWithFilters?.ToQueryRequest()
                     };
                     
