@@ -19,6 +19,11 @@ public class ColumnConfig<T>
     public int? Order { get; set; }
     public RenderFragment<T>? Template { get; set; }
     
+    /// <summary>
+    /// Expresión tipada para formatear el valor mostrado. Ejemplo: p => p.Organization?.Nombre ?? "Global"
+    /// </summary>
+    public Func<T, string>? FormatExpression { get; set; }
+    
     public object? FilterValue { get; set; }
     public FilterOperator? FilterOperator { get; set; }
     

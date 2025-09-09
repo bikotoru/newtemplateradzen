@@ -960,6 +960,13 @@ protected readonly string _baseUrl;  // ✅ Usar este, NO _endpoint
              ApiService="@MyEntityService"  <!-- Requerido para otras operaciones -->
              BaseQuery="@currentView.QueryBuilder"  <!-- Se combina con endpoint -->
              ExcelFileName="CustomExport" />
+
+<!-- ✅ Ejemplo real del sistema -->
+<EntityTable T="SystemPermissions"
+             ApiEndpoint="@viewManager.ApiEndpoint"  <!-- Endpoint dinámico del ViewManager -->
+             ApiService="@SystemPermissionService"
+             BaseQuery="@currentView.QueryBuilder"
+             ExcelFileName="SystemPermissions_MiOrganizacion" />
 ```
 
 #### **Implementación Backend para ApiEndpoint:**
@@ -1001,21 +1008,46 @@ public async Task<PagedResponse<MyEntity>> GetCustomFilteredPagedAsync(QueryRequ
 }
 ```
 
-### **ColumnConfig Templates con RenderFragment:**
+### **ColumnConfig: Template vs FormatExpression**
 
-#### **Template CORRECTO para ColumnConfig:**
+#### **FormatExpression - NUEVA Funcionalidad Tipada (MÁS SIMPLE):**
 ```csharp
-// ✅ CORRECTO - Template usa RenderFragment con builder pattern
-new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
+// ✅ MEJOR OPCIÓN - FormatExpression para formateo simple de texto
+new ColumnConfig<SystemPermissions>
+{
+    Property = "Organization.Nombre",
+    Title = "Organización", 
+    Width = "180px",
+    Sortable = true,
+    Filterable = true,
+    Order = 4,
+    FormatExpression = p => p.Organization?.Nombre ?? "Global" // ✅ Tipado fuerte, IntelliSense
+}
+
+// ✅ Otros ejemplos de FormatExpression
+new ColumnConfig<SystemPermissions>
+{
+    Property = "FechaCreacion",
+    Title = "Fecha Creación",
+    FormatExpression = p => p.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "N/A"
+}
+
+new ColumnConfig<SystemPermissions>
+{
+    Property = "Active", 
+    Title = "Estado",
+    FormatExpression = p => p.Active ? "Activo" : "Inactivo"
+}
+```
+
+#### **Template CORRECTO para ColumnConfig (PARA HTML COMPLEJO):**
+```csharp
+// ✅ USAR Template solo cuando necesites HTML complejo (badges, links, botones)
+new ColumnConfig<SystemPermissions>
 {
     Property = "Organization.Nombre",
     Title = "Organización",
     Width = "180px",
-    Sortable = true,
-    Filterable = true,
-    TextAlign = TextAlign.Left,
-    Visible = true,
-    Order = 4,
     Template = permission => builder =>
     {
         builder.OpenElement(0, "span");
@@ -1170,6 +1202,7 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
 - [ ] ¿Estoy usando `ApiService` (no `Service`) en EntityTable?
 - [ ] ¿Estoy usando `ExcelFileName` (no `ExportFileName`) para nombres de archivos Excel?
 - [ ] ¿Si uso `ApiEndpoint`, mi backend devuelve `PagedResponse<T>` con la misma estructura que query estándar?
+- [ ] ¿Para formatear texto uso `FormatExpression` en lugar de `Template` cuando es posible?
 - [ ] ¿Si uso Template en ColumnConfig, estoy usando RenderFragment con builder pattern?
 - [ ] ¿Estoy inyectando servicios con nombres correctos?
 

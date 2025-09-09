@@ -297,6 +297,33 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
         return true;
     }
 
+    private string GetPropertyValue(T entity, string propertyPath)
+    {
+        try
+        {
+            if (entity == null) return "";
+            
+            object? currentValue = entity;
+            var properties = propertyPath.Split('.');
+            
+            foreach (var property in properties)
+            {
+                if (currentValue == null) return "";
+                
+                var propInfo = currentValue.GetType().GetProperty(property);
+                if (propInfo == null) return "";
+                
+                currentValue = propInfo.GetValue(currentValue);
+            }
+            
+            return currentValue?.ToString() ?? "";
+        }
+        catch (Exception)
+        {
+            return "";
+        }
+    }
+
     public void Dispose()
     {
         StopAutoRefresh();

@@ -286,6 +286,16 @@
                                     }
                                 </div>
                             </HeaderTemplate>
+                            <Template Context="item">
+                                @if (col.FormatExpression != null)
+                                {
+                                    @col.FormatExpression(item)
+                                }
+                                else
+                                {
+                                    @GetPropertyValue(item, col.Property)
+                                }
+                            </Template>
                         </RadzenDataGridColumn>
                     }
                 }
