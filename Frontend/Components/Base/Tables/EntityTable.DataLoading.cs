@@ -42,28 +42,21 @@ public partial class EntityTable<T>
                 {
                     var API = ServiceProvider.GetRequiredService<Frontend.Services.API>();
                     
-                    // Construir query con filtros y paginación
+                    // Construir query básico con paginación y ordenamiento
                     var queryRequest = new QueryRequest
                     {
                         Skip = args.Skip ?? 0,
                         Take = args.Top ?? PageSize,
-                        OrderBy = args.OrderBy,
-                        Filters = args.Filters?.Select(f => new Shared.Models.QueryModels.FilterDescriptor
-                        {
-                            Member = f.Property,
-                            Operator = f.FilterOperator.ToString(),
-                            Value = f.FilterValue
-                        }).ToList()
+                        OrderBy = args.OrderBy
                     };
                     
-                    // Si tiene BaseQuery, incluir sus filtros
+                    // Si tiene BaseQuery, incluir sus filtros como string
                     if (queryWithFilters != null)
                     {
                         var baseQueryRequest = queryWithFilters.ToQueryRequest();
-                        if (baseQueryRequest.Filters?.Any() == true)
+                        if (!string.IsNullOrEmpty(baseQueryRequest.Filter))
                         {
-                            queryRequest.Filters = queryRequest.Filters ?? new List<Shared.Models.QueryModels.FilterDescriptor>();
-                            queryRequest.Filters.AddRange(baseQueryRequest.Filters);
+                            queryRequest.Filter = baseQueryRequest.Filter;
                         }
                     }
                     
