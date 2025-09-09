@@ -555,13 +555,15 @@ Shared.Models/Entities/SystemEntities/
 ### 1. Lista (SystemPermissionList)
 ```razor
 <PageWithCommandBar BackPath="/admin" ShowNew="true" OnNew="NavigateToNew">
+    <!-- ✅ EJEMPLO ACTUALIZADO - ApiEndpoint para reglas de negocio personalizadas -->
     <EntityTable T="SystemPermissions"
-                 Service="permissionService"
-                 BaseQuery="viewManager.GetDefaultQuery()"
-                 ViewConfigurations="viewManager.GetViewConfigurations()"
-                 OnEdit="HandleEdit"
-                 OnDelete="HandleDelete"
-                 ExportFileName="SystemPermissions" />
+                 ApiEndpoint="/api/admin/systempermission/view-filtered"  <!-- Endpoint personalizado -->
+                 ApiService="@SystemPermissionService"                    <!-- Requerido para operaciones -->
+                 BaseQuery="@currentView.QueryBuilder"                    <!-- Se combina con endpoint -->
+                 ColumnConfigs="@currentView.ColumnConfigs"
+                 OnEdit="@HandleEdit"
+                 OnDelete="@HandleDelete"
+                 ExcelFileName="SystemPermissions" />
 </PageWithCommandBar>
 ```
 
@@ -626,10 +628,45 @@ public class SystemPermissionViewManager : IViewManager<SystemPermissions>
             {
                 DisplayName = "Vista Completa",
                 QueryBuilder = GetDefaultQuery(),
-                ColumnConfigs = new List<ColumnConfig>
+                ColumnConfigs = new List<ColumnConfig<SystemPermissions>>
                 {
-                    new() { PropertyName = "Nombre", Title = "Nombre", Width = "200px", Sortable = true, Filterable = true },
-                    new() { PropertyName = "Descripcion", Title = "Descripción", Width = "300px", Sortable = true, Filterable = true }
+                    new ColumnConfig<SystemPermissions>
+                    {
+                        Property = "ActionKey", 
+                        Title = "Action Key", 
+                        Width = "250px", 
+                        Sortable = true, 
+                        Filterable = true,
+                        Order = 1
+                    },
+                    new ColumnConfig<SystemPermissions>
+                    {
+                        Property = "GrupoNombre", 
+                        Title = "Grupo", 
+                        Width = "150px", 
+                        Sortable = true, 
+                        Filterable = true,
+                        Order = 2
+                    },
+                    new ColumnConfig<SystemPermissions>
+                    {
+                        Property = "Descripcion", 
+                        Title = "Descripción", 
+                        Width = "300px", 
+                        Sortable = false, 
+                        Filterable = true,
+                        Order = 3
+                    },
+                    new ColumnConfig<SystemPermissions>
+                    {
+                        Property = "Organization.Nombre",
+                        Title = "Organización",
+                        Width = "200px",
+                        Sortable = true,
+                        Filterable = true,
+                        Order = 4,
+                        FormatExpression = p => p.Organization?.Nombre ?? "Global"  // ✅ Usar FormatExpression
+                    }
                 }
             }
         };
@@ -643,9 +680,35 @@ public class SystemPermissionViewManager : IViewManager<SystemPermissions>
 [Route("api/admin/systempermission")]
 public class SystemPermissionController : BaseQueryController<SystemPermissions>
 {
-    public SystemPermissionController(SystemPermissionService service) : base(service) { }
+    private readonly SystemPermissionService _systempermissionService;
+
+    public SystemPermissionController(SystemPermissionService service, ILogger<SystemPermissionController> logger, IServiceProvider serviceProvider) 
+        : base(service, logger, serviceProvider)
+    {
+        _systempermissionService = service;
+    }
     
-    // Endpoints personalizados adicionales si se necesitan
+    /// <summary>
+    /// ✅ EJEMPLO: Endpoint personalizado con reglas de negocio (Global + Mi Organización)
+    /// </summary>
+    [HttpPost("view-filtered")]
+    public async Task<IActionResult> GetFilteredPermissions([FromBody] QueryRequest queryRequest)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            // ⚠️ CRÍTICO: Retornar PagedResult<T> para compatibilidad con EntityTable
+            var result = await _systempermissionService.GetFilteredPermissionsPagedAsync(queryRequest, user);
+            return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<SystemPermissions>>.SuccessResponse(result));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener permisos filtrados");
+            return StatusCode(500, ApiResponse<Shared.Models.QueryModels.PagedResult<SystemPermissions>>.ErrorResponse("Error interno del servidor"));
+        }
+    }
 }
 ```
 
@@ -950,61 +1013,289 @@ protected readonly string _baseUrl;  // ✅ Usar este, NO _endpoint
 // todas las funciones de filtrado, ordenamiento y paginación de EntityTable
 ```
 
-### **Patrón de ApiEndpoint Personalizado:**
+### **Patrón ApiEndpoint Personalizado - REGLAS DE NEGOCIO + FUNCIONALIDAD COMPLETA:**
 
-#### **Cuándo usar ApiEndpoint:**
+**📋 Cuándo usar ApiEndpoint personalizado:**
+- Necesitas aplicar reglas de negocio específicas (ej: Global + Mi Organización)
+- Quieres mantener TODA la funcionalidad de EntityTable (filtros, ordenamiento, paginación, exportación)
+- Necesitas lógica personalizada pero compatible con el sistema estándar
+
+**⚠️ CRÍTICO: El backend DEBE retornar `PagedResult<T>` (no `PagedResponse<T>`) para compatibilidad con EntityTable.**
+
+#### **Frontend - EntityTable con ApiEndpoint:**
 ```razor
-<!-- ✅ Usar ApiEndpoint cuando necesitas lógica personalizada pero mantienes funcionalidad completa -->
-<EntityTable T="MyEntity"
-             ApiEndpoint="/api/custom/my-filtered-endpoint"
-             ApiService="@MyEntityService"  <!-- Requerido para otras operaciones -->
-             BaseQuery="@currentView.QueryBuilder"  <!-- Se combina con endpoint -->
-             ExcelFileName="CustomExport" />
-
-<!-- ✅ Ejemplo real del sistema -->
+<!-- ✅ CORRECTO - ApiEndpoint + ApiService para funcionalidad completa -->
 <EntityTable T="SystemPermissions"
-             ApiEndpoint="@viewManager.ApiEndpoint"  <!-- Endpoint dinámico del ViewManager -->
-             ApiService="@SystemPermissionService"
-             BaseQuery="@currentView.QueryBuilder"
-             ExcelFileName="SystemPermissions_MiOrganizacion" />
+             ApiEndpoint="/api/admin/systempermission/view-filtered"  <!-- Endpoint personalizado -->
+             ApiService="@SystemPermissionService"                    <!-- Requerido para otras operaciones -->
+             BaseQuery="@currentView.QueryBuilder"                    <!-- Se combina con endpoint -->
+             ExcelFileName="SystemPermissions" />
 ```
 
-#### **Implementación Backend para ApiEndpoint:**
+#### **Backend - Controller (Solo Validación + Delegación):**
 ```csharp
-// ✅ CORRECTO - Controller SIN lógica de negocio, solo validación y delegación
-[HttpPost("custom-filtered-view")]
-public async Task<IActionResult> GetCustomFilteredView([FromBody] QueryRequest queryRequest)
+[HttpPost("view-filtered")]
+public async Task<IActionResult> GetFilteredPermissions([FromBody] QueryRequest queryRequest)
 {
-    // "*" para endpoints sin restricciones, "view" para permisos específicos
-    var (user, hasPermission, errorResult) = await ValidatePermissionAsync("*");
+    var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
     if (errorResult != null) return errorResult;
 
     try
     {
-        // SOLO pasar QueryRequest y SessionDataDto - NO lógica de negocio aquí
-        var result = await _service.GetCustomFilteredPagedAsync(queryRequest, user);
-        return Ok(ApiResponse<PagedResponse<MyEntity>>.SuccessResponse(result));
+        // ⚠️ CRÍTICO: Retornar PagedResult<T> para compatibilidad con EntityTable
+        var result = await _service.GetFilteredPermissionsPagedAsync(queryRequest, user);
+        return Ok(ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.SuccessResponse(result));
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Error in custom endpoint");
-        return StatusCode(500, ApiResponse<PagedResponse<MyEntity>>.ErrorResponse("Error interno"));
+        _logger.LogError(ex, "Error en endpoint personalizado");
+        return StatusCode(500, ApiResponse<Shared.Models.QueryModels.PagedResult<T>>.ErrorResponse("Error interno"));
     }
 }
 ```
 
-#### **Implementación Service Backend:**
+#### **Backend - Service (Toda la Lógica de Negocio):**
 ```csharp
-// ✅ CORRECTO - TODA la lógica de negocio en el service para reutilización
-public async Task<PagedResponse<MyEntity>> GetCustomFilteredPagedAsync(QueryRequest queryRequest, SessionDataDto sessionData)
+/// <summary>
+/// Método personalizado que aplica reglas de negocio específicas
+/// DEBE retornar PagedResult<T> para compatibilidad con EntityTable
+/// </summary>
+public async Task<Shared.Models.QueryModels.PagedResult<T>> GetFilteredPermissionsPagedAsync(QueryRequest queryRequest, SessionDataDto sessionData)
 {
-    // TODA la lógica de filtros de negocio aquí - puede reutilizarse
-    var baseQuery = _dbSet.Where(x => x.OrganizationId == sessionData.OrganizationId || x.OrganizationId == null)
-                          .Where(x => x.Active)  // Otros filtros de negocio
-                          .Include(x => x.RelatedEntity);
+    // REGLAS DE NEGOCIO PERSONALIZADAS
+    var baseQuery = _dbSet.Where(p => p.OrganizationId == null || p.OrganizationId == sessionData.OrganizationId)
+                          .Where(p => p.Active)
+                          .Include(p => p.Organization);
+
+    // Aplicar filtro adicional desde EntityTable (filtros de columna)
+    IQueryable<T> filteredQuery = baseQuery;
+    if (!string.IsNullOrEmpty(queryRequest.Filter))
+    {
+        try 
+        {
+            // System.Linq.Dynamic.Core procesa filtros automáticamente
+            filteredQuery = filteredQuery.Where(queryRequest.Filter);
+        }
+        catch (Exception filterEx)
+        {
+            // Fallback manual para filtros específicos
+            _logger.LogWarning(filterEx, "Filtro dinámico falló, aplicando fallback manual");
+            // ... lógica de fallback
+        }
+    }
+
+    // Aplicar ordenamiento
+    if (!string.IsNullOrEmpty(queryRequest.OrderBy))
+    {
+        // Parsing de "Campo desc" o "Campo asc"
+        var orderParts = queryRequest.OrderBy.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var fieldName = orderParts[0];
+        var isDescending = orderParts.Length > 1 && orderParts[1].ToLower() == "desc";
+        
+        filteredQuery = isDescending 
+            ? filteredQuery.OrderByDescending(p => EF.Property<object>(p, fieldName))
+            : filteredQuery.OrderBy(p => EF.Property<object>(p, fieldName));
+    }
+
+    // Contar total antes de paginación
+    var totalCount = await filteredQuery.CountAsync();
+
+    // Aplicar paginación
+    var skip = queryRequest.Skip ?? 0;
+    var take = queryRequest.Take ?? 20;
+    var data = await filteredQuery.Skip(skip).Take(take).ToListAsync();
+
+    // ⚠️ CRÍTICO: Retornar PagedResult<T> (no PagedResponse<T>)
+    return new Shared.Models.QueryModels.PagedResult<T>
+    {
+        Data = data,
+        TotalCount = totalCount,
+        Page = (skip / take) + 1,
+        PageSize = take
+    };
+}
+```
+
+#### **Patrón Común: Global + Mi Organización:**
+```csharp
+/// <summary>
+/// Patrón reutilizable para mostrar registros globales + mi organización
+/// </summary>
+protected IQueryable<T> ApplyGlobalPlusMyOrgFilter<T>(IQueryable<T> query, SessionDataDto sessionData) 
+    where T : class
+{
+    // Usar reflection para encontrar OrganizationId property
+    var organizationProperty = typeof(T).GetProperty("OrganizationId");
+    if (organizationProperty != null)
+    {
+        return query.Where(x => 
+            EF.Property<Guid?>(x, "OrganizationId") == null || 
+            EF.Property<Guid?>(x, "OrganizationId") == sessionData.OrganizationId);
+    }
+    return query;
+}
+```
+
+---
+
+## 🔧 **FILTROS DINÁMICOS Y SYSTEM.LINQ.DYNAMIC.CORE**
+
+### **ConvertRadzenFilterToString - Valores Directos (NO @0):**
+
+**⚠️ PROBLEMA CRÍTICO:** El patrón original usaba `@0` que NO funciona desde frontend.
+**✅ SOLUCIÓN:** Incluir valores directos en el filtro con escape de comillas.
+
+#### **Frontend - EntityTable.Filters.cs:**
+```csharp
+private string ConvertRadzenFilterToString(FilterDescriptor filter)
+{
+    if (filter == null || string.IsNullOrEmpty(filter.Property)) 
+        return string.Empty;
+
+    var property = filter.Property;
+    var value = filter.FilterValue?.ToString() ?? "";
+    var escapedValue = value.Replace("\"", "\\\""); // ⚠️ CRÍTICO: Escapar comillas
     
-    // QueryPagedAsync maneja filtros, ordenamiento, paginación automáticamente
-    return await QueryPagedAsync(queryRequest, sessionData, baseQuery);
+    return filter.FilterOperator switch
+    {
+        // ✅ CORRECTO - Valores directos con escape
+        FilterOperator.Contains => $"({property} != null && {property}.ToLower().Contains(\"{escapedValue.ToLower()}\"))",
+        FilterOperator.Equals => $"{property} == \"{escapedValue}\"",
+        FilterOperator.NotEquals => $"{property} != \"{escapedValue}\"",
+        FilterOperator.StartsWith => $"({property} != null && {property}.ToLower().StartsWith(\"{escapedValue.ToLower()}\"))",
+        FilterOperator.EndsWith => $"({property} != null && {property}.ToLower().EndsWith(\"{escapedValue.ToLower()}\"))",
+        
+        // Valores numéricos - usar valor directo sin comillas
+        FilterOperator.GreaterThan => IsNumericValue(value) ? $"{property} > {value}" : $"{property} > \"{escapedValue}\"",
+        FilterOperator.GreaterThanOrEquals => IsNumericValue(value) ? $"{property} >= {value}" : $"{property} >= \"{escapedValue}\"",
+        FilterOperator.LessThan => IsNumericValue(value) ? $"{property} < {value}" : $"{property} < \"{escapedValue}\"",
+        FilterOperator.LessThanOrEquals => IsNumericValue(value) ? $"{property} <= {value}" : $"{property} <= \"{escapedValue}\"",
+        
+        // Operadores sin valores
+        FilterOperator.IsNull => $"{property} == null",
+        FilterOperator.IsNotNull => $"{property} != null",
+        FilterOperator.IsEmpty => $"string.IsNullOrEmpty({property})",
+        FilterOperator.IsNotEmpty => $"!string.IsNullOrEmpty({property})",
+        _ => string.Empty
+    };
+}
+```
+
+### **EntityTable.DataLoading - Filtros para ApiEndpoint Personalizado:**
+
+**⚠️ PROBLEMA:** EntityTable NO enviaba filtros de columna cuando usaba ApiEndpoint personalizado.
+**✅ SOLUCIÓN:** Combinar BaseQuery + Filtros de Columna.
+
+#### **Frontend - EntityTable.DataLoading.cs:**
+```csharp
+// En la sección ApiEndpoint personalizado (línea ~41)
+if (!string.IsNullOrEmpty(ApiEndpoint))
+{
+    var API = ServiceProvider.GetRequiredService<Frontend.Services.API>();
+    
+    var queryRequest = new QueryRequest
+    {
+        Skip = args.Skip ?? 0,
+        Take = args.Top ?? PageSize,
+        OrderBy = args.OrderBy
+    };
+    
+    // ⚠️ CRÍTICO: Combinar TODOS los filtros
+    var allFilters = new List<string>();
+    
+    // BaseQuery filters
+    if (queryWithFilters != null)
+    {
+        var baseQueryRequest = queryWithFilters.ToQueryRequest();
+        if (!string.IsNullOrEmpty(baseQueryRequest.Filter))
+        {
+            allFilters.Add($"({baseQueryRequest.Filter})");
+        }
+    }
+    
+    // ✅ NUEVO: Column filters (args.Filters) - ESTO FALTABA
+    if (args.Filters != null && args.Filters.Any())
+    {
+        var columnFilters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
+        foreach (var filter in columnFilters)
+        {
+            allFilters.Add($"({filter})");
+        }
+    }
+    
+    // Combinar todos los filtros
+    if (allFilters.Any())
+    {
+        queryRequest.Filter = string.Join(" and ", allFilters);
+    }
+    
+    // ⚠️ CRÍTICO: Esperar PagedResponse<T> del endpoint personalizado
+    var response = await API.PostAsync<Shared.Models.Responses.PagedResponse<T>>(ApiEndpoint, queryRequest);
+}
+```
+
+### **Backend - Procesamiento de Filtros Dinámicos:**
+
+#### **System.Linq.Dynamic.Core Integration:**
+```csharp
+using System.Linq.Dynamic.Core; // ⚠️ CRÍTICO: Agregar este using
+
+// En el service method
+if (!string.IsNullOrEmpty(queryRequest.Filter))
+{
+    _logger.LogInformation("Aplicando filtro: {Filter}", queryRequest.Filter);
+    try 
+    {
+        // ✅ System.Linq.Dynamic.Core procesa filtros automáticamente
+        filteredQuery = filteredQuery.Where(queryRequest.Filter);
+    }
+    catch (Exception filterEx)
+    {
+        _logger.LogWarning(filterEx, "No se pudo aplicar filtro dinámico: {Filter}", queryRequest.Filter);
+        
+        // ✅ Fallback manual para filtros específicos
+        if (queryRequest.Filter.Contains("ActionKey"))
+        {
+            var searchTerm = ExtractSearchTermFromFilter(queryRequest.Filter);
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                filteredQuery = filteredQuery.Where(p => 
+                    p.ActionKey != null && p.ActionKey.ToLower().Contains(searchTerm.ToLower()));
+            }
+        }
+    }
+}
+```
+
+#### **Helper Method para Extraer Valores:**
+```csharp
+/// <summary>
+/// Método helper para extraer término de búsqueda de filtros como "(Active == true) and (ActionKey.Contains("test"))"
+/// </summary>
+private string? ExtractSearchTermFromFilter(string filter)
+{
+    try
+    {
+        // Buscar patrón .Contains("valor")
+        var containsMatch = System.Text.RegularExpressions.Regex.Match(filter, @"\.Contains\(""([^""]+)""\)");
+        if (containsMatch.Success)
+        {
+            return containsMatch.Groups[1].Value;
+        }
+
+        // Buscar patrón == "valor"
+        var equalsMatch = System.Text.RegularExpressions.Regex.Match(filter, @"==\s*""([^""]+)""");
+        if (equalsMatch.Success)
+        {
+            return equalsMatch.Groups[1].Value;
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Error extrayendo término de búsqueda del filtro: {Filter}", filter);
+    }
+
+    return null;
 }
 ```
 
@@ -1201,10 +1492,22 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
 **Frontend Components:**
 - [ ] ¿Estoy usando `ApiService` (no `Service`) en EntityTable?
 - [ ] ¿Estoy usando `ExcelFileName` (no `ExportFileName`) para nombres de archivos Excel?
-- [ ] ¿Si uso `ApiEndpoint`, mi backend devuelve `PagedResponse<T>` con la misma estructura que query estándar?
 - [ ] ¿Para formatear texto uso `FormatExpression` en lugar de `Template` cuando es posible?
 - [ ] ¿Si uso Template en ColumnConfig, estoy usando RenderFragment con builder pattern?
 - [ ] ¿Estoy inyectando servicios con nombres correctos?
+
+**ApiEndpoint Personalizado:**
+- [ ] ¿Mi backend retorna `PagedResult<T>` (NO `PagedResponse<T>`) para compatibilidad con EntityTable?
+- [ ] ¿EntityTable tiene tanto `ApiEndpoint` como `ApiService` configurados?
+- [ ] ¿Mi controller solo valida permisos y delega al service (sin lógica de negocio)?
+- [ ] ¿ConvertRadzenFilterToString incluye valores directos (no @0)?
+- [ ] ¿EntityTable.DataLoading combina BaseQuery + filtros de columna para ApiEndpoint?
+
+**Filtros Dinámicos:**
+- [ ] ¿Agregué `using System.Linq.Dynamic.Core;` en el service backend?
+- [ ] ¿Mi service tiene try-catch para filtros dinámicos con fallback manual?
+- [ ] ¿ConvertRadzenFilterToString escapa comillas correctamente?
+- [ ] ¿Los valores numéricos no llevan comillas en los filtros?
 
 ---
 
@@ -1241,7 +1544,22 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
    - ✅ Solución: Usar `builder.OpenElement()`, `builder.AddAttribute()`, `builder.AddContent()`, `builder.CloseElement()`
    - ✅ Verificar: El Template debe ser `Func<T, RenderFragment>` no string HTML
 
-5. **EntityTable no carga datos**
+5. **ApiEndpoint Personalizado - Errores de Tipo de Retorno**
+   - ❌ Error: EntityTable no procesa datos del endpoint personalizado
+   - ✅ Solución: Backend debe retornar `PagedResult<T>` (no `PagedResponse<T>`)
+   - ✅ Verificar: El controller debe usar `ApiResponse<PagedResult<T>>.SuccessResponse(result)`
+
+6. **Filtros de Columna No Funcionan con ApiEndpoint**
+   - ❌ Error: Solo se envía `(Active == true)` pero no filtros de columna  
+   - ✅ Solución: EntityTable.DataLoading debe combinar BaseQuery + args.Filters
+   - ✅ Verificar: `ConvertRadzenFilterToString` debe usar valores directos (no @0)
+
+7. **System.Linq.Dynamic.Core - Filtros Fallan**
+   - ❌ Error: `Translation of 'EF.Property<object>...Contains("valor")' failed`
+   - ✅ Solución: Agregar `using System.Linq.Dynamic.Core;` y try-catch con fallback
+   - ✅ Verificar: Instalar paquete NuGet `System.Linq.Dynamic.Core`
+
+8. **EntityTable no carga datos**
    - Verificar que el Service esté inyectado correctamente
    - Revisar que BaseQuery no tenga filtros inválidos
    - Comprobar permisos del usuario para la entidad
