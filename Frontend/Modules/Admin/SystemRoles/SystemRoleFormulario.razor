@@ -37,20 +37,54 @@
                                         
                                         <RadzenStack Gap="1rem">
                                             <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-                                                <RadzenFormField Text="Nombre" Style="width: 100%">
+                                                <RadzenFormField Text="Nombre del Rol" Style="width: 100%">
                                                     <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
                                                                    Value="@entity.Nombre"
-                                                                   Placeholder="Ingrese nombre" />
+                                                                   Placeholder="Ej: Administrador, Usuario, Supervisor..." />
                                                 </RadzenFormField>
                                             </ValidatedInput>
+                                            
+                                            <ValidatedInput FieldName="TypeRole" Value="@entity.TypeRole">
+                                                <RadzenFormField Text="Tipo de Rol" Style="width: 100%">
+                                                    <RadzenDropDown @bind-Value="@entity.TypeRole"
+                                                                    Data="@GetRoleTypes()"
+                                                                    Style="width: 100%"
+                                                                    Placeholder="Seleccionar tipo de rol">
+                                                        <Template Context="item">
+                                                            <div class="d-flex align-items-center">
+                                                                <span class="badge @(item == "Admin" ? "badge-danger" : "badge-primary") me-2">
+                                                                    @item
+                                                                </span>
+                                                                <span>
+                                                                    @(item == "Admin" ? "Administrador del sistema" : "Acceso estándar")
+                                                                </span>
+                                                            </div>
+                                                        </Template>
+                                                    </RadzenDropDown>
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                            
                                             <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
                                                 <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
                                                     <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
                                                                     Value="@entity.Descripcion"
-                                                                    Placeholder="Ingrese descripción (opcional)" 
+                                                                    Placeholder="Describe el propósito y alcance de este rol..." 
                                                                     Rows="3" />
                                                 </RadzenFormField>
                                             </ValidatedInput>
+                                            
+                                            @if (entity.TypeRole == "Admin")
+                                            {
+                                                <RadzenAlert AlertStyle="AlertStyle.Warning" Icon="warning" Size="AlertSize.Small">
+                                                    <strong>¡Atención!</strong> Los roles de tipo Admin tienen acceso completo al sistema. Asigna solo a usuarios de confianza.
+                                                </RadzenAlert>
+                                            }
+                                            else if (entity.TypeRole == "Access")
+                                            {
+                                                <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info" Size="AlertSize.Small">
+                                                    <strong>Rol de Acceso:</strong> Este tipo de rol permite configurar permisos específicos según las necesidades del usuario.
+                                                </RadzenAlert>
+                                            }
                                             
                                         </RadzenStack>
                                         
@@ -62,8 +96,206 @@
                     </RadzenRow>
                 </div>
             </CrmTab>
+
+            @if (isEditMode && entity.TypeRole == "Access")
+            {
+                <CrmTab Id="tab2" Title="Permisos" Icon="security" IconColor="#28a745">
+                    <div class="scrollable-content">
+                        <RadzenRow JustifyContent="JustifyContent.Center">
+                            <RadzenColumn SizeLG="8" SizeMD="10" SizeSM="12">
+                                
+                                <EssentialsCard Title="Gestión de Permisos" 
+                                               Icon="security" 
+                                               IconColor="#28a745">
+                                    <ChildContent>
+                                        @if (availablePermissions == null)
+                                        {
+                                            <div class="text-center p-4">
+                                                <RadzenProgressBarCircular ShowValue="true" ProgressBarStyle="ProgressBarStyle.Primary" Value="100" />
+                                                <p class="mt-2 text-muted">Cargando permisos disponibles...</p>
+                                            </div>
+                                        }
+                                        else if (!availablePermissions.Any())
+                                        {
+                                            <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
+                                                No hay permisos disponibles para asignar a este rol.
+                                            </RadzenAlert>
+                                        }
+                                        else
+                                        {
+                                            <RadzenStack Gap="1rem">
+                                                <!-- Filtro de permisos -->
+                                                <RadzenFormField Text="Buscar permisos" Style="width: 100%">
+                                                    <RadzenTextBox @bind-Value="@permissionFilter" 
+                                                                   Placeholder="Filtrar por nombre de permiso..."
+                                                                   @oninput="@FilterPermissions"
+                                                                   Style="width: 100%" />
+                                                </RadzenFormField>
+
+                                                <!-- Lista de permisos -->
+                                                <div class="permissions-container">
+                                                    @if (filteredPermissions?.Any() == true)
+                                                    {
+                                                        @foreach (var permission in filteredPermissions)
+                                                        {
+                                                            var isAssigned = IsPermissionAssigned(permission.Id);
+                                                            <div class="permission-item @(isAssigned ? "assigned" : "")">
+                                                                <RadzenCheckBox @bind-Value="@isAssigned"
+                                                                               Change="@((bool value) => TogglePermission(permission.Id, value))"
+                                                                               Name="@($"perm_{permission.Id}")" />
+                                                                <div class="permission-info">
+                                                                    <div class="permission-name">@permission.ActionKey</div>
+                                                                    @if (!string.IsNullOrEmpty(permission.Descripcion))
+                                                                    {
+                                                                        <div class="permission-description">@permission.Descripcion</div>
+                                                                    }
+                                                                </div>
+                                                                <div class="permission-badge">
+                                                                    <span class="badge @(permission.Organization != null ? "badge-primary" : "badge-success")">
+                                                                        @(permission.Organization?.Nombre ?? "Global")
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="text-center text-muted p-4">
+                                                            No se encontraron permisos que coincidan con el filtro.
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                                <!-- Resumen -->
+                                                <RadzenAlert AlertStyle="AlertStyle.Success" Icon="check_circle" Size="AlertSize.Small">
+                                                    <strong>Permisos asignados:</strong> @assignedPermissions.Count de @availablePermissions.Count disponibles
+                                                </RadzenAlert>
+
+                                                <!-- Botón para guardar permisos -->
+                                                <div class="text-center">
+                                                    <RadzenButton Text="Guardar Permisos" 
+                                                                  Icon="save" 
+                                                                  ButtonStyle="ButtonStyle.Success"
+                                                                  Click="@SavePermissions" 
+                                                                  IsBusy="@isLoadingPermissions"
+                                                                  Size="ButtonSize.Medium" />
+                                                </div>
+                                            </RadzenStack>
+                                        }
+                                    </ChildContent>
+                                </EssentialsCard>
+                                
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </div>
+                </CrmTab>
+            }
             
         </CrmTabs>
     </div>
 
 </PageWithCommandBar>
+
+<style>
+    .permissions-container {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        background-color: #f8f9fa;
+    }
+
+    .permission-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+
+    .permission-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateY(-1px);
+    }
+
+    .permission-item.assigned {
+        border-left: 4px solid #28a745;
+        background-color: #f8fff9;
+    }
+
+    .permission-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .permission-name {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.95rem;
+    }
+
+    .permission-description {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+        line-height: 1.3;
+    }
+
+    .permission-badge {
+        flex-shrink: 0;
+    }
+
+    .badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 12px;
+    }
+
+    .badge-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .badge-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .badge-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    /* Mejoras para checkboxes */
+    .rz-chkbox {
+        flex-shrink: 0;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .permission-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .permission-info {
+            width: 100%;
+        }
+        
+        .permission-badge {
+            align-self: flex-end;
+        }
+    }
+</style>

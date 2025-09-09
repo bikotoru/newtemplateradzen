@@ -265,7 +265,7 @@ namespace Frontend.Services
 
         public virtual QueryBuilder<T> Query()
         {
-            return _queryService.For<T>();
+            return _queryService.For<T>(_baseUrl);
         }
 
         public virtual QueryBuilder<T> QueryAsync()
@@ -445,7 +445,7 @@ namespace Frontend.Services
             List<string>? stringSearchFields = null)
         {
             var query = baseQuery ?? Query();
-
+            query._baseUrl = _baseUrl;
             if (args.Filters != null && args.Filters.Any())
             {
                 foreach (var filter in args.Filters)

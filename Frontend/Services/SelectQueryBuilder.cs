@@ -8,6 +8,7 @@ namespace Frontend.Services
     {
         private readonly API _api;
         private readonly string _entityName;
+        private readonly string? _baseUrl;
         private readonly List<Expression<Func<T, bool>>> _filters;
         private readonly LambdaExpression? _orderByExpression;
         private readonly bool _orderByDescending;
@@ -23,6 +24,7 @@ namespace Frontend.Services
         internal SelectQueryBuilder(
             API api,
             string entityName,
+            string? baseUrl,
             List<Expression<Func<T, bool>>> filters,
             LambdaExpression? orderByExpression,
             bool orderByDescending,
@@ -35,6 +37,7 @@ namespace Frontend.Services
         {
             _api = api;
             _entityName = entityName;
+            _baseUrl = baseUrl?.TrimEnd('/');
             _filters = filters;
             _orderByExpression = orderByExpression;
             _orderByDescending = orderByDescending;
@@ -55,7 +58,7 @@ namespace Frontend.Services
 
         public SelectQueryBuilder<T, TResult> OrderBy<TProperty>(Expression<Func<T, TProperty>> property, bool descending = false)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, property, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, property, 
                 descending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
         }
 
@@ -64,7 +67,7 @@ namespace Frontend.Services
         /// </summary>
         public SelectQueryBuilder<T, TResult> Search(string searchTerm)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
                 _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, searchTerm, _searchFields);
         }
 
@@ -74,7 +77,7 @@ namespace Frontend.Services
         public SelectQueryBuilder<T, TResult> InFields(params Expression<Func<T, object>>[] searchFields)
         {
             var newSearchFields = new List<Expression<Func<T, object>>>(searchFields);
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
                 _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, newSearchFields);
         }
 
@@ -116,7 +119,9 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<List<TResult>>($"/api/{_entityName}/select", request);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/select" : $"/api/{_entityName}/select";
+            var response = await _api.PostAsync<List<TResult>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Select query failed: {response.Message}");
@@ -144,7 +149,9 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/{_entityName}/select-paged", request);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/select-paged" : $"/api/{_entityName}/select-paged";
+            var response = await _api.PostAsync<PagedResult<TResult>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged select query failed: {response.Message}");
@@ -307,7 +314,9 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _api.PostAsync<List<TResult>>($"/api/{_entityName}/select", searchRequest);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-select" : $"/api/{_entityName}/search-select";
+            var response = await _api.PostAsync<List<TResult>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search select failed: {response.Message}");
@@ -320,7 +329,9 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest();
 
-            var response = await _api.PostAsync<PagedResult<TResult>>($"/api/{_entityName}/select-paged", searchRequest);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-select-paged" : $"/api/{_entityName}/search-select-paged";
+            var response = await _api.PostAsync<PagedResult<TResult>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search select failed: {response.Message}");

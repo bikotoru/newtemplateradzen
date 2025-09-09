@@ -181,6 +181,38 @@ public partial class EntityTable<T> : ComponentBase, IDisposable where T : class
                 apiService = ServiceProvider.GetService<BaseApiService<T>>();
             }
         }
+
+        // ⚠️ VALIDACIÓN CRÍTICA: EntityTable DEBE tener un ApiService
+        if (apiService == null && string.IsNullOrEmpty(ApiEndpoint))
+        {
+            var entityName = typeof(T).Name;
+            var expectedServiceName = $"{entityName}Service";
+            
+            throw new InvalidOperationException($@"
+❌ ERROR DE CONFIGURACIÓN CRÍTICO: EntityTable<{entityName}> no puede funcionar sin ApiService
+
+🔧 SOLUCIONES POSIBLES:
+
+1. ✅ OPCIÓN RECOMENDADA - Agregar parámetro ApiService:
+   <EntityTable T=""{entityName}""
+                ApiService=""@{expectedServiceName}""
+                ... />
+
+2. ✅ ALTERNATIVA - Usar ApiEndpoint personalizado:
+   <EntityTable T=""{entityName}""
+                ApiEndpoint=""/api/custom-endpoint""
+                ... />
+
+3. ✅ VERIFICAR - Que {expectedServiceName} esté inyectado en el componente:
+   [Inject] private {expectedServiceName} {expectedServiceName} {{ get; set; }} = null!;
+
+📋 COMPONENTE ACTUAL: {GetType().DeclaringType?.Name ?? "Unknown"}
+🎯 ENTIDAD: {entityName}
+🔍 SERVICIO ESPERADO: {expectedServiceName}
+
+💡 Esto es intencional para detectar configuraciones incorrectas inmediatamente.
+");
+        }
     }
 
     protected override async Task OnParametersSetAsync()

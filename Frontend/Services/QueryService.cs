@@ -17,12 +17,18 @@ namespace Frontend.Services
         {
             return new QueryBuilder<T>(_api, typeof(T).Name);
         }
+        
+        public QueryBuilder<T> For<T>(string baseUrl) where T : class
+        {
+            return new QueryBuilder<T>(_api, typeof(T).Name, baseUrl);
+        }
     }
 
     public class QueryBuilder<T> where T : class
     {
         protected readonly API _api;
         protected readonly string _entityName;
+        public string? _baseUrl;
         protected readonly List<Expression<Func<T, bool>>> _filters = new();
         protected LambdaExpression? _orderByExpression;
         protected bool _orderByDescending = false;
@@ -38,6 +44,14 @@ namespace Frontend.Services
         {
             _api = api;
             _entityName = entityName;
+            _baseUrl = null;
+        }
+        
+        public QueryBuilder(API api, string entityName, string baseUrl)
+        {
+            _api = api;
+            _entityName = entityName;
+            _baseUrl = baseUrl?.TrimEnd('/');
         }
 
         public QueryBuilder<T> Where(Expression<Func<T, bool>> predicate)
@@ -55,7 +69,7 @@ namespace Frontend.Services
 
         public SelectQueryBuilder<T, TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _filters, _orderByExpression, 
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
                 _orderByDescending, selector, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
         }
 
@@ -199,7 +213,9 @@ namespace Frontend.Services
                 Take = _take
             };
 
-            var response = await _api.PostAsync<List<T>>($"/api/{_entityName}/query", request);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/query" : $"/api/{_entityName}/query";
+            var response = await _api.PostAsync<List<T>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Query failed: {response.Message}");
@@ -253,7 +269,9 @@ namespace Frontend.Services
             // Usar endpoint de Query paginado normal
             var request = ToQueryRequest(autoInclude);
 
-            var response = await _api.PostAsync<PagedResult<T>>($"/api/{_entityName}/paged", request);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible, sino fallback al patrón antiguo
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/paged" : $"/api/{_entityName}/paged";
+            var response = await _api.PostAsync<PagedResult<T>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged query failed: {response.Message}");
@@ -389,7 +407,9 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _api.PostAsync<List<T>>($"/api/{_entityName}/search", searchRequest);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search" : $"/api/{_entityName}/search";
+            var response = await _api.PostAsync<List<T>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search failed: {response.Message}");
@@ -402,7 +422,9 @@ namespace Frontend.Services
         {
             var searchRequest = BuildSearchRequest(autoInclude);
 
-            var response = await _api.PostAsync<PagedResult<T>>($"/api/{_entityName}/search-paged", searchRequest);
+            // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
+            var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-paged" : $"/api/{_entityName}/search-paged";
+            var response = await _api.PostAsync<PagedResult<T>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search failed: {response.Message}");

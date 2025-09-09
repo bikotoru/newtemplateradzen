@@ -11,20 +11,43 @@
         <FormValidator Entity="entity" Rules="@GetValidationRules()">
             <RadzenStack Gap="1rem">
                 <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-    <RadzenFormField Text="Nombre">
-        <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
-                       Value="@entity.Nombre"
-                       Placeholder="Ingrese nombre" />
-    </RadzenFormField>
-</ValidatedInput>
+                    <RadzenFormField Text="Nombre del Rol">
+                        <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                                       Value="@entity.Nombre"
+                                       Placeholder="Ej: Usuario Básico, Supervisor..." />
+                    </RadzenFormField>
+                </ValidatedInput>
+                
+                <ValidatedInput FieldName="TypeRole" Value="@entity.TypeRole">
+                    <RadzenFormField Text="Tipo de Rol">
+                        <RadzenDropDown @bind-Value="@entity.TypeRole"
+                                        Data="@GetRoleTypes()"
+                                        Style="width: 100%"
+                                        Placeholder="Seleccionar tipo">
+                            <Template Context="item">
+                                <span class="badge @(item == "Admin" ? "badge-danger" : "badge-primary")">
+                                    @item
+                                </span>
+                            </Template>
+                        </RadzenDropDown>
+                    </RadzenFormField>
+                </ValidatedInput>
+                
                 <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
-    <RadzenFormField Text="Descripción">
-        <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
-                        Value="@entity.Descripcion"
-                        Placeholder="Ingrese descripción (opcional)" 
-                        Rows="3" />
-    </RadzenFormField>
-</ValidatedInput>
+                    <RadzenFormField Text="Descripción (Opcional)">
+                        <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
+                                        Value="@entity.Descripcion"
+                                        Placeholder="Breve descripción del rol..." 
+                                        Rows="2" />
+                    </RadzenFormField>
+                </ValidatedInput>
+                
+                @if (entity.TypeRole == "Admin")
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Warning" Size="AlertSize.ExtraSmall" Icon="warning">
+                        ⚠️ Rol administrativo con acceso completo
+                    </RadzenAlert>
+                }
                 
             </RadzenStack>
         </FormValidator>

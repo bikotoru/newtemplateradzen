@@ -20,7 +20,8 @@ public partial class SystemRoleFast : ComponentBase
     { 
         Active = true,
         FechaCreacion = DateTime.Now,
-        FechaModificacion = DateTime.Now
+        FechaModificacion = DateTime.Now,
+        TypeRole = "Access" // Valor por defecto
     };
     private bool isLoading = false;
     
@@ -32,9 +33,16 @@ public partial class SystemRoleFast : ComponentBase
             .Field("Nombre", field => field
                 .Required("El nombre es obligatorio")
                 .Length(3, 100, "El nombre debe tener entre 3 y 100 caracteres"))
+            .Field("TypeRole", field => field
+                .Required("El tipo de rol es obligatorio"))
             .Field("Descripcion", field => field
                 .MaxLength(500, "La descripción no puede exceder 500 caracteres"))
             .Build();
+    }
+
+    private string[] GetRoleTypes()
+    {
+        return new string[] { "Access", "Admin" };
     }
     
     private async Task SaveEntity()
@@ -63,6 +71,19 @@ public partial class SystemRoleFast : ComponentBase
                     Severity = NotificationSeverity.Warning,
                     Summary = "Validación",
                     Detail = "El nombre debe tener entre 3 y 100 caracteres",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            // Validación TypeRole
+            if (string.IsNullOrWhiteSpace(entity.TypeRole))
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Validación",
+                    Detail = "El tipo de rol es obligatorio",
                     Duration = 4000
                 });
                 return;
@@ -103,7 +124,8 @@ public partial class SystemRoleFast : ComponentBase
                 { 
                     Active = true,
                     FechaCreacion = DateTime.Now,
-                    FechaModificacion = DateTime.Now
+                    FechaModificacion = DateTime.Now,
+                    TypeRole = "Access" // Valor por defecto
                 };
             }
             else

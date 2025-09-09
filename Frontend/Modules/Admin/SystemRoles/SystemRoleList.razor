@@ -13,6 +13,7 @@
 
     <RadzenCard>
         <EntityTable T="Shared.Models.Entities.SystemEntities.SystemRoles"
+                     ApiService="@SystemRoleService"
                      @ref="entityTable"
                      @key="@GetGridKey()"
                      ShowSearchBar="true"

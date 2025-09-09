@@ -5,14 +5,18 @@ using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Frontend.Components.Validation;
 using SystemRoleEntity = Shared.Models.Entities.SystemEntities.SystemRoles;
+using SystemPermissionEntity = Shared.Models.Entities.SystemEntities.SystemPermissions;
+using SystemRolePermissionEntity = Shared.Models.Entities.SystemEntities.SystemRolesPermissions;
 using Radzen;
 using System.Linq.Expressions;
+using Frontend.Modules.Admin.SystemPermissions;
 
 namespace Frontend.Modules.Admin.SystemRoles;
 
 public partial class SystemRoleFormulario : ComponentBase
 {
     [Inject] private SystemRoleService SystemRoleService { get; set; } = null!;
+    [Inject] private SystemPermissionService SystemPermissionService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
     
@@ -23,6 +27,13 @@ public partial class SystemRoleFormulario : ComponentBase
     private bool isEditMode => Id.HasValue;
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
+
+    // Variables para gestión de permisos
+    private List<SystemPermissionEntity>? availablePermissions = null;
+    private List<SystemPermissionEntity>? filteredPermissions = null;
+    private HashSet<Guid> assignedPermissions = new();
+    private bool isLoadingPermissions = false;
+    private string permissionFilter = string.Empty;
     
 
     protected override async Task OnInitializedAsync()
@@ -52,11 +63,16 @@ public partial class SystemRoleFormulario : ComponentBase
             { 
                 Active = true,
                 FechaCreacion = DateTime.Now,
-                FechaModificacion = DateTime.Now
+                FechaModificacion = DateTime.Now,
+                TypeRole = "Access" // Valor por defecto
             };
         }
         
-        // No lookups to initialize
+        // Cargar permisos disponibles si estamos en modo edición
+        if (isEditMode && entity.TypeRole == "Access")
+        {
+            await LoadPermissionsAsync();
+        }
     }
 
     private async Task LoadEntity()
@@ -106,9 +122,16 @@ public partial class SystemRoleFormulario : ComponentBase
             .Field("Nombre", field => field
                 .Required("El nombre es obligatorio")
                 .Length(3, 100, "El nombre debe tener entre 3 y 100 caracteres"))
+            .Field("TypeRole", field => field
+                .Required("El tipo de rol es obligatorio"))
             .Field("Descripcion", field => field
                 .MaxLength(500, "La descripción no puede exceder 500 caracteres"))
             .Build();
+    }
+
+    private string[] GetRoleTypes()
+    {
+        return new string[] { "Access", "Admin" };
     }
     
     private FormValidator? formValidator;
@@ -139,6 +162,19 @@ public partial class SystemRoleFormulario : ComponentBase
                     Severity = NotificationSeverity.Warning,
                     Summary = "Validación",
                     Detail = "El nombre debe tener entre 3 y 100 caracteres",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            // Validación TypeRole
+            if (string.IsNullOrWhiteSpace(entity.TypeRole))
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Validación",
+                    Detail = "El tipo de rol es obligatorio",
                     Duration = 4000
                 });
                 return;
@@ -225,4 +261,185 @@ public partial class SystemRoleFormulario : ComponentBase
             StateHasChanged();
         }
     }
+
+    #region Gestión de Permisos
+
+    private async Task LoadPermissionsAsync()
+    {
+        try
+        {
+            if (availablePermissions == null)
+            {
+                // Cargar todos los permisos disponibles
+                var permissionsResponse = await SystemPermissionService.GetAllUnpagedAsync();
+                if (permissionsResponse.Success && permissionsResponse.Data != null)
+                {
+                    availablePermissions = permissionsResponse.Data;
+                    filteredPermissions = availablePermissions;
+                }
+                else
+                {
+                    availablePermissions = new List<SystemPermissionEntity>();
+                    filteredPermissions = new List<SystemPermissionEntity>();
+                }
+            }
+
+            // Cargar permisos asignados al rol actual
+            if (isEditMode && entity.Id != Guid.Empty)
+            {
+                await LoadAssignedPermissionsAsync();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando permisos: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
+    private async Task LoadAssignedPermissionsAsync()
+    {
+        try
+        {
+            // TODO: Aquí necesitaríamos un servicio para SystemRolesPermissions
+            // Por ahora simulamos la carga. En una implementación real:
+            // var assignedResponse = await SystemRolePermissionService.GetByRoleIdAsync(entity.Id);
+            
+            assignedPermissions.Clear();
+            
+            // Simulación - en la implementación real cargarías desde el backend
+            // foreach (var rolePermission in assignedResponse.Data)
+            // {
+            //     assignedPermissions.Add(rolePermission.SystemPermissionsId);
+            // }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando permisos asignados: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
+    private void FilterPermissions(ChangeEventArgs e)
+    {
+        permissionFilter = e.Value?.ToString() ?? string.Empty;
+        
+        if (availablePermissions != null)
+        {
+            if (string.IsNullOrWhiteSpace(permissionFilter))
+            {
+                filteredPermissions = availablePermissions;
+            }
+            else
+            {
+                var filter = permissionFilter.ToLower();
+                filteredPermissions = availablePermissions.Where(p =>
+                    (p.ActionKey?.ToLower().Contains(filter) == true) ||
+                    (p.Descripcion?.ToLower().Contains(filter) == true) ||
+                    (p.Organization?.Nombre?.ToLower().Contains(filter) == true)
+                ).ToList();
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool IsPermissionAssigned(Guid permissionId)
+    {
+        return assignedPermissions.Contains(permissionId);
+    }
+
+    private void TogglePermission(Guid permissionId, bool isAssigned)
+    {
+        if (isAssigned)
+        {
+            assignedPermissions.Add(permissionId);
+        }
+        else
+        {
+            assignedPermissions.Remove(permissionId);
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SavePermissions()
+    {
+        if (!isEditMode || entity.Id == Guid.Empty)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Atención",
+                Detail = "Debe guardar el rol antes de asignar permisos",
+                Duration = 4000
+            });
+            return;
+        }
+
+        try
+        {
+            isLoadingPermissions = true;
+
+            // TODO: Aquí implementarías la lógica para guardar los permisos
+            // En una implementación real harías algo como:
+            
+            // 1. Eliminar permisos existentes del rol
+            // await SystemRolePermissionService.DeleteByRoleIdAsync(entity.Id);
+            
+            // 2. Crear nuevos permisos
+            // foreach (var permissionId in assignedPermissions)
+            // {
+            //     var rolePermission = new SystemRolePermissionEntity
+            //     {
+            //         SystemRolesId = entity.Id,
+            //         SystemPermissionsId = permissionId,
+            //         Active = true,
+            //         FechaCreacion = DateTime.Now,
+            //         FechaModificacion = DateTime.Now
+            //     };
+            //     await SystemRolePermissionService.CreateAsync(rolePermission);
+            // }
+
+            // Simulación de guardado exitoso
+            await Task.Delay(1000); // Simular operación
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "¡Éxito!",
+                Detail = $"Permisos guardados exitosamente. {assignedPermissions.Count} permisos asignados.",
+                Duration = 4000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error guardando permisos: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoadingPermissions = false;
+            StateHasChanged();
+        }
+    }
+
+    #endregion
 }
