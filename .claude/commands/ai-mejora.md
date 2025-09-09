@@ -1001,6 +1001,62 @@ public async Task<PagedResponse<MyEntity>> GetCustomFilteredPagedAsync(QueryRequ
 }
 ```
 
+### **ColumnConfig Templates con RenderFragment:**
+
+#### **Template CORRECTO para ColumnConfig:**
+```csharp
+// ✅ CORRECTO - Template usa RenderFragment con builder pattern
+new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
+{
+    Property = "Organization.Nombre",
+    Title = "Organización",
+    Width = "180px",
+    Sortable = true,
+    Filterable = true,
+    TextAlign = TextAlign.Left,
+    Visible = true,
+    Order = 4,
+    Template = permission => builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class",
+            $"badge {(permission.Organization != null ? "badge-primary" : "badge-success")}");
+        builder.AddContent(2, permission.Organization?.Nombre ?? "Global");
+        builder.CloseElement();
+    }
+}
+```
+
+#### **Patrones de Template Comunes:**
+```csharp
+// ✅ Badge condicional
+Template = entity => builder =>
+{
+    builder.OpenElement(0, "span");
+    builder.AddAttribute(1, "class", $"badge {(entity.Active ? "badge-success" : "badge-danger")}");
+    builder.AddContent(2, entity.Active ? "Activo" : "Inactivo");
+    builder.CloseElement();
+}
+
+// ✅ Link con navegación
+Template = entity => builder =>
+{
+    builder.OpenElement(0, "a");
+    builder.AddAttribute(1, "href", $"/detalle/{entity.Id}");
+    builder.AddAttribute(2, "class", "link-primary");
+    builder.AddContent(3, entity.Nombre);
+    builder.CloseElement();
+}
+
+// ✅ Formato de fecha
+Template = entity => builder =>
+{
+    builder.OpenElement(0, "span");
+    builder.AddContent(1, entity.FechaCreacion?.ToString("dd/MM/yyyy HH:mm") ?? "N/A");
+    builder.CloseElement();
+}
+```
+
 ### **Patrones de Obtención de Usuario/Organización:**
 
 #### **En Controllers (Backend):**
@@ -1114,6 +1170,7 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
 - [ ] ¿Estoy usando `ApiService` (no `Service`) en EntityTable?
 - [ ] ¿Estoy usando `ExcelFileName` (no `ExportFileName`) para nombres de archivos Excel?
 - [ ] ¿Si uso `ApiEndpoint`, mi backend devuelve `PagedResponse<T>` con la misma estructura que query estándar?
+- [ ] ¿Si uso Template en ColumnConfig, estoy usando RenderFragment con builder pattern?
 - [ ] ¿Estoy inyectando servicios con nombres correctos?
 
 ---
@@ -1143,6 +1200,13 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
    - ❌ Error: `The name '_endpoint' does not exist in the current context`
    - ✅ Solución: Usar `_baseUrl` en lugar de `_endpoint` en BaseApiService
    - ✅ Verificar: `grep -n "_baseUrl\|_endpoint" Frontend/Services/BaseApiService.cs`
+
+5. **Errores de Template en ColumnConfig**
+   - ❌ Error: `Cannot convert lambda expression to type 'RenderFragment<T>'`
+   - ✅ Solución: Usar pattern `entity => builder =>` con RenderTreeBuilder
+   - ❌ Error: Intentar usar `@Html.Raw` o markup directo en Template
+   - ✅ Solución: Usar `builder.OpenElement()`, `builder.AddAttribute()`, `builder.AddContent()`, `builder.CloseElement()`
+   - ✅ Verificar: El Template debe ser `Func<T, RenderFragment>` no string HTML
 
 5. **EntityTable no carga datos**
    - Verificar que el Service esté inyectado correctamente
