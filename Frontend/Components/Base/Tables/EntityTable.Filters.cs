@@ -13,19 +13,20 @@ public partial class EntityTable<T>
 
         var property = filter.Property;
         var value = filter.FilterValue?.ToString() ?? "";
+        var escapedValue = value.Replace("\"", "\\\""); // Escapar comillas
         
         return filter.FilterOperator switch
         {
-            FilterOperator.Equals => $"{property} == @0",
-            FilterOperator.NotEquals => $"{property} != @0",
-            FilterOperator.Contains => $"({property} != null && {property}.ToLower().Contains(@0))",
-            FilterOperator.DoesNotContain => $"({property} == null || !{property}.ToLower().Contains(@0))",
-            FilterOperator.StartsWith => $"({property} != null && {property}.ToLower().StartsWith(@0))",
-            FilterOperator.EndsWith => $"({property} != null && {property}.ToLower().EndsWith(@0))",
-            FilterOperator.GreaterThan => IsNumericValue(value) ? $"{property} > {value}" : $"{property} > @0",
-            FilterOperator.GreaterThanOrEquals => IsNumericValue(value) ? $"{property} >= {value}" : $"{property} >= @0",
-            FilterOperator.LessThan => IsNumericValue(value) ? $"{property} < {value}" : $"{property} < @0",
-            FilterOperator.LessThanOrEquals => IsNumericValue(value) ? $"{property} <= {value}" : $"{property} <= @0",
+            FilterOperator.Equals => $"{property} == \"{escapedValue}\"",
+            FilterOperator.NotEquals => $"{property} != \"{escapedValue}\"",
+            FilterOperator.Contains => $"({property} != null && {property}.ToLower().Contains(\"{escapedValue.ToLower()}\"))",
+            FilterOperator.DoesNotContain => $"({property} == null || !{property}.ToLower().Contains(\"{escapedValue.ToLower()}\"))",
+            FilterOperator.StartsWith => $"({property} != null && {property}.ToLower().StartsWith(\"{escapedValue.ToLower()}\"))",
+            FilterOperator.EndsWith => $"({property} != null && {property}.ToLower().EndsWith(\"{escapedValue.ToLower()}\"))",
+            FilterOperator.GreaterThan => IsNumericValue(value) ? $"{property} > {value}" : $"{property} > \"{escapedValue}\"",
+            FilterOperator.GreaterThanOrEquals => IsNumericValue(value) ? $"{property} >= {value}" : $"{property} >= \"{escapedValue}\"",
+            FilterOperator.LessThan => IsNumericValue(value) ? $"{property} < {value}" : $"{property} < \"{escapedValue}\"",
+            FilterOperator.LessThanOrEquals => IsNumericValue(value) ? $"{property} <= {value}" : $"{property} <= \"{escapedValue}\"",
             FilterOperator.IsNull => $"{property} == null",
             FilterOperator.IsNotNull => $"{property} != null",
             FilterOperator.IsEmpty => $"string.IsNullOrEmpty({property})",

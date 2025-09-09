@@ -38,7 +38,22 @@ namespace Frontend.Modules.Admin.SystemPermissions
 
         // ✅ Solo métodos custom permitidos aquí
 
-        
+        /// <summary>
+        /// Validar ActionKey único en tiempo real
+        /// </summary>
+        public async Task<ApiResponse<bool>> ValidateActionKeyAsync(string actionKey, Guid? excludeId = null)
+        {
+            var request = new { ActionKey = actionKey, ExcludeId = excludeId };
+            return await _api.PostAsync<bool>($"{_baseUrl}/validate-action-key", request);
+        }
+
+        /// <summary>
+        /// Obtener grupos existentes para el dropdown
+        /// </summary>
+        public async Task<ApiResponse<List<string>>> GetGruposExistentesAsync()
+        {
+            return await _api.GetAsync<List<string>>($"{_baseUrl}/grupos-existentes");
+        }
     }
 
 }

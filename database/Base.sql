@@ -101,6 +101,9 @@ BEGIN
         CreadorId UNIQUEIDENTIFIER NULL,
         ModificadorId UNIQUEIDENTIFIER NULL,
         Active BIT DEFAULT 1 NOT NULL,
+        ActionKey NVARCHAR(255) NULL,
+        GroupKey NVARCHAR(255) NULL,
+        GrupoNombre NVARCHAR(255) NULL,
         
         -- Foreign Keys
         CONSTRAINT FK_system_permissions_OrganizationId 
@@ -116,6 +119,9 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_system_permissions_OrganizationId ON system_permissions(OrganizationId);
     CREATE NONCLUSTERED INDEX IX_system_permissions_Active ON system_permissions(Active);
     CREATE NONCLUSTERED INDEX IX_system_permissions_FechaCreacion ON system_permissions(FechaCreacion);
+    CREATE NONCLUSTERED INDEX IX_system_permissions_ActionKey ON system_permissions(ActionKey);
+    CREATE NONCLUSTERED INDEX IX_system_permissions_GroupKey ON system_permissions(GroupKey);
+    CREATE NONCLUSTERED INDEX IX_system_permissions_GrupoNombre ON system_permissions(GrupoNombre);
     
     PRINT '✅ Tabla system_permissions creada con índices y FK';
 END
@@ -408,6 +414,63 @@ BEGIN
     PRINT '📄 Permiso SuperAdmin ya existe';
 END
 
+-- 2.1. Insertar Permisos del Sistema - SYSTEMPERMISSION
+PRINT '📊 Insertando permisos SYSTEMPERMISSION...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMPERMISSION.CREATE')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
+    VALUES 
+    ('SYSTEMPERMISSION.CREATE', 'Crear permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.CREATE', 'SYSTEMPERMISSION', 'SystemPermission'),
+    ('SYSTEMPERMISSION.DELETE', 'Eliminar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.DELETE', 'SYSTEMPERMISSION', 'SystemPermission'),
+    ('SYSTEMPERMISSION.RESTORE', 'Restaurar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.RESTORE', 'SYSTEMPERMISSION', 'SystemPermission'),
+    ('SYSTEMPERMISSION.UPDATE', 'Actualizar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.UPDATE', 'SYSTEMPERMISSION', 'SystemPermission'),
+    ('SYSTEMPERMISSION.VIEW', 'Ver permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.VIEW', 'SYSTEMPERMISSION', 'SystemPermission'),
+    ('SYSTEMPERMISSION.VIEWMENU', 'Ver menú de permisos', @OrgId, 1, 'SYSTEMPERMISSION.VIEWMENU', 'SYSTEMPERMISSION', 'SystemPermission');
+    PRINT '✅ Permisos SYSTEMPERMISSION creados (6)';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permisos SYSTEMPERMISSION ya existen';
+END
+
+-- 2.2. Insertar Permisos del Sistema - SYSTEMUSER
+PRINT '📊 Insertando permisos SYSTEMUSER...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMUSER.CREATE')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
+    VALUES 
+    ('SYSTEMUSER.CREATE', 'Crear usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.CREATE', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.DELETE', 'Eliminar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.DELETE', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.RESTORE', 'Restaurar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.RESTORE', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.UPDATE', 'Actualizar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.UPDATE', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.VIEW', 'Ver usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.VIEW', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.VIEWMENU', 'Ver menú de usuarios', @OrgId, 1, 'SYSTEMUSER.VIEWMENU', 'SYSTEMUSER', 'SystemUser');
+    PRINT '✅ Permisos SYSTEMUSER creados (6)';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permisos SYSTEMUSER ya existen';
+END
+
+-- 2.3. Insertar Permisos del Sistema - SYSTEMROLE
+PRINT '📊 Insertando permisos SYSTEMROLE...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.CREATE')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
+    VALUES 
+    ('SYSTEMROLE.CREATE', 'Crear roles del sistema', @OrgId, 1, 'SYSTEMROLE.CREATE', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.DELETE', 'Eliminar roles del sistema', @OrgId, 1, 'SYSTEMROLE.DELETE', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.RESTORE', 'Restaurar roles del sistema', @OrgId, 1, 'SYSTEMROLE.RESTORE', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.UPDATE', 'Actualizar roles del sistema', @OrgId, 1, 'SYSTEMROLE.UPDATE', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.VIEW', 'Ver roles del sistema', @OrgId, 1, 'SYSTEMROLE.VIEW', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', @OrgId, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole');
+    PRINT '✅ Permisos SYSTEMROLE creados (6)';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permisos SYSTEMROLE ya existen';
+END
+
 -- 3. Insertar Rol Admin
 IF NOT EXISTS (SELECT 1 FROM system_roles WHERE Nombre = 'Administrador')
 BEGIN
@@ -471,7 +534,12 @@ PRINT '🏢 Organización: Organización Base';
 PRINT '👤 Usuario Admin: admin@admin.cl';
 PRINT '🔑 Password: U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5';
 PRINT '👥 Rol: Administrador';
-PRINT '🔐 Permiso: SuperAdmin';
+PRINT '🔐 Permisos: SuperAdmin + Sistema (18 permisos CRUD)';
+PRINT '';
+PRINT '📋 Permisos del sistema incluidos:';
+PRINT '   🔐 SYSTEMPERMISSION.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
+PRINT '   👤 SYSTEMUSER.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
+PRINT '   🛡️  SYSTEMROLE.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
 PRINT '';
 PRINT '📊 Tablas creadas:';
 PRINT '   • system_organization';

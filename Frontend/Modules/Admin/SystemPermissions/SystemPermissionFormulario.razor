@@ -37,18 +37,57 @@
                                         
                                         <RadzenStack Gap="1rem">
                                             <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-                                                <RadzenFormField Text="Nombre" Style="width: 100%">
-                                                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
-                                                                   Value="@entity.Nombre"
-                                                                   Placeholder="Ingrese nombre" />
+                                                <RadzenFormField Text="Action Key / Nombre" Style="width: 100%">
+                                                    <RadzenTextBox @bind-Value="entity.Nombre" 
+                                                                   @oninput="OnActionKeyChanged"
+                                                                   Placeholder="Ej: CATEGORIA.CREAR, USUARIO.EDITAR" />
+                                                    @if (actionKeyValidationState == ActionKeyValidationState.Checking)
+                                                    {
+                                                        <div class="validation-checking">
+                                                            <RadzenIcon Icon="sync" Style="animation: spin 1s linear infinite; color: #0078d4;" />
+                                                            <span style="margin-left: 8px; color: #0078d4;">Verificando disponibilidad...</span>
+                                                        </div>
+                                                    }
+                                                    else if (actionKeyValidationState == ActionKeyValidationState.Invalid)
+                                                    {
+                                                        <div class="validation-error">
+                                                            <RadzenIcon Icon="error" Style="color: #d13438;" />
+                                                            <span style="margin-left: 8px; color: #d13438;">Este Action Key ya existe</span>
+                                                        </div>
+                                                    }
+                                                    else if (actionKeyValidationState == ActionKeyValidationState.Valid && !string.IsNullOrWhiteSpace(entity.Nombre))
+                                                    {
+                                                        <div class="validation-success">
+                                                            <RadzenIcon Icon="check_circle" Style="color: #107c10;" />
+                                                            <span style="margin-left: 8px; color: #107c10;">Action Key disponible</span>
+                                                        </div>
+                                                    }
                                                 </RadzenFormField>
                                             </ValidatedInput>
+
+                                            <ValidatedInput FieldName="GrupoNombre" Value="@entity.GrupoNombre">
+                                                <RadzenFormField Text="Grupo (Opcional)" Style="width: 100%">
+                                                    <RadzenDropDown @bind-Value="entity.GrupoNombre"
+                                                                    Data="@gruposExistentes"
+                                                                    AllowClear="true"
+                                                                    AllowFiltering="true"
+                                                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                                    Placeholder="Selecciona grupo existente o escribe nuevo"
+                                                                    Style="width: 100%"
+                                                                    LoadingText="Cargando grupos...">
+                                                        <Template Context="grupo">
+                                                            @grupo
+                                                        </Template>
+                                                    </RadzenDropDown>
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                            
                                             <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
                                                 <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
-                                                    <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
-                                                                    Value="@entity.Descripcion"
-                                                                    Placeholder="Ingrese descripción (opcional)" 
-                                                                    Rows="3" />
+                                                    <RadzenTextArea @bind-Value="entity.Descripcion"
+                                                                    Placeholder="Descripción del permiso (opcional)" 
+                                                                    Rows="3"
+                                                                    Style="width: 100%" />
                                                 </RadzenFormField>
                                             </ValidatedInput>
                                             

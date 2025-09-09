@@ -50,14 +50,33 @@ public partial class EntityTable<T>
                         OrderBy = args.OrderBy
                     };
                     
+                    // Agregar filtros de columna si existen
+                    var allFilters = new List<string>();
+                    
                     // Si tiene BaseQuery, incluir sus filtros como string
                     if (queryWithFilters != null)
                     {
                         var baseQueryRequest = queryWithFilters.ToQueryRequest();
                         if (!string.IsNullOrEmpty(baseQueryRequest.Filter))
                         {
-                            queryRequest.Filter = baseQueryRequest.Filter;
+                            allFilters.Add($"({baseQueryRequest.Filter})");
                         }
+                    }
+                    
+                    // Agregar filtros de columna (args.Filters)
+                    if (args.Filters != null && args.Filters.Any())
+                    {
+                        var columnFilters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
+                        foreach (var filter in columnFilters)
+                        {
+                            allFilters.Add($"({filter})");
+                        }
+                    }
+                    
+                    // Combinar todos los filtros
+                    if (allFilters.Any())
+                    {
+                        queryRequest.Filter = string.Join(" and ", allFilters);
                     }
                     
                     var response = await API.PostAsync<Shared.Models.Responses.PagedResponse<T>>(ApiEndpoint, queryRequest);

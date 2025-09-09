@@ -1,0 +1,61 @@
+.validation-checking,
+.validation-error,
+.validation-success {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.validation-checking {
+    background-color: #f3f9ff;
+    border: 1px solid #b3d6ff;
+}
+
+.validation-error {
+    background-color: #fff0f0;
+    border: 1px solid #ffb3b3;
+}
+
+.validation-success {
+    background-color: #f0fff0;
+    border: 1px solid #b3ffb3;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Mejorar estilo del dropdown de grupos */
+.rz-dropdown-panel {
+    max-height: 300px;
+}
+
+/* Responsive para validaciones en móvil */
+@media (max-width: 768px) {
+    .validation-checking,
+    .validation-error,
+    .validation-success {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+}

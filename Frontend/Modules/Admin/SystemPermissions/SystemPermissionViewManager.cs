@@ -27,14 +27,25 @@ namespace Frontend.Modules.Admin.SystemPermissions
                 {
                     new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
                     {
-                        Property = "Nombre",
-                        Title = "Nombre",
-                        Width = "200px",
+                        Property = "ActionKey",
+                        Title = "Action Key",
+                        Width = "250px",
                         Sortable = true,
                         Filterable = true,
                         TextAlign = TextAlign.Left,
                         Visible = true,
                         Order = 1
+                    },
+                    new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
+                    {
+                        Property = "GrupoNombre",
+                        Title = "Grupo",
+                        Width = "150px",
+                        Sortable = true,
+                        Filterable = true,
+                        TextAlign = TextAlign.Left,
+                        Visible = true,
+                        Order = 2
                     },
                     new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
                     {
@@ -45,7 +56,19 @@ namespace Frontend.Modules.Admin.SystemPermissions
                         Filterable = true,
                         TextAlign = TextAlign.Left,
                         Visible = true,
-                        Order = 2
+                        Order = 3
+                    },
+                    new ColumnConfig<Shared.Models.Entities.SystemEntities.SystemPermissions>
+                    {
+                        Property = "Organization.Nombre",
+                        Title = "Organización",
+                        Width = "200px",
+                        Sortable = true,
+                        Filterable = true,
+                        TextAlign = TextAlign.Left,
+                        Visible = true,
+                        Order = 4,
+                        FormatExpression = (p => p.Organization?.Nombre ?? "Global")
                     }
                 }
             });

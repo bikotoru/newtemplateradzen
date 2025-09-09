@@ -24,6 +24,13 @@ public partial class SystemPermissionFormulario : ComponentBase
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
     
+    // Validación ActionKey en tiempo real
+    private ActionKeyValidationState actionKeyValidationState = ActionKeyValidationState.None;
+    private System.Timers.Timer? debounceTimer;
+    
+    // Lookup GrupoNombre
+    private List<string> gruposExistentes = new();
+    
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,7 +63,8 @@ public partial class SystemPermissionFormulario : ComponentBase
             };
         }
         
-        // No lookups to initialize
+        // Cargar grupos existentes
+        await LoadGruposExistentes();
     }
 
     private async Task LoadEntity()
@@ -119,14 +127,14 @@ public partial class SystemPermissionFormulario : ComponentBase
         {
             isLoading = true;
 
-            // Validación Nombre
+            // Validación Nombre/ActionKey
             if (string.IsNullOrWhiteSpace(entity.Nombre))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Validación",
-                    Detail = "El nombre es obligatorio",
+                    Detail = "El Action Key es obligatorio",
                     Duration = 4000
                 });
                 return;
@@ -138,10 +146,27 @@ public partial class SystemPermissionFormulario : ComponentBase
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Validación",
-                    Detail = "El nombre debe tener entre 3 y 100 caracteres",
+                    Detail = "El Action Key debe tener entre 3 y 100 caracteres",
                     Duration = 4000
                 });
                 return;
+            }
+
+            // Verificar ActionKey único si cambió
+            if (actionKeyValidationState != ActionKeyValidationState.Valid && !isEditMode)
+            {
+                var isValid = await ValidateActionKeyUnique();
+                if (!isValid)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Validación",
+                        Detail = "Este Action Key ya existe. Por favor, utiliza uno diferente.",
+                        Duration = 4000
+                    });
+                    return;
+                }
             }
 
             // Validación Descripcion
@@ -156,6 +181,9 @@ public partial class SystemPermissionFormulario : ComponentBase
                 });
                 return;
             }
+
+            // Sincronizar ActionKey = Nombre antes de guardar
+            entity.ActionKey = entity.Nombre;
 
             if (isEditMode)
             {
@@ -225,4 +253,114 @@ public partial class SystemPermissionFormulario : ComponentBase
             StateHasChanged();
         }
     }
+
+    #region Validación ActionKey en tiempo real
+    
+    private async Task OnActionKeyChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        entity.Nombre = e.Value?.ToString() ?? "";
+        entity.ActionKey = entity.Nombre; // Sincronizar siempre
+        
+        // Cancelar timer anterior
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+        
+        if (string.IsNullOrWhiteSpace(entity.Nombre))
+        {
+            actionKeyValidationState = ActionKeyValidationState.None;
+            StateHasChanged();
+            return;
+        }
+        
+        if (entity.Nombre.Length < 3)
+        {
+            actionKeyValidationState = ActionKeyValidationState.None;
+            StateHasChanged();
+            return;
+        }
+        
+        // Estado de verificación
+        actionKeyValidationState = ActionKeyValidationState.Checking;
+        StateHasChanged();
+        
+        // Debounce de 800ms
+        debounceTimer = new System.Timers.Timer(800);
+        debounceTimer.Elapsed += async (sender, args) =>
+        {
+            debounceTimer.Stop();
+            await InvokeAsync(async () =>
+            {
+                await ValidateActionKeyUnique();
+                StateHasChanged();
+            });
+        };
+        debounceTimer.Start();
+    }
+    
+    private async Task<bool> ValidateActionKeyUnique()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(entity.Nombre))
+            {
+                actionKeyValidationState = ActionKeyValidationState.None;
+                return false;
+            }
+            
+            var response = await SystemPermissionService.ValidateActionKeyAsync(entity.Nombre, isEditMode ? entity.Id : null);
+            
+            if (response.Success)
+            {
+                actionKeyValidationState = response.Data ? ActionKeyValidationState.Valid : ActionKeyValidationState.Invalid;
+                return response.Data;
+            }
+            else
+            {
+                actionKeyValidationState = ActionKeyValidationState.None;
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            actionKeyValidationState = ActionKeyValidationState.None;
+            return false;
+        }
+    }
+    
+    #endregion
+    
+    #region Lookup GrupoNombre
+    
+    private async Task LoadGruposExistentes()
+    {
+        try
+        {
+            var response = await SystemPermissionService.GetGruposExistentesAsync();
+            if (response.Success && response.Data != null)
+            {
+                gruposExistentes = response.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't show notification for optional data
+            gruposExistentes = new List<string>();
+        }
+    }
+    
+    #endregion
+    
+    public void Dispose()
+    {
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+    }
+}
+
+public enum ActionKeyValidationState
+{
+    None,
+    Checking,
+    Valid,
+    Invalid
 }
