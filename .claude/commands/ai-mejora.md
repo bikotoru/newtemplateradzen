@@ -1009,6 +1009,10 @@ protected readonly string _baseUrl;  // ✅ Usar este, NO _endpoint
 // [Parameter] public BaseApiService<T>? Service { get; set; }     // ❌ Usar ApiService
 // [Parameter] public string ExportFileName { get; set; }          // ❌ Usar ExcelFileName
 
+// ⚠️ ERROR MUY COMÚN - SIEMPRE usar ApiService="@MiServicio" en EntityTable:
+// ❌ FALTA: <EntityTable T="SystemUsers" ... />                           // Sin ApiService
+// ✅ CORRECTO: <EntityTable T="SystemUsers" ApiService="@SystemUserService" ... />
+
 // 📝 NOTA: ApiEndpoint se usa cuando necesitas un endpoint personalizado que mantenga
 // todas las funciones de filtrado, ordenamiento y paginación de EntityTable
 ```
@@ -1514,6 +1518,14 @@ public async Task<PagedResponse<T>> BadMethodAsync(QueryRequest queryRequest, Gu
 ## 🔍 TROUBLESHOOTING
 
 ### Problemas Comunes
+
+0. **🚨 ERROR CRÍTICO MUY COMÚN: ApiService faltante en EntityTable**
+   - ❌ Error: EntityTable no carga datos, no se muestran filas
+   - ❌ Error: `Cannot invoke ApiService.GetAllPagedAsync because ApiService is null`
+   - ❌ Código problemático: `<EntityTable T="SystemUsers" BaseQuery="..." />` (SIN ApiService)
+   - ✅ Solución: **SIEMPRE** agregar `ApiService="@MiServicio"` en EntityTable
+   - ✅ Código correcto: `<EntityTable T="SystemUsers" ApiService="@SystemUserService" BaseQuery="..." />`
+   - ✅ Verificar: El servicio debe estar inyectado con `[Inject] private SystemUserService SystemUserService { get; set; } = null!;`
 
 1. **Errores de Compilación por Métodos Inexistentes**
    - ❌ Error: `'PermissionService' does not contain a definition for 'GetCurrentUserAsync'`

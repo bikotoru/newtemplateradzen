@@ -15,6 +15,7 @@
         <EntityTable T="Shared.Models.Entities.SystemEntities.SystemUsers"
                      @ref="entityTable"
                      @key="@GetGridKey()"
+                     ApiService="@SystemUserService"
                      ShowSearchBar="true"
                      ShowExcelExport="true"
                      ShowRefreshButton="true"
