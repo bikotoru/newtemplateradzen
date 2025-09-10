@@ -377,6 +377,35 @@ BEGIN
 END
 
 -- ========================================
+-- 🔑 TABLA: z_token
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='z_token' AND xtype='U')
+BEGIN
+    CREATE TABLE z_token (
+        id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        data VARCHAR(MAX) NULL,
+        organizationid UNIQUEIDENTIFIER NULL,
+        refresh BIT NULL,
+        logout BIT NULL,
+        
+        -- Foreign Key
+        CONSTRAINT FK_z_token_OrganizationId 
+            FOREIGN KEY (organizationid) REFERENCES system_organization(Id)
+    );
+    
+    -- Índices para z_token
+    CREATE NONCLUSTERED INDEX IX_z_token_OrganizationId ON z_token(organizationid);
+    CREATE NONCLUSTERED INDEX IX_z_token_Refresh ON z_token(refresh);
+    CREATE NONCLUSTERED INDEX IX_z_token_Logout ON z_token(logout);
+    
+    PRINT '✅ Tabla z_token creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla z_token ya existe';
+END
+
+-- ========================================
 -- 📊 DATOS INICIALES
 -- ========================================
 
@@ -472,8 +501,9 @@ BEGIN
     ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', @OrgId, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole'),
     ('SYSTEMROLE.MANAGEPERMISSIONS', 'Gestionar permisos de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
     ('SYSTEMROLE.ADDPERMISSIONS', 'Agregar permisos a roles', @OrgId, 1, 'SYSTEMROLE.ADDPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.REMOVEPERMISSIONS', 'Remover permisos de roles', @OrgId, 1, 'SYSTEMROLE.REMOVEPERMISSIONS', 'SYSTEMROLE', 'SystemRole');
-    PRINT '✅ Permisos SYSTEMROLE creados (9)';
+    ('SYSTEMROLE.REMOVEPERMISSIONS', 'Remover permisos de roles', @OrgId, 1, 'SYSTEMROLE.REMOVEPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
+    PRINT '✅ Permisos SYSTEMROLE creados (10)';
 END
 ELSE
 BEGIN
@@ -543,12 +573,12 @@ PRINT '🏢 Organización: Organización Base';
 PRINT '👤 Usuario Admin: admin@admin.cl';
 PRINT '🔑 Password: U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5';
 PRINT '👥 Rol: Administrador';
-PRINT '🔐 Permisos: SuperAdmin + Sistema (27 permisos CRUD + Gestión)';
+PRINT '🔐 Permisos: SuperAdmin + Sistema (28 permisos CRUD + Gestión)';
 PRINT '';
 PRINT '📋 Permisos del sistema incluidos:';
 PRINT '   🔐 SYSTEMPERMISSION.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
 PRINT '   👤 SYSTEMUSER.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU, MANAGEROLES, ADDROLES, REMOVEROLES, MANAGEPERMISSIONS, ADDPERMISSIONS, REMOVEPERMISSIONS)';
-PRINT '   🛡️  SYSTEMROLE.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU, MANAGEPERMISSIONS, ADDPERMISSIONS, REMOVEPERMISSIONS)';
+PRINT '   🛡️  SYSTEMROLE.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU, MANAGEPERMISSIONS, ADDPERMISSIONS, REMOVEPERMISSIONS, MANAGEUSERS)';
 PRINT '';
 PRINT '📊 Tablas creadas:';
 PRINT '   • system_organization';
@@ -560,6 +590,7 @@ PRINT '   • system_users_permissions';
 PRINT '   • system_roles_permissions';
 PRINT '   • system_config';
 PRINT '   • system_config_values';
+PRINT '   • z_token';
 PRINT '';
 PRINT '🎯 Listo para usar con el generador de modelos Python!';
 PRINT '========================================';
