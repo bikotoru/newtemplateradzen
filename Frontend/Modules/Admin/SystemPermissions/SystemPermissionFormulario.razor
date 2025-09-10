@@ -4,6 +4,7 @@
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
+@using Frontend.Modules.Admin.SystemPermissions.Components
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.CREATE", "SYSTEMPERMISSION.UPDATE")]
 
@@ -111,6 +112,46 @@
                     </RadzenRow>
                 </div>
             </CrmTab>
+
+            @* Tab de Asignaciones solo en modo edición *@
+            @if (isEditMode && entity != null)
+            {
+                <CrmTab Id="tab2" Title="Asignaciones" Icon="people" IconColor="#0078d4">
+                    <div class="scrollable-content">
+                        <RadzenRow JustifyContent="JustifyContent.Center">
+                            <RadzenColumn SizeLG="10" SizeMD="12" SizeSM="12">
+                                
+                                <RadzenStack Gap="2rem">
+                                    
+                                    @* Gestión de Usuarios *@
+                                    <EssentialsCard Title="Usuarios con este Permiso" 
+                                                   Icon="people" 
+                                                   IconColor="#0078d4">
+                                        <ChildContent>
+                                            <PermissionUsersManager PermissionId="@entity.Id"
+                                                                   PermissionName="@entity.Nombre"
+                                                                   CanEdit="@(CanEdit && CanManageUserPermissions)" />
+                                        </ChildContent>
+                                    </EssentialsCard>
+
+                                    @* Gestión de Roles *@
+                                    <EssentialsCard Title="Roles con este Permiso" 
+                                                   Icon="group" 
+                                                   IconColor="#0078d4">
+                                        <ChildContent>
+                                            <PermissionRolesManager PermissionId="@entity.Id"
+                                                                   PermissionName="@entity.Nombre"
+                                                                   CanEdit="@(CanEdit && CanManageRolePermissions)" />
+                                        </ChildContent>
+                                    </EssentialsCard>
+
+                                </RadzenStack>
+                                
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </div>
+                </CrmTab>
+            }
             
         </CrmTabs>
     </div>

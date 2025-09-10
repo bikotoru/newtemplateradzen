@@ -7,6 +7,8 @@ using Shared.Models.QueryModels;
 using Shared.Models.Responses;
 using Shared.Models.Requests;
 using Shared.Models.DTOs.Auth;
+using Shared.Models.DTOs.UserPermissions;
+using Shared.Models.DTOs.RolePermissions;
 using System.Linq.Dynamic.Core;
 
 namespace Backend.Modules.Admin.SystemPermissions
@@ -235,6 +237,181 @@ namespace Backend.Modules.Admin.SystemPermissions
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Obtener usuarios que tienen un permiso específico (paginado)
+        /// </summary>
+        public async Task<Shared.Models.QueryModels.PagedResult<PermissionUserDto>> GetPermissionUsersPagedAsync(PermissionUserSearchRequest request, SessionDataDto sessionData)
+        {
+            _logger.LogInformation("Obteniendo usuarios con permiso {PermissionId} para Organization {OrganizationId}", 
+                request.PermissionId, sessionData.OrganizationId);
+
+            try
+            {
+                // Verificar que el permiso existe y es accesible
+                var permission = await _dbSet
+                    .Where(p => p.Id == request.PermissionId && 
+                               (p.OrganizationId == null || p.OrganizationId == sessionData.OrganizationId))
+                    .FirstOrDefaultAsync();
+
+                if (permission == null)
+                {
+                    throw new InvalidOperationException("Permiso no encontrado o sin acceso");
+                }
+
+                // Query base de usuarios en la organización
+                var usersQuery = _context.Set<Shared.Models.Entities.SystemEntities.SystemUsers>()
+                    .Where(u => u.OrganizationId == sessionData.OrganizationId && u.Active);
+
+                // Aplicar filtro de búsqueda si se especifica
+                if (!string.IsNullOrEmpty(request.SearchTerm))
+                {
+                    var searchTerm = request.SearchTerm.ToLower();
+                    usersQuery = usersQuery.Where(u => 
+                        u.Nombre.ToLower().Contains(searchTerm) ||
+                        (u.Email != null && u.Email.ToLower().Contains(searchTerm)));
+                }
+
+                // Obtener usuarios con información de permisos
+                var usersWithPermissions = await usersQuery
+                    .Select(u => new PermissionUserDto
+                    {
+                        UserId = u.Id,
+                        Nombre = u.Nombre,
+                        Email = u.Email,
+                        IsDirectlyAssigned = u.SystemUsersPermissionsSystemUsers
+                            .Any(up => up.SystemPermissionsId == request.PermissionId),
+                        IsInheritedFromRole = u.SystemUsersRolesSystemUsers
+                            .Any(ur => ur.SystemRoles.SystemRolesPermissions
+                                .Any(rp => rp.SystemPermissionsId == request.PermissionId)),
+                        InheritedFromRoles = u.SystemUsersRolesSystemUsers
+                            .Where(ur => ur.SystemRoles.SystemRolesPermissions
+                                .Any(rp => rp.SystemPermissionsId == request.PermissionId))
+                            .Select(ur => ur.SystemRoles.Nombre)
+                            .ToList()
+                    })
+                    .ToListAsync();
+
+                // Aplicar filtros adicionales
+                if (request.ShowOnlyWithPermission)
+                {
+                    usersWithPermissions = usersWithPermissions
+                        .Where(u => u.HasPermission)
+                        .ToList();
+                }
+
+                if (request.ShowOnlyDirectAssignments)
+                {
+                    usersWithPermissions = usersWithPermissions
+                        .Where(u => u.IsDirectlyAssigned)
+                        .ToList();
+                }
+
+                // Aplicar paginación
+                var totalCount = usersWithPermissions.Count;
+                var pagedUsers = usersWithPermissions
+                    .Skip((request.Page - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .ToList();
+
+                return new Shared.Models.QueryModels.PagedResult<PermissionUserDto>
+                {
+                    Data = pagedUsers,
+                    TotalCount = totalCount,
+                    Page = request.Page,
+                    PageSize = request.PageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios con permiso {PermissionId}", request.PermissionId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Obtener roles que tienen un permiso específico (paginado)
+        /// </summary>
+        public async Task<Shared.Models.QueryModels.PagedResult<PermissionRoleDto>> GetPermissionRolesPagedAsync(PermissionRoleSearchRequest request, SessionDataDto sessionData)
+        {
+            _logger.LogInformation("Obteniendo roles con permiso {PermissionId} para Organization {OrganizationId}", 
+                request.PermissionId, sessionData.OrganizationId);
+
+            try
+            {
+                // Verificar que el permiso existe y es accesible
+                var permission = await _dbSet
+                    .Where(p => p.Id == request.PermissionId && 
+                               (p.OrganizationId == null || p.OrganizationId == sessionData.OrganizationId))
+                    .FirstOrDefaultAsync();
+
+                if (permission == null)
+                {
+                    throw new InvalidOperationException("Permiso no encontrado o sin acceso");
+                }
+
+                // Query base de roles en la organización
+                var rolesQuery = _context.Set<Shared.Models.Entities.SystemEntities.SystemRoles>()
+                    .Where(r => r.OrganizationId == sessionData.OrganizationId);
+
+                // Aplicar filtro de activos si se especifica
+                if (request.ShowOnlyActive)
+                {
+                    rolesQuery = rolesQuery.Where(r => r.Active);
+                }
+
+                // Aplicar filtro de búsqueda si se especifica
+                if (!string.IsNullOrEmpty(request.SearchTerm))
+                {
+                    var searchTerm = request.SearchTerm.ToLower();
+                    rolesQuery = rolesQuery.Where(r => 
+                        r.Nombre.ToLower().Contains(searchTerm) ||
+                        (r.Descripcion != null && r.Descripcion.ToLower().Contains(searchTerm)));
+                }
+
+                // Obtener roles con información de permisos
+                var rolesWithPermissions = await rolesQuery
+                    .Select(r => new PermissionRoleDto
+                    {
+                        RoleId = r.Id,
+                        Nombre = r.Nombre,
+                        Descripcion = r.Descripcion,
+                        Active = r.Active,
+                        HasPermission = r.SystemRolesPermissions
+                            .Any(rp => rp.SystemPermissionsId == request.PermissionId),
+                        UsersCount = r.SystemUsersRoles.Count
+                    })
+                    .ToListAsync();
+
+                // Aplicar filtro de solo con permiso
+                if (request.ShowOnlyWithPermission)
+                {
+                    rolesWithPermissions = rolesWithPermissions
+                        .Where(r => r.HasPermission)
+                        .ToList();
+                }
+
+                // Aplicar paginación
+                var totalCount = rolesWithPermissions.Count;
+                var pagedRoles = rolesWithPermissions
+                    .Skip((request.Page - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .ToList();
+
+                return new Shared.Models.QueryModels.PagedResult<PermissionRoleDto>
+                {
+                    Data = pagedRoles,
+                    TotalCount = totalCount,
+                    Page = request.Page,
+                    PageSize = request.PageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles con permiso {PermissionId}", request.PermissionId);
+                throw;
+            }
         }
     }
 }

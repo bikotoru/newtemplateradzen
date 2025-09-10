@@ -31,6 +31,10 @@ public partial class SystemPermissionFormulario : AuthorizedPageBase
     private bool CanEdit => isEditMode ? AuthService.HasPermission("SYSTEMPERMISSION.UPDATE") : AuthService.HasPermission("SYSTEMPERMISSION.CREATE");
     private bool CanSave => CanEdit;
     
+    // Permisos para gestionar asignaciones
+    private bool CanManageUserPermissions => AuthService.HasPermission("SYSTEMUSER.MANAGEPERMISSIONS");
+    private bool CanManageRolePermissions => AuthService.HasPermission("SYSTEMROLE.MANAGEPERMISSIONS");
+    
     // Validación ActionKey en tiempo real
     private ActionKeyValidationState actionKeyValidationState = ActionKeyValidationState.None;
     private System.Timers.Timer? debounceTimer;

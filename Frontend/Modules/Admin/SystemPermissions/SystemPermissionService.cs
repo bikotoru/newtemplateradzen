@@ -4,6 +4,8 @@ using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.Builders;
 using Shared.Models.QueryModels;
+using Shared.Models.DTOs.UserPermissions;
+using Shared.Models.DTOs.RolePermissions;
 
 namespace Frontend.Modules.Admin.SystemPermissions
 {
@@ -53,6 +55,24 @@ namespace Frontend.Modules.Admin.SystemPermissions
         public async Task<ApiResponse<List<string>>> GetGruposExistentesAsync()
         {
             return await _api.GetAsync<List<string>>($"{_baseUrl}/grupos-existentes");
+        }
+
+        /// <summary>
+        /// Obtener usuarios que tienen un permiso específico (paginado)
+        /// </summary>
+        public async Task<PagedResult<PermissionUserDto>?> GetPermissionUsersPagedAsync(PermissionUserSearchRequest request)
+        {
+            var response = await _api.PostAsync<PagedResult<PermissionUserDto>>($"{_baseUrl}/permission-users-paged", request);
+            return response.Success ? response.Data : null;
+        }
+
+        /// <summary>
+        /// Obtener roles que tienen un permiso específico (paginado)
+        /// </summary>
+        public async Task<PagedResult<PermissionRoleDto>?> GetPermissionRolesPagedAsync(PermissionRoleSearchRequest request)
+        {
+            var response = await _api.PostAsync<PagedResult<PermissionRoleDto>>($"{_baseUrl}/permission-roles-paged", request);
+            return response.Success ? response.Data : null;
         }
     }
 

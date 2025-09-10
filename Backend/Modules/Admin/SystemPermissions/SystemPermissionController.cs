@@ -4,6 +4,8 @@ using Shared.Models.Entities;
 using Backend.Controllers;
 using Shared.Models.QueryModels;
 using Shared.Models.Responses;
+using Shared.Models.DTOs.UserPermissions;
+using Shared.Models.DTOs.RolePermissions;
 
 namespace Backend.Modules.Admin.SystemPermissions
 {
@@ -78,6 +80,48 @@ namespace Backend.Modules.Admin.SystemPermissions
             {
                 _logger.LogError(ex, "Error al obtener grupos existentes");
                 return StatusCode(500, ApiResponse<List<string>>.ErrorResponse("Error interno del servidor"));
+            }
+        }
+
+        /// <summary>
+        /// Obtener usuarios que tienen un permiso específico (paginado)
+        /// </summary>
+        [HttpPost("permission-users-paged")]
+        public async Task<IActionResult> GetPermissionUsersPagedAsync([FromBody] PermissionUserSearchRequest request)
+        {
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                var result = await _systempermissionService.GetPermissionUsersPagedAsync(request, user);
+                return Ok(ApiResponse<PagedResult<PermissionUserDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios con permiso {PermissionId}", request.PermissionId);
+                return StatusCode(500, ApiResponse<PagedResult<PermissionUserDto>>.ErrorResponse("Error interno del servidor"));
+            }
+        }
+
+        /// <summary>
+        /// Obtener roles que tienen un permiso específico (paginado)
+        /// </summary>
+        [HttpPost("permission-roles-paged")]
+        public async Task<IActionResult> GetPermissionRolesPagedAsync([FromBody] PermissionRoleSearchRequest request)
+        {
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                var result = await _systempermissionService.GetPermissionRolesPagedAsync(request, user);
+                return Ok(ApiResponse<PagedResult<PermissionRoleDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles con permiso {PermissionId}", request.PermissionId);
+                return StatusCode(500, ApiResponse<PagedResult<PermissionRoleDto>>.ErrorResponse("Error interno del servidor"));
             }
         }
     }
