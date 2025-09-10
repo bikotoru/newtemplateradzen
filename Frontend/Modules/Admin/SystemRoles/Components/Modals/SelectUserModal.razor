@@ -1,0 +1,118 @@
+@using Shared.Models.DTOs.RoleUsers
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   👤 SELECT USER MODAL
+   Modal para seleccionar usuario para asignar a rol
+   ======================================== *@
+
+<RadzenStack Gap="1rem">
+    
+    @* Header con información del rol *@
+    <RadzenCard Variant="Variant.Flat" class="rz-background-color-primary-lighter">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+            <RadzenIcon Icon="group_add" Style="color: var(--rz-primary); font-size: 1.5rem;" />
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight: 600; margin: 0;">
+                    Agregar Usuario al Rol
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-text-secondary-color); margin: 0;">
+                    Rol: <strong>@RoleName</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    @* Búsqueda *@
+    <RadzenFormField Text="Buscar usuarios" Variant="Variant.Outlined">
+        <Start>
+            <RadzenIcon Icon="search" />
+        </Start>
+        <ChildContent>
+            <RadzenTextBox @bind-Value="searchTerm" 
+                           Placeholder="Escriba para filtrar usuarios..." 
+                           @oninput="OnSearchChanged"
+                           Style="width: 100%;" />
+        </ChildContent>
+    </RadzenFormField>
+
+    @* Lista de usuarios disponibles *@
+    <RadzenStack Gap="0.5rem" Style="max-height: 300px; overflow-y: auto;">
+        @if (filteredUsers?.Any() == true)
+        {
+            @foreach (var user in filteredUsers)
+            {
+                <RadzenCard Variant="Variant.Outlined" 
+                           class="user-selectable" 
+                           Style="cursor: pointer; transition: all 0.2s ease;"
+                           @onclick="() => SelectUser(user)">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                        <RadzenIcon Icon="account_circle" Style="font-size: 2rem; color: var(--rz-primary);" />
+                        <RadzenStack Gap="0.25rem" Style="flex: 1;">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600; margin: 0;">
+                                @user.Nombre
+                            </RadzenText>
+                            @if (!string.IsNullOrEmpty(user.Email))
+                            {
+                                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-text-secondary-color); margin: 0;">
+                                    @user.Email
+                                </RadzenText>
+                            }
+                            <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-disabled-color); margin: 0;">
+                                ID: @user.UserId
+                            </RadzenText>
+                        </RadzenStack>
+                        <RadzenIcon Icon="add_circle" Style="color: var(--rz-success);" />
+                    </RadzenStack>
+                </RadzenCard>
+            }
+        }
+        else if (AvailableUsers?.Any() != true)
+        {
+            <RadzenCard Variant="Variant.Flat">
+                <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+                    <RadzenIcon Icon="person_off" Style="font-size: 3rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-text-secondary-color); text-align: center;">
+                        No hay usuarios disponibles para asignar a este rol
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <RadzenCard Variant="Variant.Flat">
+                <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+                    <RadzenIcon Icon="search_off" Style="font-size: 3rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-text-secondary-color); text-align: center;">
+                        No se encontraron usuarios que coincidan con la búsqueda
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+    </RadzenStack>
+
+    @* Footer con botones *@
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem" Style="margin-top: 1rem;">
+        <RadzenButton Text="Cancelar" 
+                     Icon="cancel"
+                     ButtonStyle="ButtonStyle.Danger" 
+                     Variant="Variant.Filled"
+                     Size="ButtonSize.Medium"
+                     Click="Cancel" />
+    </RadzenStack>
+
+</RadzenStack>
+
+<style>
+    .user-selectable:hover {
+        background-color: var(--rz-primary-lighter);
+        border-color: var(--rz-primary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+    
+    .user-selectable:active {
+        transform: translateY(0);
+    }
+</style>

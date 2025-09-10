@@ -4,6 +4,7 @@ using Backend.Utils.Data;
 using Backend.Utils.Services;
 using Shared.Models.Entities;
 using Shared.Models.DTOs.RolePermissions;
+using Shared.Models.DTOs.RoleUsers;
 using Shared.Models.DTOs.Auth;
 using Shared.Models.QueryModels;
 
@@ -11,9 +12,12 @@ namespace Backend.Modules.Admin.SystemRoles
 {
     public class SystemRoleService : BaseQueryService<Shared.Models.Entities.SystemEntities.SystemRoles>
     {
+        private readonly AppDbContext _appContext;
+        
         public SystemRoleService(AppDbContext context, ILogger<SystemRoleService> logger) 
             : base(context, logger)
         {
+            _appContext = context;
         }
 
         /// <summary>
@@ -178,7 +182,7 @@ namespace Backend.Modules.Admin.SystemRoles
                         newRolePermissions.Count, existingInactive.Count, request.RoleId);
                 }
 
-                await _context.SaveChangesAsync();
+                await _appContext.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 _logger.LogInformation("Permisos del rol {RoleId} actualizados exitosamente", request.RoleId);
@@ -267,6 +271,147 @@ namespace Backend.Modules.Admin.SystemRoles
             }
 
             return summary;
+        }
+
+        /// <summary>
+        /// Obtener usuarios de un rol con paginación y filtros
+        /// </summary>
+        public async Task<PagedResult<RoleUserDto>> GetRoleUsersPagedAsync(RoleUserSearchRequest request, SessionDataDto sessionData)
+        {
+            try
+            {
+                var query = _appContext.SystemUsers.AsQueryable();
+
+                // Filtrar por término de búsqueda si se proporciona
+                if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                {
+                    var searchTerm = request.SearchTerm.ToLower();
+                    query = query.Where(u => u.Nombre.ToLower().Contains(searchTerm) ||
+                                           (u.Email != null && u.Email.ToLower().Contains(searchTerm)));
+                }
+
+                // Si showOnlyAssigned es true, solo mostrar usuarios asignados al rol
+                if (request.ShowOnlyAssigned)
+                {
+                    query = query.Where(u => u.SystemUsersRolesSystemUsers.Any(ru => ru.SystemRolesId == request.RoleId));
+                }
+
+                // Obtener usuarios con información de asignación
+                var totalCount = await query.CountAsync();
+                
+                var users = await query
+                    .Skip((request.Page - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .Select(u => new RoleUserDto
+                    {
+                        UserId = u.Id,
+                        Nombre = u.Nombre,
+                        Email = u.Email ?? string.Empty,
+                        IsAssigned = u.SystemUsersRolesSystemUsers.Any(ru => ru.SystemRolesId == request.RoleId),
+                        FechaCreacion = u.FechaCreacion,
+                        Active = u.Active
+                    })
+                    .ToListAsync();
+
+                return new PagedResult<RoleUserDto>
+                {
+                    Data = users,
+                    TotalCount = totalCount,
+                    Page = request.Page,
+                    PageSize = request.PageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios del rol {RoleId}", request.RoleId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asignar usuario a rol
+        /// </summary>
+        public async Task AssignUserToRoleAsync(AssignUserToRoleRequest request, SessionDataDto sessionData)
+        {
+            try
+            {
+                // Verificar si el rol existe
+                var roleExists = await _appContext.SystemRoles
+                    .AnyAsync(r => r.Id == request.RoleId);
+                
+                if (!roleExists)
+                {
+                    throw new ArgumentException("El rol especificado no existe");
+                }
+
+                // Verificar si el usuario existe
+                var userExists = await _appContext.SystemUsers
+                    .AnyAsync(u => u.Id == request.UserId);
+                
+                if (!userExists)
+                {
+                    throw new ArgumentException("El usuario especificado no existe");
+                }
+
+                // Verificar si ya existe la asignación
+                var existingAssignment = await _appContext.SystemUsersRoles
+                    .AnyAsync(ru => ru.SystemRolesId == request.RoleId && ru.SystemUsersId == request.UserId);
+
+                if (existingAssignment)
+                {
+                    throw new InvalidOperationException("El usuario ya está asignado a este rol");
+                }
+
+                // Crear nueva asignación
+                var roleUser = new Shared.Models.Entities.SystemEntities.SystemUsersRoles
+                {
+                    SystemRolesId = request.RoleId,
+                    SystemUsersId = request.UserId,
+                    FechaCreacion = DateTime.UtcNow,
+                    CreadorId = sessionData.Id
+                };
+
+                _appContext.SystemUsersRoles.Add(roleUser);
+                await _appContext.SaveChangesAsync();
+
+                _logger.LogInformation("Usuario {UserId} asignado al rol {RoleId} por {CreatedBy}", 
+                    request.UserId, request.RoleId, sessionData.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar usuario {UserId} al rol {RoleId}", request.UserId, request.RoleId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Remover usuario de rol
+        /// </summary>
+        public async Task RemoveUserFromRoleAsync(RemoveUserFromRoleRequest request, SessionDataDto sessionData)
+        {
+            try
+            {
+                // Buscar la asignación existente
+                var roleUser = await _appContext.SystemUsersRoles
+                    .FirstOrDefaultAsync(ru => ru.SystemRolesId == request.RoleId && ru.SystemUsersId == request.UserId);
+
+                if (roleUser == null)
+                {
+                    throw new ArgumentException("El usuario no está asignado a este rol");
+                }
+
+                // Remover la asignación
+                _appContext.SystemUsersRoles.Remove(roleUser);
+                await _appContext.SaveChangesAsync();
+
+                _logger.LogInformation("Usuario {UserId} removido del rol {RoleId} por {RemovedBy}", 
+                    request.UserId, request.RoleId, sessionData.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al remover usuario {UserId} del rol {RoleId}", request.UserId, request.RoleId);
+                throw;
+            }
         }
     }
 }

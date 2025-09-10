@@ -3,6 +3,7 @@ using Backend.Utils.Services;
 using Shared.Models.Entities;
 using Backend.Controllers;
 using Shared.Models.DTOs.RolePermissions;
+using Shared.Models.DTOs.RoleUsers;
 using Shared.Models.Responses;
 
 namespace Backend.Modules.Admin.SystemRoles
@@ -110,6 +111,72 @@ namespace Backend.Modules.Admin.SystemRoles
             {
                 _logger.LogError(ex, "Error al generar resumen de cambios para rol {RoleId}", roleId);
                 return StatusCode(500, ApiResponse<RolePermissionChangesSummary>.ErrorResponse("Error interno del servidor"));
+            }
+        }
+
+        /// <summary>
+        /// Obtener usuarios de un rol con paginación y filtros
+        /// </summary>
+        [HttpPost("{roleId}/users/search")]
+        public async Task<IActionResult> GetRoleUsersPaged(Guid roleId, [FromBody] RoleUserSearchRequest request)
+        {
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("manageusers");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                request.RoleId = roleId; // Asegurar que el roleId del parámetro se use
+                var result = await _systemroleService.GetRoleUsersPagedAsync(request, user);
+                return Ok(ApiResponse<PagedResult<RoleUserDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios del rol {RoleId}", roleId);
+                return StatusCode(500, ApiResponse<PagedResult<RoleUserDto>>.ErrorResponse("Error interno del servidor"));
+            }
+        }
+
+        /// <summary>
+        /// Asignar usuario a rol
+        /// </summary>
+        [HttpPost("{roleId}/users/assign")]
+        public async Task<IActionResult> AssignUserToRole(Guid roleId, [FromBody] AssignUserToRoleRequest request)
+        {
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("manageusers");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                request.RoleId = roleId; // Asegurar que el roleId del parámetro se use
+                await _systemroleService.AssignUserToRoleAsync(request, user);
+                return Ok(ApiResponse<bool>.SuccessResponse(true, "Usuario asignado al rol exitosamente"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar usuario {UserId} al rol {RoleId}", request.UserId, roleId);
+                return StatusCode(500, ApiResponse<bool>.ErrorResponse($"Error al asignar usuario: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Remover usuario de rol
+        /// </summary>
+        [HttpPost("{roleId}/users/remove")]
+        public async Task<IActionResult> RemoveUserFromRole(Guid roleId, [FromBody] RemoveUserFromRoleRequest request)
+        {
+            var (user, hasPermission, errorResult) = await ValidatePermissionAsync("manageusers");
+            if (errorResult != null) return errorResult;
+
+            try
+            {
+                request.RoleId = roleId; // Asegurar que el roleId del parámetro se use
+                await _systemroleService.RemoveUserFromRoleAsync(request, user);
+                return Ok(ApiResponse<bool>.SuccessResponse(true, "Usuario removido del rol exitosamente"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al remover usuario {UserId} del rol {RoleId}", request.UserId, roleId);
+                return StatusCode(500, ApiResponse<bool>.ErrorResponse($"Error al remover usuario: {ex.Message}"));
             }
         }
     }

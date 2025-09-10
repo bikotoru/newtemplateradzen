@@ -5,6 +5,7 @@ using Shared.Models.Responses;
 using Shared.Models.Builders;
 using Shared.Models.QueryModels;
 using Shared.Models.DTOs.RolePermissions;
+using Shared.Models.DTOs.RoleUsers;
 
 namespace Frontend.Modules.Admin.SystemRoles
 {
@@ -106,6 +107,78 @@ namespace Frontend.Modules.Admin.SystemRoles
             {
                 _logger.LogError(ex, "Error al generar resumen de cambios para rol {RoleId}", roleId);
                 return ApiResponse<RolePermissionChangesSummary>.ErrorResponse($"Error al generar resumen de cambios: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Métodos de Gestión de Usuarios
+
+        /// <summary>
+        /// Obtener usuarios de un rol con paginación y búsqueda
+        /// </summary>
+        public async Task<PagedResult<RoleUserDto>> GetRoleUsersPagedAsync(RoleUserSearchRequest request)
+        {
+            try
+            {
+                var endpoint = $"{_baseUrl}/{request.RoleId}/users/search";
+                var response = await _api.PostAsync<PagedResult<RoleUserDto>>(endpoint, request);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return response.Data;
+                }
+                
+                throw new Exception(response.Message ?? "Error al obtener usuarios del rol");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios del rol {RoleId}", request.RoleId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asignar usuario a rol
+        /// </summary>
+        public async Task AssignUserToRoleAsync(AssignUserToRoleRequest request)
+        {
+            try
+            {
+                var endpoint = $"{_baseUrl}/{request.RoleId}/users/assign";
+                var response = await _api.PostAsync<bool>(endpoint, request);
+                
+                if (!response.Success)
+                {
+                    throw new Exception(response.Message ?? "Error al asignar usuario al rol");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar usuario {UserId} al rol {RoleId}", request.UserId, request.RoleId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Remover usuario de rol
+        /// </summary>
+        public async Task RemoveUserFromRoleAsync(RemoveUserFromRoleRequest request)
+        {
+            try
+            {
+                var endpoint = $"{_baseUrl}/{request.RoleId}/users/remove";
+                var response = await _api.PostAsync<bool>(endpoint, request);
+                
+                if (!response.Success)
+                {
+                    throw new Exception(response.Message ?? "Error al remover usuario del rol");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al remover usuario {UserId} del rol {RoleId}", request.UserId, request.RoleId);
+                throw;
             }
         }
 

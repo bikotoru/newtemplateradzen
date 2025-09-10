@@ -120,6 +120,17 @@
                 </CrmTab>
             }
             
+            @if (isEditMode && entity != null && AuthService.HasPermission("SYSTEMROLE.MANAGEUSERS"))
+            {
+                <CrmTab Id="tab3" Title="Gestión de Usuarios" Icon="group" IconColor="#007bff">
+                    <div class="scrollable-content p-3">
+                        <SystemRoleUsersManager RoleId="@entity.Id" 
+                                               RoleName="@entity.Nombre"
+                                               CanEdit="@CanEdit" />
+                    </div>
+                </CrmTab>
+            }
+            
         </CrmTabs>
     </div>
 
