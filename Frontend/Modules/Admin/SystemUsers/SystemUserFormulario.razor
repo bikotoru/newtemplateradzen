@@ -4,6 +4,7 @@
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
+@using Frontend.Modules.Admin.SystemUsers.Components
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("SYSTEMUSER.VIEW", "SYSTEMUSER.CREATE", "SYSTEMUSER.EDIT")]
 
@@ -63,6 +64,19 @@
                         </RadzenRow>
                     </div>
                 </CrmTab>
+                
+                @if (isEditMode && entity != null && entity.Id != Guid.Empty)
+                {
+                    <CrmTab Id="tab2" Title="Gestión de Permisos" Icon="security" IconColor="#28a745">
+                        <div class="scrollable-content">
+                            <RadzenRow JustifyContent="JustifyContent.Center">
+                                <RadzenColumn SizeLG="12" SizeMD="12" SizeSM="12">
+                                    <SystemUserPermissionsManager UserId="@entity.Id" UserName="@entity.Nombre" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </div>
+                    </CrmTab>
+                }
                 
             </CrmTabs>
         </div>

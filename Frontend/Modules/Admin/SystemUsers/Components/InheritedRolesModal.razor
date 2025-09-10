@@ -1,0 +1,65 @@
+@using Shared.Models.DTOs.UserPermissions
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   📋 MODAL DE ROLES QUE OTORGAN UN PERMISO HEREDADO
+   Modal que muestra los roles que otorgan un permiso específico a un usuario
+   ======================================== *@
+
+<RadzenStack Gap="1.5rem" Style="height: 100%; overflow-y: auto; padding: 1rem;">
+    
+    @* Header del modal *@
+    <RadzenStack Gap="0.5rem">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenIcon Icon="security" Style="color: var(--rz-primary); font-size: 1.5rem;" />
+            <RadzenText TextStyle="TextStyle.H5" Style="margin: 0; color: var(--rz-text-primary-color);">
+                Permiso Heredado: @PermissionName
+            </RadzenText>
+        </RadzenStack>
+        <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-text-secondary-color); margin: 0;">
+            Este permiso es otorgado automáticamente al usuario a través de los siguientes roles:
+        </RadzenText>
+    </RadzenStack>
+
+    @* Lista de roles *@
+    <RadzenStack Gap="0.75rem">
+        @foreach (var roleName in InheritedFromRoles)
+        {
+            <RadzenCard Variant="Variant.Filled" Style="background: var(--rz-info-lighter); border-left: 4px solid var(--rz-info);">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenIcon Icon="group" Style="color: var(--rz-info); font-size: 1.2rem;" />
+                    <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight: 600; color: var(--rz-info-dark); margin: 0;">
+                        @roleName
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+    </RadzenStack>
+
+    @* Nota informativa *@
+    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
+            <RadzenIcon Icon="info" Style="margin-top: 2px;" />
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600; margin: 0;">
+                    Información importante
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
+                    Los permisos heredados no se pueden modificar directamente desde aquí.
+                    Para cambiar este permiso, debe modificar los roles del usuario o los permisos de los roles.
+                </RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenAlert>
+
+    @* Botones de acción *@
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cerrar" 
+                     Icon="close" 
+                     ButtonStyle="ButtonStyle.Secondary"
+                     Size="ButtonSize.Medium"
+                     Click="Close"
+                     Variant="Variant.Outlined" />
+    </RadzenStack>
+</RadzenStack>

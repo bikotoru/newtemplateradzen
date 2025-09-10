@@ -80,6 +80,149 @@ namespace Backend.Modules.Admin.SystemUsers
                 return StatusCode(500, ApiResponse<bool>.ErrorResponse("Error interno del servidor"));
             }
         }
+
+        #region Gestión de Permisos de Usuarios
+
+        /// <summary>
+    /// Buscar permisos de un usuario con paginación y filtros
+    /// </summary>
+    [HttpPost("{userId:guid}/permissions/search")]
+    public async Task<IActionResult> SearchUserPermissions(Guid userId, [FromBody] Shared.Models.DTOs.UserPermissions.UserPermissionSearchRequest request)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            request.UserId = userId;
+            var result = await _systemuserService.GetUserPermissionsPagedAsync(request, user!);
+            
+            return Ok(new ApiResponse<PagedResult<Shared.Models.DTOs.UserPermissions.UserPermissionDto>>
+            {
+                Success = true,
+                Data = result,
+                Message = "Permisos del usuario obtenidos exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar permisos del usuario {UserId}", userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Actualizar permisos directos de un usuario
+    /// </summary>
+    [HttpPut("{userId:guid}/permissions")]
+    public async Task<IActionResult> UpdateUserPermissions(Guid userId, [FromBody] Shared.Models.DTOs.UserPermissions.UserPermissionUpdateRequest request)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("edit");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            request.UserId = userId;
+            var result = await _systemuserService.UpdateUserPermissionsAsync(request, user!);
+            
+            if (result)
+            {
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Data = true,
+                    Message = "Permisos del usuario actualizados exitosamente"
+                });
+            }
+            else
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Data = false,
+                    Message = "No se pudieron actualizar los permisos del usuario"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar permisos del usuario {UserId}", userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Obtener grupos de permisos disponibles
+    /// </summary>
+    [HttpGet("permissions/groups")]
+    public async Task<IActionResult> GetAvailablePermissionGroups()
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            var groups = await _systemuserService.GetAvailablePermissionGroupsAsync(user!);
+            
+            return Ok(new ApiResponse<List<string>>
+            {
+                Success = true,
+                Data = groups,
+                Message = "Grupos de permisos obtenidos exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener grupos de permisos");
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Generar resumen de cambios en permisos de usuario
+    /// </summary>
+    [HttpPost("{userId:guid}/permissions/changes-summary")]
+    public async Task<IActionResult> GetUserPermissionChangesSummary(Guid userId, [FromBody] Shared.Models.DTOs.UserPermissions.UserPermissionUpdateRequest request)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            request.UserId = userId;
+            var summary = await _systemuserService.GetChangesSummaryAsync(request, user!);
+            
+            return Ok(new ApiResponse<Shared.Models.DTOs.UserPermissions.UserPermissionChangesSummary>
+            {
+                Success = true,
+                Data = summary,
+                Message = "Resumen de cambios generado exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar resumen de cambios para usuario {UserId}", userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
+    }
+
+        #endregion
     }
 
     // DTOs para validación

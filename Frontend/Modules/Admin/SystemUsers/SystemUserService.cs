@@ -38,6 +38,116 @@ namespace Frontend.Modules.Admin.SystemUsers
 
         // ✅ Solo métodos custom permitidos aquí
 
+        #region Gestión de Permisos de Usuarios
+
+        /// <summary>
+        /// Buscar permisos de un usuario con paginación y filtros
+        /// </summary>
+        public async Task<ApiResponse<PagedResult<Shared.Models.DTOs.UserPermissions.UserPermissionDto>>> GetUserPermissionsPagedAsync(Guid userId, Shared.Models.DTOs.UserPermissions.UserPermissionSearchRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo permisos paginados para usuario {UserId}", userId);
+                
+                var response = await _api.PostAsync<PagedResult<Shared.Models.DTOs.UserPermissions.UserPermissionDto>>(
+                    $"{_baseUrl}/{userId}/permissions/search", 
+                    request
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener permisos del usuario {UserId}", userId);
+                return new ApiResponse<PagedResult<Shared.Models.DTOs.UserPermissions.UserPermissionDto>>
+                {
+                    Success = false,
+                    Message = "Error al obtener permisos del usuario"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Actualizar permisos directos de un usuario
+        /// </summary>
+        public async Task<ApiResponse<bool>> UpdateUserPermissionsAsync(Guid userId, Shared.Models.DTOs.UserPermissions.UserPermissionUpdateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Actualizando permisos para usuario {UserId}", userId);
+                
+                var response = await _api.PutAsync<bool>(
+                    $"{_baseUrl}/{userId}/permissions", 
+                    request
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar permisos del usuario {UserId}", userId);
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Error al actualizar permisos del usuario"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Obtener grupos de permisos disponibles
+        /// </summary>
+        public async Task<ApiResponse<List<string>>> GetAvailablePermissionGroupsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo grupos de permisos disponibles");
+                
+                var response = await _api.GetAsync<List<string>>(
+                    $"{_baseUrl}/permissions/groups"
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener grupos de permisos");
+                return new ApiResponse<List<string>>
+                {
+                    Success = false,
+                    Message = "Error al obtener grupos de permisos"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Generar resumen de cambios en permisos de usuario
+        /// </summary>
+        public async Task<ApiResponse<Shared.Models.DTOs.UserPermissions.UserPermissionChangesSummary>> GetUserPermissionChangesSummaryAsync(Guid userId, Shared.Models.DTOs.UserPermissions.UserPermissionUpdateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Generando resumen de cambios para usuario {UserId}", userId);
+                
+                var response = await _api.PostAsync<Shared.Models.DTOs.UserPermissions.UserPermissionChangesSummary>(
+                    $"{_baseUrl}/{userId}/permissions/changes-summary", 
+                    request
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar resumen de cambios para usuario {UserId}", userId);
+                return new ApiResponse<Shared.Models.DTOs.UserPermissions.UserPermissionChangesSummary>
+                {
+                    Success = false,
+                    Message = "Error al generar resumen de cambios"
+                };
+            }
+        }
+
+        #endregion
         
     }
 
