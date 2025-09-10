@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Backend.Utils.EFInterceptors.Core;
 using Backend.Utils.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Backend.Utils.EFInterceptors.Extensions
 {
@@ -25,8 +26,8 @@ namespace Backend.Utils.EFInterceptors.Extensions
             // Register the interceptor service
             services.AddScoped<EFInterceptorService>();
 
-            // Register DbContext options first
-            services.AddDbContext<AppDbContext>(options =>
+            // Register DbContext options first with interceptors
+            services.AddDbContext<AppDbContext>((serviceProvider, options) =>
             {
                 if (connectionString == "InMemoryTestConnection")
                 {
@@ -36,6 +37,15 @@ namespace Backend.Utils.EFInterceptors.Extensions
                 {
                     options.UseSqlServer(connectionString);
                 }
+                
+                // Add the NoSelect interceptor
+                var logger = serviceProvider.GetService<ILogger<NoSelectQueryInterceptor>>();
+                if (logger != null)
+                {
+                    var noSelectInterceptor = new NoSelectQueryInterceptor(logger);
+                    options.AddInterceptors(noSelectInterceptor);
+                }
+                
                 options.EnableSensitiveDataLogging(false);
                 options.EnableDetailedErrors(true);
             });
