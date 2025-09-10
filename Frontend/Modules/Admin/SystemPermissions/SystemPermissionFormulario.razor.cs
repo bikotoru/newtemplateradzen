@@ -28,7 +28,7 @@ public partial class SystemPermissionFormulario : AuthorizedPageBase
     // Propiedades de permisos
     private bool CanView => AuthService.HasPermission("SYSTEMPERMISSION.VIEW");
     private bool CanCreate => AuthService.HasPermission("SYSTEMPERMISSION.CREATE");
-    private bool CanEdit => isEditMode ? AuthService.HasPermission("SYSTEMPERMISSION.EDIT") : AuthService.HasPermission("SYSTEMPERMISSION.CREATE");
+    private bool CanEdit => isEditMode ? AuthService.HasPermission("SYSTEMPERMISSION.UPDATE") : AuthService.HasPermission("SYSTEMPERMISSION.CREATE");
     private bool CanSave => CanEdit;
     
     // Validación ActionKey en tiempo real
@@ -151,7 +151,7 @@ public partial class SystemPermissionFormulario : AuthorizedPageBase
                     Severity = NotificationSeverity.Warning,
                     Summary = "Permisos Insuficientes",
                     Detail = isEditMode ? 
-                        "No tienes permisos para editar este registro" : 
+                        "No tienes permisos para actualizar este registro" : 
                         "No tienes permisos para crear nuevos registros",
                     Duration = 4000
                 });
@@ -303,6 +303,8 @@ public partial class SystemPermissionFormulario : AuthorizedPageBase
     
     private async Task OnActionKeyChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
     {
+        if (entity == null) return;
+        
         entity.Nombre = e.Value?.ToString() ?? "";
         entity.ActionKey = entity.Nombre; // Sincronizar siempre
         
@@ -346,7 +348,7 @@ public partial class SystemPermissionFormulario : AuthorizedPageBase
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(entity.Nombre))
+            if (entity == null || string.IsNullOrWhiteSpace(entity.Nombre))
             {
                 actionKeyValidationState = ActionKeyValidationState.None;
                 return false;

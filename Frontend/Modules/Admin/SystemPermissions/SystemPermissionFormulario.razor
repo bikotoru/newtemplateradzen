@@ -5,11 +5,11 @@
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
 @inherits AuthorizedPageBase
-@attribute [AuthorizePermission("SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.CREATE", "SYSTEMPERMISSION.EDIT")]
+@attribute [AuthorizePermission("SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.CREATE", "SYSTEMPERMISSION.UPDATE")]
 
 <PageTitle>@(isEditMode ? $"Editar SystemPermission - {entity?.Nombre}" : "Nuevo SystemPermission")</PageTitle>
 
-@if (HasRequiredPermissions && !IsCheckingPermissions)
+@if (HasRequiredPermissions && !IsCheckingPermissions && entity != null)
 {
     <PageWithCommandBar BackPath="/admin/systempermission/list" 
                         ShowSave="@CanSave"
@@ -117,52 +117,5 @@
 
     </PageWithCommandBar>
 
-    @if (!CanEdit)
-    {
-        <div class="read-only-notice">
-            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
-                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
-                @if (isEditMode)
-                {
-                    <text>Necesitas el permiso "SYSTEMPERMISSION.EDIT" para modificarlo.</text>
-                }
-                else
-                {
-                    <text>Necesitas el permiso "SYSTEMPERMISSION.CREATE" para crear registros.</text>
-                }
-            </RadzenAlert>
-        </div>
-    }
 }
 
-<style>
-    .read-only-notice {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 1000;
-        max-width: 400px;
-        animation: slideInRight 0.3s ease-out;
-    }
-
-    @@keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .read-only-notice {
-            position: relative;
-            top: auto;
-            right: auto;
-            margin: 1rem;
-            max-width: none;
-        }
-    }
-</style>
