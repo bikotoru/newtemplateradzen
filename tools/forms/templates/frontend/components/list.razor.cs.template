@@ -3,11 +3,12 @@ using Frontend.Components.Base.Tables;
 using Shared.Models.Entities;
 using Frontend.Services;
 using Radzen;
+using Frontend.Components.Auth;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
 
 namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
-public partial class {{ENTITY_NAME}}List : ComponentBase
+public partial class {{ENTITY_NAME}}List : AuthorizedPageBase
 {
     [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -15,16 +16,20 @@ public partial class {{ENTITY_NAME}}List : ComponentBase
     [Inject] private QueryService QueryService { get; set; } = null!;
 
     private EntityTable<{{ENTITY_NAME}}Entity>? entityTable;
-    private {{ENTITY_NAME}}ViewManager viewManager = null!;
-    private ViewConfiguration<{{ENTITY_NAME}}Entity> currentView = null!;
+    private {{ENTITY_NAME}}ViewManager? viewManager;
+    private ViewConfiguration<{{ENTITY_NAME}}Entity>? currentView;
     
     private List<IViewConfiguration<{{ENTITY_NAME}}Entity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<{{ENTITY_NAME}}Entity>>().ToList();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        viewManager = new {{ENTITY_NAME}}ViewManager(QueryService);
-        currentView = viewManager.GetDefaultView();
-        base.OnInitialized();
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            viewManager = new {{ENTITY_NAME}}ViewManager(QueryService);
+            currentView = viewManager.GetDefaultView();
+        }
     }
 
     private async Task HandleEdit({{ENTITY_NAME}}Entity {{ENTITY_LOWER}})

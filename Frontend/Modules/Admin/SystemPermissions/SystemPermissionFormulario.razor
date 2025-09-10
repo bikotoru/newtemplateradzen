@@ -4,12 +4,16 @@
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.CREATE", "SYSTEMPERMISSION.EDIT")]
 
-<PageTitle>@(isEditMode ? $"Editar SystemPermission - {entity.Nombre}" : "Nuevo SystemPermission")</PageTitle>
+<PageTitle>@(isEditMode ? $"Editar SystemPermission - {entity?.Nombre}" : "Nuevo SystemPermission")</PageTitle>
 
-<PageWithCommandBar BackPath="/admin/systempermission/list" 
-                    ShowSave
-                    OnSaveClick="@SaveForm">
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/admin/systempermission/list" 
+                        ShowSave="@CanSave"
+                        OnSaveClick="@SaveForm">
 
     <div class="full-width-tabs">
         <CrmTabs DefaultTabId="tab1" DisableUrlSync="true">
@@ -33,14 +37,17 @@
                                 </EssentialsTemplate>
                                 
                                 <ChildContent>
-                                    <FormValidator Entity="entity" Rules="@GetValidationRules()">
-                                        
-                                        <RadzenStack Gap="1rem">
-                                            <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-                                                <RadzenFormField Text="Action Key / Nombre" Style="width: 100%">
-                                                    <RadzenTextBox @bind-Value="entity.Nombre" 
-                                                                   @oninput="OnActionKeyChanged"
-                                                                   Placeholder="Ej: CATEGORIA.CREAR, USUARIO.EDITAR" />
+                                    @if (entity != null)
+                                    {
+                                        <FormValidator Entity="entity" Rules="@GetValidationRules()">
+                                            
+                                            <RadzenStack Gap="1rem">
+                                                <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+                                                    <RadzenFormField Text="Action Key / Nombre" Style="width: 100%">
+                                                        <RadzenTextBox @bind-Value="entity.Nombre" 
+                                                                       @oninput="OnActionKeyChanged"
+                                                                       Placeholder="Ej: CATEGORIA.CREAR, USUARIO.EDITAR"
+                                                                       Disabled="@(!CanEdit)" />
                                                     @if (actionKeyValidationState == ActionKeyValidationState.Checking)
                                                     {
                                                         <div class="validation-checking">
@@ -65,35 +72,38 @@
                                                 </RadzenFormField>
                                             </ValidatedInput>
 
-                                            <ValidatedInput FieldName="GrupoNombre" Value="@entity.GrupoNombre">
-                                                <RadzenFormField Text="Grupo (Opcional)" Style="width: 100%">
-                                                    <RadzenDropDown @bind-Value="entity.GrupoNombre"
-                                                                    Data="@gruposExistentes"
-                                                                    AllowClear="true"
-                                                                    AllowFiltering="true"
-                                                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                                                    Placeholder="Selecciona grupo existente o escribe nuevo"
-                                                                    Style="width: 100%"
-                                                                    LoadingText="Cargando grupos...">
-                                                        <Template Context="grupo">
-                                                            @grupo
-                                                        </Template>
-                                                    </RadzenDropDown>
-                                                </RadzenFormField>
-                                            </ValidatedInput>
+                                                <ValidatedInput FieldName="GrupoNombre" Value="@entity.GrupoNombre">
+                                                    <RadzenFormField Text="Grupo (Opcional)" Style="width: 100%">
+                                                        <RadzenDropDown @bind-Value="entity.GrupoNombre"
+                                                                        Data="@gruposExistentes"
+                                                                        AllowClear="true"
+                                                                        AllowFiltering="true"
+                                                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                                        Placeholder="Selecciona grupo existente o escribe nuevo"
+                                                                        Style="width: 100%"
+                                                                        LoadingText="Cargando grupos..."
+                                                                        Disabled="@(!CanEdit)">
+                                                            <Template Context="grupo">
+                                                                @grupo
+                                                            </Template>
+                                                        </RadzenDropDown>
+                                                    </RadzenFormField>
+                                                </ValidatedInput>
                                             
-                                            <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
-                                                <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
-                                                    <RadzenTextArea @bind-Value="entity.Descripcion"
-                                                                    Placeholder="Descripción del permiso (opcional)" 
-                                                                    Rows="3"
-                                                                    Style="width: 100%" />
-                                                </RadzenFormField>
-                                            </ValidatedInput>
+                                                <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
+                                                    <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
+                                                        <RadzenTextArea @bind-Value="entity.Descripcion"
+                                                                        Placeholder="Descripción del permiso (opcional)" 
+                                                                        Rows="3"
+                                                                        Style="width: 100%"
+                                                                        Disabled="@(!CanEdit)" />
+                                                    </RadzenFormField>
+                                                </ValidatedInput>
+                                                
+                                            </RadzenStack>
                                             
-                                        </RadzenStack>
-                                        
-                                    </FormValidator>
+                                        </FormValidator>
+                                    }
                                 </ChildContent>
                             </EssentialsCard>
                             
@@ -105,4 +115,54 @@
         </CrmTabs>
     </div>
 
-</PageWithCommandBar>
+    </PageWithCommandBar>
+
+    @if (!CanEdit)
+    {
+        <div class="read-only-notice">
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
+                @if (isEditMode)
+                {
+                    <text>Necesitas el permiso "SYSTEMPERMISSION.EDIT" para modificarlo.</text>
+                }
+                else
+                {
+                    <text>Necesitas el permiso "SYSTEMPERMISSION.CREATE" para crear registros.</text>
+                }
+            </RadzenAlert>
+        </div>
+    }
+}
+
+<style>
+    .read-only-notice {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .read-only-notice {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin: 1rem;
+            max-width: none;
+        }
+    }
+</style>

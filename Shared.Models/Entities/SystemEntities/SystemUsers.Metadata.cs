@@ -11,5 +11,11 @@ namespace Shared.Models.Entities.SystemEntities
     {
         [NoSelect]
         public string Password;
+
+        [NoSelect]
+        public string Email;
+
+        [SoloCrear]
+        public string Nombre;
     }
 }

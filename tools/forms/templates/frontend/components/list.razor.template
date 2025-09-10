@@ -3,37 +3,42 @@
 @using Frontend.Components.Base.Tables
 @using Shared.Models.Entities
 @using Radzen
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("{{ENTITY_UPPER}}.VIEW")]
 
 <PageTitle>{{ENTITY_PLURAL}}</PageTitle>
 
-<PageWithCommandBar BackPath="/"
-                    ShowNew
-                    NewPath="/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario"
-                    >
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/"
+                        ShowNew
+                        NewPath="/{{MODULE_PATH}}/{{ENTITY_LOWER}}/formulario"
+                        >
 
-    <RadzenCard>
-        <EntityTable T="{{ENTITY_NAME}}" 
-                     @ref="entityTable"
-                     @key="@GetGridKey()"
-                     ShowSearchBar="true"
-                     ShowExcelExport="true"
-                     ShowRefreshButton="true"
-                     ShowAutoRefresh="true"
-                     ShowColumnConfig="true"
-                     ShowActions="true"
-                     SearchPlaceholder="Buscar {{ENTITY_LOWER}}s..."
-                     BaseQuery="@currentView.QueryBuilder"
-                     ColumnConfigs="@currentView.ColumnConfigs"
-                     ForceOrderByIndex="true"
-                     EnableSelectOptimization="true"
-                     SelectOnlyVisibleColumns="true"
-                     ViewConfigurations="@ViewConfigurationsTyped"
-                     CurrentView="@currentView"
-                     OnViewChanged="@OnViewChanged"
-                     ViewDisplayNameProperty="DisplayName"
-                     OnEdit="@HandleEdit"
-                     OnDelete="@HandleDelete">
-        </EntityTable>
-    </RadzenCard>
+        <RadzenCard>
+            <EntityTable T="{{ENTITY_NAME}}" 
+                         @ref="entityTable"
+                         @key="@GetGridKey()"
+                         ShowSearchBar="true"
+                         ShowExcelExport="true"
+                         ShowRefreshButton="true"
+                         ShowAutoRefresh="true"
+                         ShowColumnConfig="true"
+                         ShowActions="true"
+                         SearchPlaceholder="Buscar {{ENTITY_LOWER}}s..."
+                         BaseQuery="@(currentView?.QueryBuilder)"
+                         ColumnConfigs="@(currentView?.ColumnConfigs)"
+                         ForceOrderByIndex="true"
+                         EnableSelectOptimization="true"
+                         SelectOnlyVisibleColumns="true"
+                         ViewConfigurations="@ViewConfigurationsTyped"
+                         CurrentView="@currentView"
+                         OnViewChanged="@OnViewChanged"
+                         ViewDisplayNameProperty="DisplayName"
+                         OnEdit="@HandleEdit"
+                         OnDelete="@HandleDelete">
+            </EntityTable>
+        </RadzenCard>
 
-</PageWithCommandBar>
+    </PageWithCommandBar>
+}

@@ -4,13 +4,14 @@ using Shared.Models.Entities;
 using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Frontend.Components.Validation;
+using Frontend.Components.Auth;
 using {{ENTITY_NAME}}Entity = Shared.Models.Entities.{{ENTITY_NAME}};
 using Radzen;
 using System.Linq.Expressions;
 
 namespace Frontend.Modules.{{MODULE_WITH_ENTITY}};
 
-public partial class {{ENTITY_NAME}}Formulario : ComponentBase
+public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
 {
     [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -18,14 +19,31 @@ public partial class {{ENTITY_NAME}}Formulario : ComponentBase
     {{LOOKUP_SERVICE_INJECTIONS}}
     [Parameter] public Guid? Id { get; set; }
 
-    private {{ENTITY_NAME}}Entity entity = new();
+    private {{ENTITY_NAME}}Entity? entity;
     private bool isLoading = false;
     private bool isEditMode => Id.HasValue;
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
+
+    // Propiedades de permisos
+    private bool CanView => AuthService.HasPermission("{{ENTITY_UPPER}}.VIEW");
+    private bool CanCreate => AuthService.HasPermission("{{ENTITY_UPPER}}.CREATE");
+    private bool CanEdit => isEditMode ? AuthService.HasPermission("{{ENTITY_UPPER}}.EDIT") : AuthService.HasPermission("{{ENTITY_UPPER}}.CREATE");
+    private bool CanSave => CanEdit;
+
     {{LOOKUP_SEARCH_FIELDS}}
 
     protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            await OnPermissionsVerifiedAsync();
+        }
+    }
+
+    protected override async Task OnPermissionsVerifiedAsync()
     {
         if (isEditMode && Id.HasValue)
         {
@@ -57,6 +75,7 @@ public partial class {{ENTITY_NAME}}Formulario : ComponentBase
         }
         
         {{LOOKUP_FIELD_INITIALIZATIONS}}
+        StateHasChanged();
     }
 
     private async Task LoadEntity()
@@ -113,6 +132,33 @@ public partial class {{ENTITY_NAME}}Formulario : ComponentBase
     {
         try
         {
+            // Verificar permisos antes de continuar
+            if (!CanSave)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Permisos Insuficientes",
+                    Detail = isEditMode ? 
+                        "No tienes permisos para editar este registro" : 
+                        "No tienes permisos para crear nuevos registros",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            if (entity == null)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "Error interno: entidad no inicializada",
+                    Duration = 4000
+                });
+                return;
+            }
+
             isLoading = true;
 
             {{FIELD_VALIDATIONS}}

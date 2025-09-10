@@ -180,7 +180,7 @@ class FrontendGenerator:
         
         # Agregar a variables
         variables.update({
-            'FORM_FIELDS': '\n                                            '.join(form_fields),
+            'FORM_FIELDS_WITH_PERMISSIONS': '\n                                            '.join(form_fields),
             'VALIDATION_RULES': '\n            '.join(validation_rules),
             'FIELD_VALIDATIONS': '\n\n            '.join(field_validations),
             'LOOKUP_SERVICE_INJECTIONS': lookup_deps['service_injections'],

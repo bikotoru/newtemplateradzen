@@ -61,8 +61,10 @@ La herramienta convierte automáticamente nombres de tablas a nombres de entidad
 | Atributo | Descripción | Ejemplo |
 |----------|-------------|---------|
 | `SoloCrear` | Campo solo modificable durante creación | `categoria:Nombre:SoloCrear` |
+| `AutoIncremental` | Campo con numeración automática incremental | `producto:Codigo:AutoIncremental` |
+| `NoSelect` | Campo que se devuelve como null en consultas (para datos sensibles) | `system_users:Password:NoSelect` |
 
-> **Nota**: Actualmente solo está disponible `SoloCrear`, pero la herramienta está preparada para agregar más atributos en el futuro.
+> **Nota**: La herramienta soporta múltiples atributos y está preparada para agregar más en el futuro.
 
 ## 📁 Estructura Generada
 
@@ -113,11 +115,17 @@ namespace Shared.Models.Entities
 # Marcar campo Nombre como solo creación
 python customvalidator.py categoria:Nombre:SoloCrear
 
+# Marcar campo Password como no seleccionable (seguridad)
+python customvalidator.py system_users:Password:NoSelect
+
 # Marcar múltiples campos de una entidad
 python customvalidator.py categoria:Nombre:SoloCrear categoria:Descripcion:SoloCrear categoria:OrganizationId:SoloCrear
 
-# Trabajar con múltiples entidades
-python customvalidator.py categoria:Nombre:SoloCrear system_users:Email:SoloCrear system_organization:Nombre:SoloCrear
+# Trabajar con múltiples entidades y atributos
+python customvalidator.py categoria:Nombre:SoloCrear system_users:Email:SoloCrear system_users:Password:NoSelect
+
+# Combinar múltiples atributos en una entidad
+python customvalidator.py system_users:Password:NoSelect system_users:Email:SoloCrear system_users:CreatedDate:AutoIncremental
 
 # Ver qué entidades están disponibles
 python customvalidator.py --list

@@ -3,11 +3,12 @@ using Frontend.Components.Base.Tables;
 using Shared.Models.Entities;
 using Frontend.Services;
 using Radzen;
+using Frontend.Components.Auth;
 using SystemPermissionEntity = Shared.Models.Entities.SystemEntities.SystemPermissions;
 
 namespace Frontend.Modules.Admin.SystemPermissions;
 
-public partial class SystemPermissionList : ComponentBase
+public partial class SystemPermissionList : AuthorizedPageBase
 {
     [Inject] private SystemPermissionService SystemPermissionService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -15,16 +16,20 @@ public partial class SystemPermissionList : ComponentBase
     [Inject] private QueryService QueryService { get; set; } = null!;
 
     private EntityTable<SystemPermissionEntity>? entityTable;
-    private SystemPermissionViewManager viewManager = null!;
-    private ViewConfiguration<SystemPermissionEntity> currentView = null!;
+    private SystemPermissionViewManager? viewManager;
+    private ViewConfiguration<SystemPermissionEntity>? currentView;
     
     private List<IViewConfiguration<SystemPermissionEntity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<SystemPermissionEntity>>().ToList();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        viewManager = new SystemPermissionViewManager(QueryService);
-        currentView = viewManager.GetDefaultView();
-        base.OnInitialized();
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            viewManager = new SystemPermissionViewManager(QueryService);
+            currentView = viewManager.GetDefaultView();
+        }
     }
 
     private async Task HandleEdit(SystemPermissionEntity systempermission)

@@ -4,12 +4,16 @@
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("SYSTEMROLE.VIEW", "SYSTEMROLE.CREATE", "SYSTEMROLE.EDIT")]
 
-<PageTitle>@(isEditMode ? $"Editar SystemRole - {entity.Nombre}" : "Nuevo SystemRole")</PageTitle>
+<PageTitle>@(isEditMode ? $"Editar SystemRole - {entity?.Nombre}" : "Nuevo SystemRole")</PageTitle>
 
-<PageWithCommandBar BackPath="/admin/systemrole/list" 
-                    ShowSave
-                    OnSaveClick="@SaveForm">
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/admin/systemrole/list" 
+                        ShowSave="@CanSave"
+                        OnSaveClick="@SaveForm">
 
     <div class="full-width-tabs">
         <CrmTabs DefaultTabId="tab1" DisableUrlSync="true">
@@ -33,45 +37,50 @@
                                 </EssentialsTemplate>
                                 
                                 <ChildContent>
-                                    <FormValidator Entity="entity" Rules="@GetValidationRules()">
-                                        
-                                        <RadzenStack Gap="1rem">
-                                            <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
-                                                <RadzenFormField Text="Nombre del Rol" Style="width: 100%">
-                                                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
-                                                                   Value="@entity.Nombre"
-                                                                   Placeholder="Ej: Administrador, Usuario, Supervisor..." />
-                                                </RadzenFormField>
-                                            </ValidatedInput>
+                                    @if (entity != null)
+                                    {
+                                        <FormValidator Entity="entity" Rules="@GetValidationRules()">
                                             
-                                            <ValidatedInput FieldName="TypeRole" Value="@entity.TypeRole">
-                                                <RadzenFormField Text="Tipo de Rol" Style="width: 100%">
-                                                    <RadzenDropDown @bind-Value="@entity.TypeRole"
-                                                                    Data="@GetRoleTypes()"
-                                                                    Style="width: 100%"
-                                                                    Placeholder="Seleccionar tipo de rol">
-                                                        <Template Context="item">
-                                                            <div class="d-flex align-items-center">
-                                                                <span class="badge @(item == "Admin" ? "badge-danger" : "badge-primary") me-2">
-                                                                    @item
-                                                                </span>
-                                                                <span>
-                                                                    @(item == "Admin" ? "Administrador del sistema" : "Acceso estándar")
-                                                                </span>
-                                                            </div>
-                                                        </Template>
-                                                    </RadzenDropDown>
-                                                </RadzenFormField>
-                                            </ValidatedInput>
-                                            
-                                            <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
-                                                <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
-                                                    <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
-                                                                    Value="@entity.Descripcion"
-                                                                    Placeholder="Describe el propósito y alcance de este rol..." 
-                                                                    Rows="3" />
-                                                </RadzenFormField>
-                                            </ValidatedInput>
+                                            <RadzenStack Gap="1rem">
+                                                <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+                                                    <RadzenFormField Text="Nombre del Rol" Style="width: 100%">
+                                                        <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                                                                       Value="@entity.Nombre"
+                                                                       Placeholder="Ej: Administrador, Usuario, Supervisor..."
+                                                                       Disabled="@(!CanEdit)" />
+                                                    </RadzenFormField>
+                                                </ValidatedInput>
+                                                
+                                                <ValidatedInput FieldName="TypeRole" Value="@entity.TypeRole">
+                                                    <RadzenFormField Text="Tipo de Rol" Style="width: 100%">
+                                                        <RadzenDropDown @bind-Value="@entity.TypeRole"
+                                                                        Data="@GetRoleTypes()"
+                                                                        Style="width: 100%"
+                                                                        Placeholder="Seleccionar tipo de rol"
+                                                                        Disabled="@(!CanEdit)">
+                                                            <Template Context="item">
+                                                                <div class="d-flex align-items-center">
+                                                                    <span class="badge @(item == "Admin" ? "badge-danger" : "badge-primary") me-2">
+                                                                        @item
+                                                                    </span>
+                                                                    <span>
+                                                                        @(item == "Admin" ? "Administrador del sistema" : "Acceso estándar")
+                                                                    </span>
+                                                                </div>
+                                                            </Template>
+                                                        </RadzenDropDown>
+                                                    </RadzenFormField>
+                                                </ValidatedInput>
+                                                
+                                                <ValidatedInput FieldName="Descripcion" Value="@entity.Descripcion">
+                                                    <RadzenFormField Text="Descripción (Opcional)" Style="width: 100%">
+                                                        <RadzenTextArea @oninput="@(v => entity.Descripcion = v.Value?.ToString())" 
+                                                                        Value="@entity.Descripcion"
+                                                                        Placeholder="Describe el propósito y alcance de este rol..." 
+                                                                        Rows="3"
+                                                                        Disabled="@(!CanEdit)" />
+                                                    </RadzenFormField>
+                                                </ValidatedInput>
                                             
                                             @if (entity.TypeRole == "Admin")
                                             {
@@ -85,10 +94,11 @@
                                                     <strong>Rol de Acceso:</strong> Este tipo de rol permite configurar permisos específicos según las necesidades del usuario.
                                                 </RadzenAlert>
                                             }
+                                                
+                                            </RadzenStack>
                                             
-                                        </RadzenStack>
-                                        
-                                    </FormValidator>
+                                        </FormValidator>
+                                    }
                                 </ChildContent>
                             </EssentialsCard>
                             
@@ -194,9 +204,57 @@
         </CrmTabs>
     </div>
 
-</PageWithCommandBar>
+    </PageWithCommandBar>
+
+    @if (!CanEdit)
+    {
+        <div class="read-only-notice">
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
+                @if (isEditMode)
+                {
+                    <text>Necesitas el permiso "SYSTEMROLE.EDIT" para modificarlo.</text>
+                }
+                else
+                {
+                    <text>Necesitas el permiso "SYSTEMROLE.CREATE" para crear registros.</text>
+                }
+            </RadzenAlert>
+        </div>
+    }
+}
 
 <style>
+    .read-only-notice {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .read-only-notice {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin: 1rem;
+            max-width: none;
+        }
+    }
+
     .permissions-container {
         max-height: 400px;
         overflow-y: auto;

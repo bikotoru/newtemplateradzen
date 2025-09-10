@@ -4,7 +4,8 @@
       "Bash(mkdir:*)",
       "Bash(dotnet build:*)",
       "Bash(sqlcmd:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

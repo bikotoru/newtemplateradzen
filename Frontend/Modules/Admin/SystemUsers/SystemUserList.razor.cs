@@ -3,11 +3,12 @@ using Frontend.Components.Base.Tables;
 using Shared.Models.Entities;
 using Frontend.Services;
 using Radzen;
+using Frontend.Components.Auth;
 using SystemUserEntity = Shared.Models.Entities.SystemEntities.SystemUsers;
 
 namespace Frontend.Modules.Admin.SystemUsers;
 
-public partial class SystemUserList : ComponentBase
+public partial class SystemUserList : AuthorizedPageBase
 {
     [Inject] private SystemUserService SystemUserService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -15,16 +16,20 @@ public partial class SystemUserList : ComponentBase
     [Inject] private QueryService QueryService { get; set; } = null!;
 
     private EntityTable<SystemUserEntity>? entityTable;
-    private SystemUserViewManager viewManager = null!;
-    private ViewConfiguration<SystemUserEntity> currentView = null!;
+    private SystemUserViewManager? viewManager;
+    private ViewConfiguration<SystemUserEntity>? currentView;
     
     private List<IViewConfiguration<SystemUserEntity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<SystemUserEntity>>().ToList();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        viewManager = new SystemUserViewManager(QueryService);
-        currentView = viewManager.GetDefaultView();
-        base.OnInitialized();
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            viewManager = new SystemUserViewManager(QueryService);
+            currentView = viewManager.GetDefaultView();
+        }
     }
 
     private async Task HandleEdit(SystemUserEntity systemuser)

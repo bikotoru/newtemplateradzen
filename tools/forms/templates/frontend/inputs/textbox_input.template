@@ -2,6 +2,7 @@
     <RadzenFormField Text="{{FIELD_DISPLAY}}">
         <RadzenTextBox @oninput="@(v => entity.{{FIELD_NAME}} = v.Value?.ToString())" 
                        Value="@entity.{{FIELD_NAME}}"
-                       Placeholder="{{FIELD_PLACEHOLDER}}" />
+                       Placeholder="{{FIELD_PLACEHOLDER}}"
+                       Disabled="@(!CanEdit)" />
     </RadzenFormField>
 </ValidatedInput>

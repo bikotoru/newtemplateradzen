@@ -1,0 +1,296 @@
+@page "/not-authorized"
+@using Frontend.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Acceso Denegado</PageTitle>
+
+<div class="not-authorized-container">
+    <div class="not-authorized-content">
+        <!-- Icono principal -->
+        <div class="icon-container">
+            <RadzenIcon Icon="lock" Style="font-size: 3rem; color: var(--rz-danger);" />
+        </div>
+
+        <!-- Título y mensaje principal -->
+        <h1 class="main-title">Acceso Denegado</h1>
+        <p class="main-message">
+            No tienes los permisos necesarios para acceder a esta página.
+        </p>
+
+        <!-- Información de permisos requeridos -->
+        @if (RequiredPermissions.Any())
+        {
+            <div class="permissions-info">
+                <h3>Permisos requeridos:</h3>
+                <div class="permissions-list">
+                    @foreach (var permission in RequiredPermissions)
+                    {
+                        <RadzenBadge Text="@permission" BadgeStyle="BadgeStyle.Secondary" />
+                    }
+                </div>
+                <p class="permissions-note">
+                    Necesitas al menos uno de estos permisos para continuar.
+                </p>
+            </div>
+        }
+
+        <!-- Información del usuario actual -->
+        <div class="user-info">
+            <RadzenCard>
+                <h4>Tu información:</h4>
+                <p><strong>Usuario:</strong> @AuthService.GetDisplayName()</p>
+                @if (userPermissions.Any())
+                {
+                    <p><strong>Tus permisos:</strong></p>
+                    <div class="user-permissions">
+                        @foreach (var permission in userPermissions.Take(10))
+                        {
+                            <RadzenBadge Text="@permission" BadgeStyle="BadgeStyle.Light" />
+                        }
+                        @if (userPermissions.Count > 10)
+                        {
+                            <RadzenBadge Text="@($"+{userPermissions.Count - 10} más...")" BadgeStyle="BadgeStyle.Info" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p><em>No tienes permisos asignados.</em></p>
+                }
+            </RadzenCard>
+        </div>
+
+        <!-- Acciones -->
+        <div class="actions-container">
+            <RadzenButton Text="Volver" 
+                         Icon="arrow_back" 
+                         ButtonStyle="ButtonStyle.Secondary" 
+                         Click="GoBack" />
+            
+            <RadzenButton Text="Ir al Inicio" 
+                         Icon="home" 
+                         ButtonStyle="ButtonStyle.Primary" 
+                         Click="GoHome" />
+        </div>
+
+        <!-- Información de contacto -->
+        <div class="contact-info">
+            <p class="contact-text">
+                Si crees que deberías tener acceso a esta página, contacta a tu administrador.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .not-authorized-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 70vh;
+        padding: 2rem;
+        background: var(--rz-panel-background-color);
+    }
+
+    .not-authorized-content {
+        max-width: 600px;
+        text-align: center;
+        padding: 2rem;
+        background: var(--rz-content-background-color);
+        border-radius: var(--rz-border-radius);
+        box-shadow: var(--rz-shadow-4);
+        border: 1px solid var(--rz-border-color);
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .icon-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 80px;
+        height: 80px;
+        background: var(--rz-danger-lighter);
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+    }
+
+    .main-title {
+        color: var(--rz-danger);
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+
+    .main-message {
+        font-size: 1.2rem;
+        color: var(--rz-text-color);
+        opacity: 0.8;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .permissions-info {
+        background: var(--rz-warning-lighter);
+        border: 1px solid var(--rz-warning-light);
+        border-radius: var(--rz-border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        text-align: left;
+    }
+
+    .permissions-info h3 {
+        color: var(--rz-warning-dark);
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .permissions-info h3::before {
+        content: "⚠️";
+        font-size: 1.2rem;
+    }
+
+    .permissions-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .permissions-note {
+        font-size: 0.9rem;
+        color: var(--rz-warning-dark);
+        font-style: italic;
+        margin-bottom: 0;
+        opacity: 0.9;
+    }
+
+    .user-info {
+        margin-bottom: 2rem;
+        text-align: left;
+    }
+
+    .user-info h4 {
+        margin-bottom: 0.5rem;
+        color: var(--rz-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .user-info h4::before {
+        content: "👤";
+        font-size: 1.1rem;
+    }
+
+    .user-info .rz-card {
+        background: var(--rz-info-lighter) !important;
+        border: 1px solid var(--rz-info-light) !important;
+    }
+
+    .user-permissions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.5rem;
+    }
+
+    .actions-container {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .contact-info {
+        border-top: 1px solid var(--rz-border-color);
+        background: var(--rz-panel-background-color);
+        margin: 2rem -2rem -2rem;
+        border-radius: 0 0 var(--rz-border-radius) var(--rz-border-radius);
+        padding: 1.5rem 2rem;
+    }
+
+    .contact-text {
+        font-size: 0.9rem;
+        color: var(--rz-text-secondary-color);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .contact-text::before {
+        content: "📧";
+        font-size: 1rem;
+    }
+
+    @@media (max-width: 768px) {
+        .not-authorized-container {
+            padding: 1rem;
+        }
+
+        .not-authorized-content {
+            padding: 1.5rem;
+            margin: 0;
+        }
+
+        .main-title {
+            font-size: 2rem;
+        }
+
+        .actions-container {
+            flex-direction: column;
+        }
+
+        .actions-container .rz-button {
+            width: 100%;
+        }
+
+        .contact-info {
+            margin: 1.5rem -1.5rem -1.5rem;
+            padding: 1.5rem;
+        }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+@code {
+    [Parameter, SupplyParameterFromQuery]
+    public string[]? Permissions { get; set; }
+
+    private List<string> RequiredPermissions => Permissions?.ToList() ?? new List<string>();
+    private List<string> userPermissions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar permisos del usuario actual
+        userPermissions = await AuthService.GetAllUserPermissionsAsync();
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("javascript:history.back()", forceLoad: false);
+    }
+
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

@@ -3,11 +3,12 @@ using Frontend.Components.Base.Tables;
 using Shared.Models.Entities;
 using Frontend.Services;
 using Radzen;
+using Frontend.Components.Auth;
 using SystemRoleEntity = Shared.Models.Entities.SystemEntities.SystemRoles;
 
 namespace Frontend.Modules.Admin.SystemRoles;
 
-public partial class SystemRoleList : ComponentBase
+public partial class SystemRoleList : AuthorizedPageBase
 {
     [Inject] private SystemRoleService SystemRoleService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -15,16 +16,20 @@ public partial class SystemRoleList : ComponentBase
     [Inject] private QueryService QueryService { get; set; } = null!;
 
     private EntityTable<SystemRoleEntity>? entityTable;
-    private SystemRoleViewManager viewManager = null!;
-    private ViewConfiguration<SystemRoleEntity> currentView = null!;
+    private SystemRoleViewManager? viewManager;
+    private ViewConfiguration<SystemRoleEntity>? currentView;
     
     private List<IViewConfiguration<SystemRoleEntity>>? ViewConfigurationsTyped => viewManager?.ViewConfigurations?.Cast<IViewConfiguration<SystemRoleEntity>>().ToList();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        viewManager = new SystemRoleViewManager(QueryService);
-        currentView = viewManager.GetDefaultView();
-        base.OnInitialized();
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            viewManager = new SystemRoleViewManager(QueryService);
+            currentView = viewManager.GetDefaultView();
+        }
     }
 
     private async Task HandleEdit(SystemRoleEntity systemrole)

@@ -2,6 +2,7 @@
     <RadzenFormField Text="{{FIELD_DISPLAY}}">
         <RadzenDatePicker @bind-Value="entity.{{FIELD_NAME}}" 
                           ShowTime="{{SHOW_TIME}}"
-                          DateFormat="{{DATE_FORMAT}}" />
+                          DateFormat="{{DATE_FORMAT}}"
+                          Disabled="@(!CanEdit)" />
     </RadzenFormField>
 </ValidatedInput>

@@ -1,0 +1,56 @@
+@page "/example-secure"
+@using Frontend.Attributes
+@using Frontend.Components.Auth
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("users.view", "admin.access", "example.permission")]
+
+<PageTitle>Página Segura de Ejemplo</PageTitle>
+
+<h1>🔒 Página Segura de Ejemplo</h1>
+
+<RadzenCard>
+    <h3>¡Felicitaciones!</h3>
+    <p>Tienes acceso a esta página porque cuentas con al menos uno de los siguientes permisos:</p>
+    
+    <div style="margin: 1rem 0;">
+        @foreach (var permission in RequiredPermissions)
+        {
+            <RadzenBadge Text="@permission" BadgeStyle="BadgeStyle.Success" Style="margin-right: 0.5rem;" />
+        }
+    </div>
+
+    <p><strong>Usuario actual:</strong> @AuthService.GetDisplayName()</p>
+    
+    <h4>Tus permisos:</h4>
+    <div style="margin: 1rem 0;">
+        @foreach (var permission in userPermissions)
+        {
+            <RadzenBadge Text="@permission" BadgeStyle="BadgeStyle.Light" Style="margin-right: 0.3rem; margin-bottom: 0.3rem;" />
+        }
+    </div>
+</RadzenCard>
+
+<div style="margin-top: 2rem;">
+    <RadzenButton Text="Volver al Inicio" Icon="home" Click="@(() => Navigation.NavigateTo("/"))" />
+</div>
+
+@code {
+    private List<string> userPermissions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        if (HasRequiredPermissions)
+        {
+            await OnPermissionsVerifiedAsync();
+        }
+    }
+
+    protected override async Task OnPermissionsVerifiedAsync()
+    {
+        // Este método se llama después de que se verifican los permisos exitosamente
+        userPermissions = await AuthService.GetAllUserPermissionsAsync();
+        StateHasChanged();
+    }
+}

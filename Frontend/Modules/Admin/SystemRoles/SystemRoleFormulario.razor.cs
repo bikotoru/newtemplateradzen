@@ -4,6 +4,7 @@ using Shared.Models.Entities;
 using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Frontend.Components.Validation;
+using Frontend.Components.Auth;
 using SystemRoleEntity = Shared.Models.Entities.SystemEntities.SystemRoles;
 using SystemPermissionEntity = Shared.Models.Entities.SystemEntities.SystemPermissions;
 using SystemRolePermissionEntity = Shared.Models.Entities.SystemEntities.SystemRolesPermissions;
@@ -13,7 +14,7 @@ using Frontend.Modules.Admin.SystemPermissions;
 
 namespace Frontend.Modules.Admin.SystemRoles;
 
-public partial class SystemRoleFormulario : ComponentBase
+public partial class SystemRoleFormulario : AuthorizedPageBase
 {
     [Inject] private SystemRoleService SystemRoleService { get; set; } = null!;
     [Inject] private SystemPermissionService SystemPermissionService { get; set; } = null!;
@@ -22,11 +23,17 @@ public partial class SystemRoleFormulario : ComponentBase
     
     [Parameter] public Guid? Id { get; set; }
 
-    private SystemRoleEntity entity = new();
+    private SystemRoleEntity? entity;
     private bool isLoading = false;
     private bool isEditMode => Id.HasValue;
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
+
+    // Propiedades de permisos
+    private bool CanView => AuthService.HasPermission("SYSTEMROLE.VIEW");
+    private bool CanCreate => AuthService.HasPermission("SYSTEMROLE.CREATE");
+    private bool CanEdit => isEditMode ? AuthService.HasPermission("SYSTEMROLE.EDIT") : AuthService.HasPermission("SYSTEMROLE.CREATE");
+    private bool CanSave => CanEdit;
 
     // Variables para gestión de permisos
     private List<SystemPermissionEntity>? availablePermissions = null;
@@ -37,6 +44,16 @@ public partial class SystemRoleFormulario : ComponentBase
     
 
     protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            await OnPermissionsVerifiedAsync();
+        }
+    }
+
+    protected override async Task OnPermissionsVerifiedAsync()
     {
         if (isEditMode && Id.HasValue)
         {
@@ -69,10 +86,11 @@ public partial class SystemRoleFormulario : ComponentBase
         }
         
         // Cargar permisos disponibles si estamos en modo edición
-        if (isEditMode && entity.TypeRole == "Access")
+        if (isEditMode && entity?.TypeRole == "Access")
         {
             await LoadPermissionsAsync();
         }
+        StateHasChanged();
     }
 
     private async Task LoadEntity()
@@ -140,6 +158,33 @@ public partial class SystemRoleFormulario : ComponentBase
     {
         try
         {
+            // Verificar permisos antes de continuar
+            if (!CanSave)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Permisos Insuficientes",
+                    Detail = isEditMode ? 
+                        "No tienes permisos para editar este registro" : 
+                        "No tienes permisos para crear nuevos registros",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            if (entity == null)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "Error interno: entidad no inicializada",
+                    Duration = 4000
+                });
+                return;
+            }
+
             isLoading = true;
 
             // Validación Nombre

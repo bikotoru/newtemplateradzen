@@ -4,13 +4,14 @@ using Shared.Models.Entities;
 using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Frontend.Components.Validation;
+using Frontend.Components.Auth;
 using SystemUserEntity = Shared.Models.Entities.SystemEntities.SystemUsers;
 using Radzen;
 using System.Linq.Expressions;
 
 namespace Frontend.Modules.Admin.SystemUsers;
 
-public partial class SystemUserFormulario : ComponentBase
+public partial class SystemUserFormulario : AuthorizedPageBase
 {
     [Inject] private SystemUserService SystemUserService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
@@ -18,14 +19,30 @@ public partial class SystemUserFormulario : ComponentBase
     
     [Parameter] public Guid? Id { get; set; }
 
-    private SystemUserEntity entity = new();
+    private SystemUserEntity? entity;
     private bool isLoading = false;
     private bool isEditMode => Id.HasValue;
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
+
+    // Propiedades de permisos
+    private bool CanView => AuthService.HasPermission("SYSTEMUSER.VIEW");
+    private bool CanCreate => AuthService.HasPermission("SYSTEMUSER.CREATE");
+    private bool CanEdit => isEditMode ? AuthService.HasPermission("SYSTEMUSER.EDIT") : AuthService.HasPermission("SYSTEMUSER.CREATE");
+    private bool CanSave => CanEdit;
     
 
     protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync(); // ¡IMPORTANTE! Siempre llamar primero al base para verificar permisos
+        
+        if (HasRequiredPermissions)
+        {
+            await OnPermissionsVerifiedAsync();
+        }
+    }
+
+    protected override async Task OnPermissionsVerifiedAsync()
     {
         if (isEditMode && Id.HasValue)
         {
@@ -57,6 +74,7 @@ public partial class SystemUserFormulario : ComponentBase
         }
         
         // No lookups to initialize
+        StateHasChanged();
     }
 
     private async Task LoadEntity()
@@ -117,6 +135,33 @@ public partial class SystemUserFormulario : ComponentBase
     {
         try
         {
+            // Verificar permisos antes de continuar
+            if (!CanSave)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Permisos Insuficientes",
+                    Detail = isEditMode ? 
+                        "No tienes permisos para editar este registro" : 
+                        "No tienes permisos para crear nuevos registros",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            if (entity == null)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "Error interno: entidad no inicializada",
+                    Duration = 4000
+                });
+                return;
+            }
+
             isLoading = true;
 
             // Validación Nombre

@@ -41,6 +41,11 @@ class EntityMetadataManager:
                 "class_name": "AutoIncrementalAttribute",
                 "usage": "[AutoIncremental]",
                 "description": "Campo con numeración automática incremental"
+            },
+            "NoSelect": {
+                "class_name": "NoSelectAttribute",
+                "usage": "[NoSelect]",
+                "description": "Campo que se devuelve como null en consultas (para datos sensibles)"
             }
         }
     
@@ -73,10 +78,31 @@ class EntityMetadataManager:
     
     def get_metadata_file_path(self, entity_name: str) -> Path:
         """Obtiene la ruta del archivo .Metadata.cs"""
+        # Buscar el archivo de entidad para determinar la ubicación
+        entity_file = self.get_entity_file_path(entity_name)
+        
+        # Si el archivo de entidad existe, crear el metadata en el mismo directorio
+        if entity_file.exists():
+            return entity_file.parent / f"{entity_name}.Metadata.cs"
+        
+        # Si no existe, usar el directorio raíz de entidades
         return self.entities_path / f"{entity_name}.Metadata.cs"
     
     def get_entity_file_path(self, entity_name: str) -> Path:
         """Obtiene la ruta del archivo de entidad generado por EF Core"""
+        # Buscar primero en el directorio raíz de entidades
+        entity_file = self.entities_path / f"{entity_name}.cs"
+        if entity_file.exists():
+            return entity_file
+        
+        # Buscar en subdirectorios
+        for subdirectory in self.entities_path.iterdir():
+            if subdirectory.is_dir():
+                entity_file = subdirectory / f"{entity_name}.cs"
+                if entity_file.exists():
+                    return entity_file
+        
+        # Si no se encuentra, devolver la ruta por defecto
         return self.entities_path / f"{entity_name}.cs"
     
     def entity_exists(self, entity_name: str) -> bool:
@@ -144,12 +170,23 @@ class EntityMetadataManager:
             print(f"   Atributos disponibles: {list(self.available_attributes.keys())}")
             return False
         
+        # Determinar el namespace basado en la ubicación del archivo
+        entity_file = self.get_entity_file_path(entity_name)
+        namespace = "Shared.Models.Entities"
+        
+        if entity_file.exists():
+            # Leer el archivo de entidad para extraer el namespace
+            entity_content = entity_file.read_text(encoding='utf-8')
+            namespace_match = re.search(r'namespace\s+([\w.]+);', entity_content)
+            if namespace_match:
+                namespace = namespace_match.group(1)
+
         # Contenido del archivo
         content = f"""using System;
 using System.ComponentModel.DataAnnotations;
 using {self.attributes_namespace};
 
-namespace Shared.Models.Entities
+namespace {namespace}
 {{
     [MetadataType(typeof({entity_name}Metadata))]
     public partial class {entity_name} {{ }}
@@ -390,12 +427,23 @@ namespace Shared.Models.Entities
         if metadata_file.exists():
             return self.update_metadata_file_single(entity_name, field_name, attribute)
         
+        # Determinar el namespace basado en la ubicación del archivo
+        entity_file = self.get_entity_file_path(entity_name)
+        namespace = "Shared.Models.Entities"
+        
+        if entity_file.exists():
+            # Leer el archivo de entidad para extraer el namespace
+            entity_content = entity_file.read_text(encoding='utf-8')
+            namespace_match = re.search(r'namespace\s+([\w.]+);', entity_content)
+            if namespace_match:
+                namespace = namespace_match.group(1)
+
         # Contenido del archivo
         content = f"""using System;
 using System.ComponentModel.DataAnnotations;
 using {self.attributes_namespace};
 
-namespace Shared.Models.Entities
+namespace {namespace}
 {{
     [MetadataType(typeof({entity_name}Metadata))]
     public partial class {entity_name} {{ }}
@@ -468,9 +516,17 @@ namespace Shared.Models.Entities
             return
         
         entity_files = []
+        # Buscar en directorio raíz
         for file in self.entities_path.glob("*.cs"):
             if not file.name.endswith(".Metadata.cs"):
                 entity_files.append(file.stem)
+        
+        # Buscar en subdirectorios
+        for subdirectory in self.entities_path.iterdir():
+            if subdirectory.is_dir():
+                for file in subdirectory.glob("*.cs"):
+                    if not file.name.endswith(".Metadata.cs"):
+                        entity_files.append(file.stem)
         
         if not entity_files:
             print("❌ No se encontraron entidades")
@@ -518,6 +574,7 @@ Convención de nombres de entidades:
 Atributos disponibles:
   SoloCrear             - Campo solo modificable durante creación
   AutoIncremental       - Campo con numeración automática incremental
+  NoSelect              - Campo que se devuelve como null en consultas (para datos sensibles)
         """
     )
     

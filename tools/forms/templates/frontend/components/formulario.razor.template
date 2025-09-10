@@ -4,52 +4,109 @@
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("{{ENTITY_UPPER}}.VIEW", "{{ENTITY_UPPER}}.CREATE", "{{ENTITY_UPPER}}.EDIT")]
 
-<PageTitle>@(isEditMode ? $"Editar {{ENTITY_DISPLAY_NAME}} - {entity.{{PRIMARY_FIELD}}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")</PageTitle>
+<PageTitle>@(isEditMode ? $"Editar {{ENTITY_DISPLAY_NAME}} - {entity?.{{PRIMARY_FIELD}}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")</PageTitle>
 
-<PageWithCommandBar BackPath="/{{MODULE_PATH}}/{{ENTITY_LOWER}}/list" 
-                    ShowSave
-                    OnSaveClick="@SaveForm">
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/{{MODULE_PATH}}/{{ENTITY_LOWER}}/list" 
+                        ShowSave="@CanSave"
+                        OnSaveClick="@SaveForm">
 
-    <div class="full-width-tabs">
-        <CrmTabs DefaultTabId="tab1" DisableUrlSync="true">
-            
-            <CrmTab Id="tab1" Title="Información General" Icon="edit" IconColor="#0078d4">
-                <div class="scrollable-content">
-                    <RadzenRow JustifyContent="JustifyContent.Center">
-                        <RadzenColumn SizeLG="4" SizeMD="6" SizeSM="12">
-                            
-                            <EssentialsCard Title="@(isEditMode ? "Editar {{ENTITY_DISPLAY_NAME}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")" 
-                                           Icon="@(isEditMode ? "edit" : "add")" 
-                                           IconColor="#0078d4"
-                                           ShowEssentials=@(entity.Id != Guid.Empty)>
-                             
-                                <EssentialsTemplate>
-                                    <EssentialsGrid>
-                                        <EssentialsItem Label="Estado" Value="@(entity.Active ? "Activo" : "Inactivo")" />
-                                        <EssentialsItem Label="Creado" Value="@(entity.FechaCreacion.ToString("dd/MM/yyyy"))" />
-                                        <EssentialsItem Label="ID" Value="@entity.Id.ToString()" />
-                                    </EssentialsGrid>
-                                </EssentialsTemplate>
+        <div class="full-width-tabs">
+            <CrmTabs DefaultTabId="tab1" DisableUrlSync="true">
+                
+                <CrmTab Id="tab1" Title="Información General" Icon="edit" IconColor="#0078d4">
+                    <div class="scrollable-content">
+                        <RadzenRow JustifyContent="JustifyContent.Center">
+                            <RadzenColumn SizeLG="4" SizeMD="6" SizeSM="12">
                                 
-                                <ChildContent>
-                                    <FormValidator Entity="entity" Rules="@GetValidationRules()">
-                                        
-                                        <RadzenStack Gap="1rem">
-                                            {{FORM_FIELDS}}
-                                            
-                                        </RadzenStack>
-                                        
-                                    </FormValidator>
-                                </ChildContent>
-                            </EssentialsCard>
-                            
-                        </RadzenColumn>
-                    </RadzenRow>
-                </div>
-            </CrmTab>
-            
-        </CrmTabs>
-    </div>
+                                <EssentialsCard Title="@(isEditMode ? "Editar {{ENTITY_DISPLAY_NAME}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")" 
+                                               Icon="@(isEditMode ? "edit" : "add")" 
+                                               IconColor="#0078d4"
+                                               ShowEssentials=@(entity?.Id != Guid.Empty)>
+                                 
+                                    <EssentialsTemplate>
+                                        <EssentialsGrid>
+                                            <EssentialsItem Label="Estado" Value="@(entity?.Active == true ? "Activo" : "Inactivo")" />
+                                            <EssentialsItem Label="Creado" Value="@(entity?.FechaCreacion.ToString("dd/MM/yyyy") ?? "")" />
+                                            <EssentialsItem Label="ID" Value="@(entity?.Id.ToString() ?? "")" />
+                                        </EssentialsGrid>
+                                    </EssentialsTemplate>
+                                    
+                                    <ChildContent>
+                                        @if (entity != null)
+                                        {
+                                            <FormValidator Entity="entity" Rules="@GetValidationRules()">
+                                                
+                                                <RadzenStack Gap="1rem">
+                                                    {{FORM_FIELDS_WITH_PERMISSIONS}}
+                                                    
+                                                </RadzenStack>
+                                                
+                                            </FormValidator>
+                                        }
+                                    </ChildContent>
+                                </EssentialsCard>
+                                
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </div>
+                </CrmTab>
+                
+            </CrmTabs>
+        </div>
 
-</PageWithCommandBar>
+    </PageWithCommandBar>
+
+    @if (!CanEdit)
+    {
+        <div class="read-only-notice">
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
+                @if (isEditMode)
+                {
+                    <text>Necesitas el permiso "{{ENTITY_UPPER}}.EDIT" para modificarlo.</text>
+                }
+                else
+                {
+                    <text>Necesitas el permiso "{{ENTITY_UPPER}}.CREATE" para crear registros.</text>
+                }
+            </RadzenAlert>
+        </div>
+    }
+}
+
+<style>
+    .read-only-notice {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .read-only-notice {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin: 1rem;
+            max-width: none;
+        }
+    }
+</style>
