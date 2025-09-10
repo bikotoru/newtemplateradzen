@@ -1,0 +1,215 @@
+@using Shared.Models.DTOs.UserRoles
+@using Shared.Models.QueryModels
+@using Shared.Models.Responses
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   👥 SYSTEM USER ROLES MANAGER
+   Componente para gestionar roles de usuarios
+   ======================================== *@
+
+<RadzenStack Gap="1rem">
+    
+    @* Header con controles de búsqueda y botón agregar *@
+    <RadzenCard class="rz-shadow-0" Style="border: 1px solid var(--rz-border-color);">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+            
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+                <RadzenFormField Text="Buscar roles" Variant="Variant.Outlined">
+                    <Start>
+                        <RadzenIcon Icon="search" />
+                    </Start>
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="searchTerm" 
+                                       Placeholder="Escriba para buscar...\" 
+                                       @oninput="OnSearchChanged"
+                                       Style="width: 280px;" />
+                    </ChildContent>
+                </RadzenFormField>
+                
+                <RadzenCheckBox @bind-Value="showOnlyActive" 
+                               Name="showOnlyActive"
+                               TValue="bool"
+                               Change="@OnShowOnlyActiveChanged" />
+                <RadzenLabel Text="Solo roles activos" Component="showOnlyActive" Style="margin-left: 8px; font-weight: 500;" />
+            </RadzenStack>
+            
+            <RadzenButton Text="Agregar Rol" 
+                         Icon="add" 
+                         ButtonStyle="ButtonStyle.Primary"
+                         Variant="Variant.Filled"
+                         Size="ButtonSize.Medium"
+                         Click="ShowAddRoleModal"
+                         Disabled="@isLoading"
+                         Shade="Shade.Dark" />
+        </RadzenStack>
+    </RadzenCard>
+
+    @* Loading state *@
+    @if (isLoading)
+    {
+        <RadzenCard>
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+                <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-text-secondary-color);">
+                    Cargando roles...
+                </RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else if (errorMessage != null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter">
+            <RadzenIcon Icon="error" Style="margin-right: 8px;" />
+            @errorMessage
+        </RadzenAlert>
+    }
+    else
+    {
+        @* Lista de roles *@
+        @if (pagedResult?.Data?.Any() == true)
+        {
+            <RadzenStack Gap="0.75rem">
+                @foreach (var role in pagedResult.Data)
+                {
+                    <RadzenCard Variant="Variant.Outlined" 
+                               class="role-item"
+                               Style="transition: all 0.2s ease;">
+                        <RadzenRow AlignItems="AlignItems.Start" Gap="1rem">
+                            
+                            @* Información del rol *@
+                            <RadzenColumn SizeXS="10">
+                                <RadzenStack Gap="0.5rem">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                                        <RadzenIcon Icon="group" Style="color: var(--rz-primary); font-size: 1.2rem;" />
+                                        <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight: 600; margin: 0;">
+                                            @role.Nombre
+                                        </RadzenText>
+                                        
+                                        @* Badge de estado *@
+                                        @if (role.Active)
+                                        {
+                                            <RadzenBadge Text="Activo" 
+                                                       BadgeStyle="BadgeStyle.Success" 
+                                                       Variant="Variant.Filled"
+                                                       Style="font-size: 10px;" />
+                                        }
+                                        else
+                                        {
+                                            <RadzenBadge Text="Inactivo" 
+                                                       BadgeStyle="BadgeStyle.Secondary" 
+                                                       Variant="Variant.Filled"
+                                                       Style="font-size: 10px;" />
+                                        }
+                                        
+                                        @* Badge de permisos *@
+                                        <RadzenBadge Text="@($"{role.CantidadPermisos} permisos")" 
+                                                   BadgeStyle="BadgeStyle.Info" 
+                                                   Variant="Variant.Outlined"
+                                                   Style="font-size: 10px;" />
+                                    </RadzenStack>
+                                    
+                                    @* Descripción *@
+                                    @if (!string.IsNullOrEmpty(role.Descripcion))
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Body2" 
+                                                   Style="color: var(--rz-text-secondary-color); margin: 0; line-height: 1.4;">
+                                            @role.Descripcion
+                                        </RadzenText>
+                                    }
+                                    
+                                    @* Info de asignación *@
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+                                        <RadzenText TextStyle="TextStyle.Caption" 
+                                                   Style="color: var(--rz-text-secondary-color); margin: 0;">
+                                            Asignado: @role.FechaAsignacion.ToString("dd/MM/yyyy HH:mm")
+                                        </RadzenText>
+                                        @if (!string.IsNullOrEmpty(role.AsignadoPor))
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" 
+                                                       Style="color: var(--rz-text-secondary-color); margin: 0;">
+                                                Por: @role.AsignadoPor
+                                            </RadzenText>
+                                        }
+                                    </RadzenStack>
+                                    
+                                    @* Permisos preview (primeros 3) *@
+                                    @if (role.Permisos.Any())
+                                    {
+                                        <RadzenStack Gap="0.25rem">
+                                            <RadzenText TextStyle="TextStyle.Caption" 
+                                                       Style="color: var(--rz-primary); margin: 0; font-weight: 600;">
+                                                Permisos incluidos:
+                                            </RadzenText>
+                                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" Wrap="FlexWrap.Wrap">
+                                                @foreach (var permiso in role.Permisos.Take(5))
+                                                {
+                                                    <RadzenBadge Text="@permiso" 
+                                                               BadgeStyle="BadgeStyle.Light" 
+                                                               Variant="Variant.Filled"
+                                                               Style="font-size: 9px;" />
+                                                }
+                                                @if (role.Permisos.Count > 5)
+                                                {
+                                                    <RadzenText TextStyle="TextStyle.Caption" 
+                                                               Style="color: var(--rz-text-secondary-color); margin: 0;">
+                                                        ... y @(role.Permisos.Count - 5) más
+                                                    </RadzenText>
+                                                }
+                                            </RadzenStack>
+                                        </RadzenStack>
+                                    }
+                                </RadzenStack>
+                            </RadzenColumn>
+
+                            @* Botón remover *@
+                            <RadzenColumn SizeXS="2" Style="display: flex; align-items: flex-start; justify-content: flex-end;">
+                                <RadzenButton Icon="delete"
+                                            ButtonStyle="ButtonStyle.Danger"
+                                            Variant="Variant.Text"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => RemoveRole(role))"
+                                            title="Remover rol del usuario"
+                                            Disabled="@isLoading" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenCard>
+                }
+            </RadzenStack>
+        }
+        else
+        {
+            <RadzenCard>
+                <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 3rem;">
+                    <RadzenIcon Icon="group_off" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.H6" Style="color: var(--rz-text-secondary-color); text-align: center;">
+                        No se encontraron roles asignados
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-text-disabled-color); text-align: center;">
+                        Haga clic en "Agregar Rol" para asignar roles al usuario
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        }
+
+        @* Paginación *@
+        @if (pagedResult != null && pagedResult.TotalCount > pageSize)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="margin-top: 2rem;">
+                <RadzenPager Count="@totalPages" 
+                            Page="@currentPage" 
+                            PageChanged="@(async (args) => await OnPageChanged(args.PageIndex + 1))"
+                            ShowPagingSummary="true"
+                            PagingSummaryFormat="Mostrando página {0} de {1} ({2} roles en total)" />
+            </RadzenStack>
+        }
+    }
+</RadzenStack>
+
+<style>
+    .role-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+</style>

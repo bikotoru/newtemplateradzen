@@ -76,6 +76,16 @@
                             </RadzenRow>
                         </div>
                     </CrmTab>
+                    
+                    <CrmTab Id="tab3" Title="Gestión de Roles" Icon="group" IconColor="#007bff">
+                        <div class="scrollable-content">
+                            <RadzenRow JustifyContent="JustifyContent.Center">
+                                <RadzenColumn SizeLG="12" SizeMD="12" SizeSM="12">
+                                    <SystemUserRolesManager UserId="@entity.Id" UserName="@entity.Nombre" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </div>
+                    </CrmTab>
                 }
                 
             </CrmTabs>

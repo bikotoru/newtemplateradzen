@@ -148,6 +148,119 @@ namespace Frontend.Modules.Admin.SystemUsers
         }
 
         #endregion
+
+        #region Gestión de Roles de Usuarios
+
+        /// <summary>
+        /// Buscar roles de un usuario con paginación y filtros
+        /// </summary>
+        public async Task<ApiResponse<PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>>> GetUserRolesPagedAsync(Guid userId, Shared.Models.DTOs.UserRoles.UserRoleSearchRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo roles paginados para usuario {UserId}", userId);
+                
+                var response = await _api.PostAsync<PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>>(
+                    $"{_baseUrl}/{userId}/roles/search", 
+                    request
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles del usuario {UserId}", userId);
+                return new ApiResponse<PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>>
+                {
+                    Success = false,
+                    Message = "Error al obtener roles del usuario"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Obtener roles disponibles para asignar a un usuario
+        /// </summary>
+        public async Task<ApiResponse<List<Shared.Models.DTOs.UserRoles.AvailableRoleDto>>> GetAvailableRolesAsync(Guid userId, string? searchTerm = null)
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo roles disponibles para usuario {UserId}", userId);
+                
+                var url = $"{_baseUrl}/{userId}/roles/available";
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    url += $"?search={Uri.EscapeDataString(searchTerm)}";
+                }
+
+                var response = await _api.GetAsync<List<Shared.Models.DTOs.UserRoles.AvailableRoleDto>>(url);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles disponibles para usuario {UserId}", userId);
+                return new ApiResponse<List<Shared.Models.DTOs.UserRoles.AvailableRoleDto>>
+                {
+                    Success = false,
+                    Message = "Error al obtener roles disponibles"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Asignar rol a un usuario
+        /// </summary>
+        public async Task<ApiResponse<bool>> AssignRoleToUserAsync(Guid userId, Guid roleId)
+        {
+            try
+            {
+                _logger.LogInformation("Asignando rol {RoleId} al usuario {UserId}", roleId, userId);
+                
+                var response = await _api.PostAsync<bool>(
+                    $"{_baseUrl}/{userId}/roles/{roleId}/assign",
+                    new { } // Empty body
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar rol {RoleId} al usuario {UserId}", roleId, userId);
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Error al asignar rol al usuario"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Remover rol de un usuario
+        /// </summary>
+        public async Task<ApiResponse<bool>> RemoveRoleFromUserAsync(Guid userId, Guid roleId)
+        {
+            try
+            {
+                _logger.LogInformation("Removiendo rol {RoleId} del usuario {UserId}", roleId, userId);
+                
+                var response = await _api.DeleteAsync<bool>(
+                    $"{_baseUrl}/{userId}/roles/{roleId}"
+                );
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al remover rol {RoleId} del usuario {UserId}", roleId, userId);
+                return new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Error al remover rol del usuario"
+                };
+            }
+        }
+
+        #endregion
         
     }
 

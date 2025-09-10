@@ -1,0 +1,45 @@
+@using Shared.Models.DTOs.UserRoles
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   ✅ MODAL DE CONFIRMACIÓN PARA ASIGNAR ROL
+   Modal hermoso para confirmar asignación con preview de permisos
+   ======================================== *@
+
+<div style="padding: 1rem;">
+    <p style="margin-bottom: 1rem;">
+        ¿Está seguro que desea asignar el rol <strong>@Role.Nombre</strong> al usuario <strong>@UserName</strong>?
+    </p>
+    
+    <div style="background: var(--rz-info-lighter); padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+        <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--rz-info-dark);">
+            <i class="rzi rzi-info" style="margin-right: 0.5rem;"></i>
+            El usuario obtendrá los siguientes @Role.CantidadPermisos permisos:
+        </p>
+        <div style="max-height: 200px; overflow-y: auto; font-size: 0.9rem; line-height: 1.4;">
+            @foreach (var permiso in Role.PermisosNombres)
+            {
+                <div>• <strong>@permiso</strong></div>
+            }
+        </div>
+    </div>
+    
+    <p style="font-size: 0.9rem; color: var(--rz-text-secondary-color); margin-top: 1rem;">
+        Los permisos se aplicarán inmediatamente y estarán disponibles en la próxima sesión del usuario.
+    </p>
+</div>
+
+<div style="text-align: center; margin-top: 2rem; display: flex; gap: 0.5rem; justify-content: center;">
+    <RadzenButton Text="Cancelar" 
+                  Icon="cancel" 
+                  ButtonStyle="ButtonStyle.Danger"
+                  Variant="Variant.Filled"
+                  Click="@(() => DialogService.Close(false))" />
+                  
+    <RadzenButton Text="Sí, Asignar Rol" 
+                  Icon="check" 
+                  ButtonStyle="ButtonStyle.Success"
+                  Variant="Variant.Filled"
+                  Click="@(() => DialogService.Close(true))" />
+</div>

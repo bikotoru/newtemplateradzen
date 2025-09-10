@@ -1,0 +1,37 @@
+@using Shared.Models.DTOs.UserRoles
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   📋 MODAL DE DETALLE DE PERMISOS DEL ROL
+   Modal para mostrar todos los permisos de un rol
+   ======================================== *@
+
+<div style="padding: 1rem;">
+    <h4 style="color: var(--rz-primary); margin-bottom: 1rem;">
+        <i class="rzi rzi-group" style="margin-right: 0.5rem;"></i>
+        Permisos del Rol: @Role.Nombre
+    </h4>
+    
+    <div style="background: var(--rz-base-50); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+        <p style="margin: 0; font-weight: 600;">Total de permisos: @Role.CantidadPermisos</p>
+        @if (!string.IsNullOrEmpty(Role.Descripcion))
+        {
+            <p style="margin: 0.5rem 0 0 0; color: var(--rz-text-secondary-color);">@Role.Descripcion</p>
+        }
+    </div>
+    
+    <div style="max-height: 300px; overflow-y: auto; font-size: 0.9rem; line-height: 1.6;">
+        @foreach (var permiso in Role.PermisosNombres)
+        {
+            <div>• <strong>@permiso</strong></div>
+        }
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 2rem;">
+    <RadzenButton Text="Cerrar" 
+                  Icon="close" 
+                  ButtonStyle="ButtonStyle.Secondary"
+                  Click="@(() => DialogService.Close())" />
+</div>

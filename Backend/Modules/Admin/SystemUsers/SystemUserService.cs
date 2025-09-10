@@ -529,5 +529,281 @@ namespace Backend.Modules.Admin.SystemUsers
         }
 
         #endregion
+
+        #region Gestión de Roles de Usuarios
+
+        /// <summary>
+        /// Obtener roles asignados a un usuario
+        /// </summary>
+        public async Task<Shared.Models.QueryModels.PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>> GetUserRolesPagedAsync(Shared.Models.DTOs.UserRoles.UserRoleSearchRequest request, SessionDataDto sessionData)
+        {
+            _logger.LogInformation("Obteniendo roles para usuario {UserId}", request.UserId);
+
+            try
+            {
+                var userRolesQuery = from userRole in _context.Set<Shared.Models.Entities.SystemEntities.SystemUsersRoles>()
+                                    join role in _context.Set<Shared.Models.Entities.SystemEntities.SystemRoles>()
+                                        on userRole.SystemRolesId equals role.Id
+                                    where userRole.SystemUsersId == request.UserId &&
+                                          (role.OrganizationId == null || role.OrganizationId == sessionData.OrganizationId) &&
+                                          (!request.ShowOnlyActive || (userRole.Active && role.Active))
+                                    select new { userRole, role };
+
+                // Aplicar filtro de búsqueda si se especifica
+                if (!string.IsNullOrWhiteSpace(request.Filter))
+                {
+                    if (request.Filter.Contains("Nombre.Contains("))
+                    {
+                        var searchTerm = request.Filter.Replace("Nombre.Contains(\"", "").Replace("\")", "").ToLower();
+                        userRolesQuery = userRolesQuery.Where(x => 
+                            x.role.Nombre.ToLower().Contains(searchTerm) ||
+                            (x.role.Descripcion != null && x.role.Descripcion.ToLower().Contains(searchTerm)));
+                    }
+                }
+
+                var totalCount = await userRolesQuery.CountAsync();
+
+                // Aplicar paginación
+                var skip = request.Skip ?? 0;
+                var take = request.Take ?? 20;
+                
+                var userRolesData = await userRolesQuery
+                    .OrderBy(x => x.role.Nombre)
+                    .Skip(skip)
+                    .Take(take)
+                    .Select(x => new 
+                    {
+                        x.role.Id,
+                        x.role.Nombre,
+                        x.role.Descripcion,
+                        x.role.FechaCreacion,
+                        CreadorNombre = x.role.Creador != null ? x.role.Creador.Nombre : "",
+                        x.role.Active,
+                        FechaAsignacion = x.userRole.FechaCreacion,
+                        AsignadoPor = x.userRole.Creador != null ? x.userRole.Creador.Nombre : ""
+                    })
+                    .ToListAsync();
+
+                // Obtener permisos para cada rol
+                var roleIds = userRolesData.Select(x => x.Id).ToList();
+                var rolePermissions = await _context.Set<Shared.Models.Entities.SystemEntities.SystemRolesPermissions>()
+                    .Where(rp => roleIds.Contains(rp.SystemRolesId) && rp.Active)
+                    .Include(rp => rp.SystemPermissions)
+                    .Where(rp => rp.SystemPermissions.Active)
+                    .GroupBy(rp => rp.SystemRolesId)
+                    .ToDictionaryAsync(
+                        g => g.Key,
+                        g => g.Select(rp => rp.SystemPermissions.Nombre).ToList()
+                    );
+
+                // Crear DTOs
+                var data = userRolesData.Select(x => new Shared.Models.DTOs.UserRoles.UserRoleDto
+                {
+                    RoleId = x.Id,
+                    Nombre = x.Nombre,
+                    Descripcion = x.Descripcion,
+                    FechaCreacion = x.FechaCreacion,
+                    CreadoPor = x.CreadorNombre,
+                    Active = x.Active,
+                    FechaAsignacion = x.FechaAsignacion,
+                    AsignadoPor = x.AsignadoPor,
+                    CantidadPermisos = rolePermissions.ContainsKey(x.Id) ? rolePermissions[x.Id].Count : 0,
+                    Permisos = rolePermissions.ContainsKey(x.Id) ? rolePermissions[x.Id] : new List<string>()
+                }).ToList();
+
+                var currentPage = take > 0 ? (skip / take) + 1 : 1;
+
+                return new Shared.Models.QueryModels.PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>
+                {
+                    Data = data,
+                    TotalCount = totalCount,
+                    Page = currentPage,
+                    PageSize = take
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles del usuario {UserId}", request.UserId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Obtener roles disponibles para asignar a un usuario
+        /// </summary>
+        public async Task<List<Shared.Models.DTOs.UserRoles.AvailableRoleDto>> GetAvailableRolesAsync(Guid userId, SessionDataDto sessionData, string? searchTerm = null)
+        {
+            _logger.LogInformation("Obteniendo roles disponibles para usuario {UserId}", userId);
+
+            try
+            {
+                // Obtener roles ya asignados al usuario
+                var assignedRoleIds = await _context.Set<Shared.Models.Entities.SystemEntities.SystemUsersRoles>()
+                    .Where(ur => ur.SystemUsersId == userId && ur.Active)
+                    .Select(ur => ur.SystemRolesId)
+                    .ToListAsync();
+
+                // Obtener todos los roles disponibles
+                var rolesQuery = _context.Set<Shared.Models.Entities.SystemEntities.SystemRoles>()
+                    .Where(r => (r.OrganizationId == null || r.OrganizationId == sessionData.OrganizationId) && r.Active);
+
+                // Aplicar filtro de búsqueda si se especifica
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    rolesQuery = rolesQuery.Where(r => 
+                        r.Nombre.ToLower().Contains(searchTerm.ToLower()) ||
+                        (r.Descripcion != null && r.Descripcion.ToLower().Contains(searchTerm.ToLower())));
+                }
+
+                var roles = await rolesQuery
+                    .OrderBy(r => r.Nombre)
+                    .Select(r => new 
+                    {
+                        r.Id,
+                        r.Nombre,
+                        r.Descripcion,
+                        r.FechaCreacion,
+                        r.Active
+                    })
+                    .ToListAsync();
+
+                // Obtener permisos para cada rol
+                var roleIds = roles.Select(r => r.Id).ToList();
+                var rolePermissions = await _context.Set<Shared.Models.Entities.SystemEntities.SystemRolesPermissions>()
+                    .Where(rp => roleIds.Contains(rp.SystemRolesId) && rp.Active)
+                    .Include(rp => rp.SystemPermissions)
+                    .Where(rp => rp.SystemPermissions.Active)
+                    .GroupBy(rp => rp.SystemRolesId)
+                    .ToDictionaryAsync(
+                        g => g.Key,
+                        g => new 
+                        {
+                            Nombres = g.Select(rp => rp.SystemPermissions.Nombre).ToList(),
+                            Acciones = g.Select(rp => rp.SystemPermissions.ActionKey).Where(a => !string.IsNullOrEmpty(a)).ToList()
+                        }
+                    );
+
+                // Crear DTOs
+                var availableRoles = roles.Select(r => new Shared.Models.DTOs.UserRoles.AvailableRoleDto
+                {
+                    RoleId = r.Id,
+                    Nombre = r.Nombre,
+                    Descripcion = r.Descripcion,
+                    FechaCreacion = r.FechaCreacion,
+                    Active = r.Active,
+                    YaAsignado = assignedRoleIds.Contains(r.Id),
+                    CantidadPermisos = rolePermissions.ContainsKey(r.Id) ? rolePermissions[r.Id].Nombres.Count : 0,
+                    PermisosNombres = rolePermissions.ContainsKey(r.Id) ? rolePermissions[r.Id].Nombres : new List<string>(),
+                    PermisosAcciones = rolePermissions.ContainsKey(r.Id) ? rolePermissions[r.Id].Acciones : new List<string>()
+                }).ToList();
+
+                return availableRoles;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener roles disponibles para usuario {UserId}", userId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asignar rol a un usuario
+        /// </summary>
+        public async Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId, SessionDataDto sessionData)
+        {
+            _logger.LogInformation("Asignando rol {RoleId} al usuario {UserId}", roleId, userId);
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Verificar si ya existe la asignación
+                var existingAssignment = await _context.Set<Shared.Models.Entities.SystemEntities.SystemUsersRoles>()
+                    .FirstOrDefaultAsync(ur => ur.SystemUsersId == userId && ur.SystemRolesId == roleId);
+
+                if (existingAssignment != null)
+                {
+                    if (existingAssignment.Active)
+                    {
+                        _logger.LogWarning("El rol {RoleId} ya está asignado al usuario {UserId}", roleId, userId);
+                        return true; // Ya está asignado y activo
+                    }
+                    else
+                    {
+                        // Reactivar asignación existente
+                        existingAssignment.Active = true;
+                        existingAssignment.FechaModificacion = DateTime.UtcNow;
+                        existingAssignment.ModificadorId = sessionData.Id;
+                    }
+                }
+                else
+                {
+                    // Crear nueva asignación
+                    var userRole = new Shared.Models.Entities.SystemEntities.SystemUsersRoles
+                    {
+                        Id = Guid.NewGuid(),
+                        SystemUsersId = userId,
+                        SystemRolesId = roleId,
+                        OrganizationId = sessionData.OrganizationId,
+                        Active = true,
+                        FechaCreacion = DateTime.UtcNow,
+                        CreadorId = sessionData.Id
+                    };
+
+                    _context.Set<Shared.Models.Entities.SystemEntities.SystemUsersRoles>().Add(userRole);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Rol {RoleId} asignado exitosamente al usuario {UserId}", roleId, userId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error al asignar rol {RoleId} al usuario {UserId}", roleId, userId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Remover rol de un usuario
+        /// </summary>
+        public async Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId, SessionDataDto sessionData)
+        {
+            _logger.LogInformation("Removiendo rol {RoleId} del usuario {UserId}", roleId, userId);
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var userRole = await _context.Set<Shared.Models.Entities.SystemEntities.SystemUsersRoles>()
+                    .FirstOrDefaultAsync(ur => ur.SystemUsersId == userId && ur.SystemRolesId == roleId && ur.Active);
+
+                if (userRole == null)
+                {
+                    _logger.LogWarning("No se encontró asignación activa del rol {RoleId} para el usuario {UserId}", roleId, userId);
+                    return false;
+                }
+
+                // Desactivar la asignación
+                userRole.Active = false;
+                userRole.FechaModificacion = DateTime.UtcNow;
+                userRole.ModificadorId = sessionData.Id;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Rol {RoleId} removido exitosamente del usuario {UserId}", roleId, userId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error al remover rol {RoleId} del usuario {UserId}", roleId, userId);
+                throw;
+            }
+        }
+
+        #endregion
     }
 }

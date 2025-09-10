@@ -222,19 +222,172 @@ namespace Backend.Modules.Admin.SystemUsers
         }
     }
 
-        #endregion
+    #endregion
+
+    #region Gestión de Roles de Usuarios
+
+    /// <summary>
+    /// Buscar roles de un usuario con paginación y filtros
+    /// </summary>
+    [HttpPost("{userId:guid}/roles/search")]
+    public async Task<IActionResult> SearchUserRoles(Guid userId, [FromBody] Shared.Models.DTOs.UserRoles.UserRoleSearchRequest request)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            request.UserId = userId;
+            var result = await _systemuserService.GetUserRolesPagedAsync(request, user!);
+            
+            return Ok(new ApiResponse<Shared.Models.QueryModels.PagedResult<Shared.Models.DTOs.UserRoles.UserRoleDto>>
+            {
+                Success = true,
+                Data = result,
+                Message = "Roles del usuario obtenidos exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar roles del usuario {UserId}", userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
     }
 
-    // DTOs para validación
-    public class ValidateUsernameRequest
+    /// <summary>
+    /// Obtener roles disponibles para asignar a un usuario
+    /// </summary>
+    [HttpGet("{userId:guid}/roles/available")]
+    public async Task<IActionResult> GetAvailableRoles(Guid userId, [FromQuery] string? search = null)
     {
-        public string Username { get; set; } = string.Empty;
-        public Guid? ExcludeId { get; set; }
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            var roles = await _systemuserService.GetAvailableRolesAsync(userId, user!, search);
+            
+            return Ok(new ApiResponse<List<Shared.Models.DTOs.UserRoles.AvailableRoleDto>>
+            {
+                Success = true,
+                Data = roles,
+                Message = "Roles disponibles obtenidos exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener roles disponibles para usuario {UserId}", userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
     }
 
-    public class ValidateEmailRequest
+    /// <summary>
+    /// Asignar rol a un usuario
+    /// </summary>
+    [HttpPost("{userId:guid}/roles/{roleId:guid}/assign")]
+    public async Task<IActionResult> AssignRoleToUser(Guid userId, Guid roleId)
     {
-        public string Email { get; set; } = string.Empty;
-        public Guid? ExcludeId { get; set; }
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("edit");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            var result = await _systemuserService.AssignRoleToUserAsync(userId, roleId, user!);
+            
+            if (result)
+            {
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Data = true,
+                    Message = "Rol asignado exitosamente al usuario"
+                });
+            }
+            else
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Data = false,
+                    Message = "No se pudo asignar el rol al usuario"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al asignar rol {RoleId} al usuario {UserId}", roleId, userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
     }
+
+    /// <summary>
+    /// Remover rol de un usuario
+    /// </summary>
+    [HttpDelete("{userId:guid}/roles/{roleId:guid}")]
+    public async Task<IActionResult> RemoveRoleFromUser(Guid userId, Guid roleId)
+    {
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("edit");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            var result = await _systemuserService.RemoveRoleFromUserAsync(userId, roleId, user!);
+            
+            if (result)
+            {
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Data = true,
+                    Message = "Rol removido exitosamente del usuario"
+                });
+            }
+            else
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Data = false,
+                    Message = "No se pudo remover el rol del usuario"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al remover rol {RoleId} del usuario {UserId}", roleId, userId);
+            return StatusCode(500, new ApiResponse<object>
+            {
+                Success = false,
+                Message = "Error interno del servidor"
+            });
+        }
+    }
+
+    #endregion
+}
+
+// DTOs para validación
+public class ValidateUsernameRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public Guid? ExcludeId { get; set; }
+}
+
+public class ValidateEmailRequest
+{
+    public string Email { get; set; } = string.Empty;
+    public Guid? ExcludeId { get; set; }
+}
 }
