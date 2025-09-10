@@ -6,7 +6,7 @@
 @using Shared.Models.Entities
 @using Frontend.Modules.Admin.SystemUsers.Components
 @inherits AuthorizedPageBase
-@attribute [AuthorizePermission("SYSTEMUSER.VIEW", "SYSTEMUSER.CREATE", "SYSTEMUSER.EDIT")]
+@attribute [AuthorizePermission("SYSTEMUSER.VIEW", "SYSTEMUSER.CREATE", "SYSTEMUSER.UPDATE")]
 
 <PageTitle>@(isEditMode ? $"Editar SystemUser - {entity?.Nombre}" : "Nuevo SystemUser")</PageTitle>
 
@@ -71,7 +71,7 @@
                         <div class="scrollable-content">
                             <RadzenRow JustifyContent="JustifyContent.Center">
                                 <RadzenColumn SizeLG="12" SizeMD="12" SizeSM="12">
-                                    <SystemUserPermissionsManager UserId="@entity.Id" UserName="@entity.Nombre" />
+                                    <SystemUserPermissionsManager UserId="@entity.Id" UserName="@entity.Nombre" CanEdit="@CanEdit" />
                                 </RadzenColumn>
                             </RadzenRow>
                         </div>
@@ -81,7 +81,7 @@
                         <div class="scrollable-content">
                             <RadzenRow JustifyContent="JustifyContent.Center">
                                 <RadzenColumn SizeLG="12" SizeMD="12" SizeSM="12">
-                                    <SystemUserRolesManager UserId="@entity.Id" UserName="@entity.Nombre" />
+                                    <SystemUserRolesManager UserId="@entity.Id" UserName="@entity.Nombre" CanEdit="@CanEdit" />
                                 </RadzenColumn>
                             </RadzenRow>
                         </div>
@@ -93,52 +93,5 @@
 
     </PageWithCommandBar>
 
-    @if (!CanEdit)
-    {
-        <div class="read-only-notice">
-            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
-                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
-                @if (isEditMode)
-                {
-                    <text>Necesitas el permiso "SYSTEMUSER.EDIT" para modificarlo.</text>
-                }
-                else
-                {
-                    <text>Necesitas el permiso "SYSTEMUSER.CREATE" para crear registros.</text>
-                }
-            </RadzenAlert>
-        </div>
-    }
 }
 
-<style>
-    .read-only-notice {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 1000;
-        max-width: 400px;
-        animation: slideInRight 0.3s ease-out;
-    }
-
-    @@keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .read-only-notice {
-            position: relative;
-            top: auto;
-            right: auto;
-            margin: 1rem;
-            max-width: none;
-        }
-    }
-</style>

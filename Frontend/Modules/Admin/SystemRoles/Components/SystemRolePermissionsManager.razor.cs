@@ -37,6 +37,11 @@ namespace Frontend.Modules.Admin.SystemRoles.Components
         [Parameter] public string? RoleName { get; set; }
 
         /// <summary>
+        /// Indica si el usuario tiene permisos para editar
+        /// </summary>
+        [Parameter] public bool CanEdit { get; set; } = true;
+
+        /// <summary>
         /// Callback que se ejecuta cuando se guardan cambios exitosamente
         /// </summary>
         [Parameter] public EventCallback OnPermissionsUpdated { get; set; }
@@ -315,6 +320,17 @@ namespace Frontend.Modules.Admin.SystemRoles.Components
         /// </summary>
         private void TogglePermission(RolePermissionDto permission, bool isChecked)
         {
+            if (!CanEdit)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin permisos",
+                    Detail = "No tienes permisos para modificar permisos de roles",
+                    Duration = 3000
+                });
+                return;
+            }
             // Obtener el estado original del servidor (sin cambios pendientes)
             var originallyAssigned = GetOriginalAssignedState(permission);
 
@@ -415,6 +431,18 @@ namespace Frontend.Modules.Admin.SystemRoles.Components
         /// </summary>
         private async Task SavePermissions()
         {
+            if (!CanEdit)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin permisos",
+                    Detail = "No tienes permisos para modificar permisos de roles",
+                    Duration = 3000
+                });
+                return;
+            }
+
             if (!hasChanges) return;
 
             try

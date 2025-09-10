@@ -12,6 +12,15 @@
 <RadzenStack Gap="1rem">
     
     @* Header con controles de búsqueda y filtros *@
+    @* Mensaje de solo lectura *@
+    @if (!CanEdit)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+            <RadzenIcon Icon="visibility" Style="margin-right: 8px;" />
+            Estás viendo los permisos en modo solo lectura. Necesitas permisos de edición para realizar cambios.
+        </RadzenAlert>
+    }
+
     <RadzenCard class="rz-shadow-0" Style="border: 1px solid var(--rz-border-color);">
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
             
@@ -56,7 +65,7 @@
                          Variant="Variant.Filled"
                          Size="ButtonSize.Medium"
                          Click="SavePermissions"
-                         Disabled="@(!hasChanges || isLoading)"
+                         Disabled="@(!CanEdit || !hasChanges || isLoading)"
                          Shade="Shade.Dark" />
         </RadzenStack>
     </RadzenCard>
@@ -118,7 +127,8 @@
                                         @* Switch del permiso *@
                                         <RadzenColumn SizeXS="1" Style="display: flex; align-items: flex-start; padding-top: 4px;">
                                             <RadzenSwitch @bind-Value="permission.IsAssigned"
-                                                         Change="@((bool value) => TogglePermission(permission, value))" />
+                                                         Change="@((bool value) => TogglePermission(permission, value))"
+                                                         Disabled="@(!CanEdit)" />
                                         </RadzenColumn>
 
                                         @* Información del permiso *@

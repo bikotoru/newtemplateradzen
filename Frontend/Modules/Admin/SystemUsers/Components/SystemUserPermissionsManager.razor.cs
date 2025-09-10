@@ -40,6 +40,11 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         [Parameter] public string? UserName { get; set; }
 
         /// <summary>
+        /// Indica si el usuario tiene permisos para editar
+        /// </summary>
+        [Parameter] public bool CanEdit { get; set; } = true;
+
+        /// <summary>
         /// Callback que se ejecuta cuando se guardan cambios exitosamente
         /// </summary>
         [Parameter] public EventCallback OnPermissionsUpdated { get; set; }
@@ -365,9 +370,9 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         /// </summary>
         private bool CanModifyPermission(UserPermissionDto permission)
         {
-            // Siempre se pueden modificar permisos directos
-            // Los heredados no se pueden modificar desde aquí
-            return true;
+            // Solo se pueden modificar si el usuario tiene permisos de edición
+            // y son permisos directos (no heredados)
+            return CanEdit && !permission.IsInheritedFromRole;
         }
 
         /// <summary>
@@ -446,6 +451,18 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         /// </summary>
         private async Task SavePermissions()
         {
+            if (!CanEdit)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin permisos",
+                    Detail = "No tienes permisos para modificar permisos de usuarios",
+                    Duration = 3000
+                });
+                return;
+            }
+
             if (!hasChanges || UserId == Guid.Empty) return;
 
             try

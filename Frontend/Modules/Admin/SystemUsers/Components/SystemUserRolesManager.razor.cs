@@ -31,6 +31,11 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         /// </summary>
         [Parameter] public string? UserName { get; set; }
 
+        /// <summary>
+        /// Indica si el usuario tiene permisos para editar
+        /// </summary>
+        [Parameter] public bool CanEdit { get; set; } = true;
+
         #region Estado del componente
 
         // Datos de roles
@@ -181,6 +186,18 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         /// </summary>
         private async Task ShowAddRoleModal()
         {
+            if (!CanEdit)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin permisos",
+                    Detail = "No tienes permisos para modificar roles de usuarios",
+                    Duration = 3000
+                });
+                return;
+            }
+
             if (UserId == Guid.Empty)
             {
                 NotificationService.Notify(new NotificationMessage
@@ -282,6 +299,18 @@ namespace Frontend.Modules.Admin.SystemUsers.Components
         /// </summary>
         private async Task RemoveRole(UserRoleDto role)
         {
+            if (!CanEdit)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin permisos",
+                    Detail = "No tienes permisos para modificar roles de usuarios",
+                    Duration = 3000
+                });
+                return;
+            }
+
             try
             {
                 // Mostrar confirmación
