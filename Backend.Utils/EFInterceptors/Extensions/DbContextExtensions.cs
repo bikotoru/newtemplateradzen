@@ -26,6 +26,10 @@ namespace Backend.Utils.EFInterceptors.Extensions
             // Register the interceptor service
             services.AddScoped<EFInterceptorService>();
 
+            // Register the interceptor as a singleton to avoid multiple instances
+            services.AddSingleton<NoSelectQueryInterceptor>(provider =>
+                new NoSelectQueryInterceptor(provider.GetRequiredService<ILogger<NoSelectQueryInterceptor>>()));
+            
             // Register DbContext options first with interceptors
             services.AddDbContext<AppDbContext>((serviceProvider, options) =>
             {
@@ -38,16 +42,15 @@ namespace Backend.Utils.EFInterceptors.Extensions
                     options.UseSqlServer(connectionString);
                 }
                 
-                // Add the NoSelect interceptor
-                var logger = serviceProvider.GetService<ILogger<NoSelectQueryInterceptor>>();
-                if (logger != null)
-                {
-                    var noSelectInterceptor = new NoSelectQueryInterceptor(logger);
-                    options.AddInterceptors(noSelectInterceptor);
-                }
+                // Get the singleton interceptor instead of creating new ones
+                var noSelectInterceptor = serviceProvider.GetRequiredService<NoSelectQueryInterceptor>();
+                options.AddInterceptors(noSelectInterceptor);
                 
                 options.EnableSensitiveDataLogging(false);
                 options.EnableDetailedErrors(true);
+                
+                // Configure warnings to suppress the service provider warning
+                options.ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning));
             });
 
             // Replace with intercepted version

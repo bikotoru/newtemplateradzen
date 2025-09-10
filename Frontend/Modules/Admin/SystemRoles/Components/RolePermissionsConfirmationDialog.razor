@@ -1,0 +1,188 @@
+@using Shared.Models.DTOs.RolePermissions
+@using Radzen
+@using Radzen.Blazor
+
+@* ========================================
+   🔔 MODAL DE CONFIRMACIÓN DE CAMBIOS
+   Modal que muestra el resumen de cambios antes de aplicar
+   ======================================== *@
+
+<RadzenStack Gap="1.5rem" Style="height: 100%; overflow-y: auto; padding: 1rem;">
+    
+    @* Header del modal *@
+    <RadzenStack Gap="0.5rem">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenIcon Icon="warning" Style="color: var(--rz-warning); font-size: 1.5rem;" />
+            <RadzenText TextStyle="TextStyle.H5" Style="margin: 0; color: var(--rz-text-primary-color);">
+                Confirmar Cambios en Permisos
+            </RadzenText>
+        </RadzenStack>
+        <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-text-secondary-color); margin: 0;">
+            Se aplicarán los siguientes cambios al rol <RadzenText TextStyle="TextStyle.Body1" Style="font-weight: 600; display: inline;">"@RoleName"</RadzenText>:
+        </RadzenText>
+    </RadzenStack>
+
+    @* Resumen de cambios *@
+    <RadzenStack Gap="1rem">
+        
+        @* Total de cambios *@
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenIcon Icon="info" />
+                <RadzenText TextStyle="TextStyle.Subtitle1" Style="font-weight: 600; margin: 0;">
+                    Total de cambios: @TotalChanges
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-text-secondary-color); margin: 0;">
+                    (@PermissionsToAdd.Count agregados, @PermissionsToRemove.Count removidos)
+                </RadzenText>
+            </RadzenStack>
+        </RadzenAlert>
+
+        <RadzenRow Gap="1rem">
+            
+            @* Permisos a agregar *@
+            @if (PermissionsToAdd.Any())
+            {
+                <RadzenColumn SizeXS="@(PermissionsToRemove.Any() ? 6 : 12)" SizeMD="@(PermissionsToRemove.Any() ? 6 : 12)" SizeSM="12">
+                    <RadzenCard Style="border-left: 3px solid var(--rz-success); background: var(--rz-success-lighter);">
+                        <RadzenStack Gap="1rem">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenIcon Icon="add_circle" Style="color: var(--rz-success);" />
+                                <RadzenText TextStyle="TextStyle.H6" Style="color: var(--rz-success-dark); margin: 0; font-weight: 600;">
+                                    Permisos a Agregar (@PermissionsToAdd.Count)
+                                </RadzenText>
+                            </RadzenStack>
+                            
+                            <RadzenStack Gap="0.5rem" Style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+                                @foreach (var permission in PermissionsToAdd)
+                                {
+                                    <RadzenCard Variant="Variant.Outlined" Style="background: white;">
+                                        <RadzenStack Gap="0.25rem">
+                                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                                                <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600; margin: 0;">
+                                                    @permission.Nombre
+                                                </RadzenText>
+                                                @if (!string.IsNullOrEmpty(permission.GrupoNombre))
+                                                {
+                                                    <RadzenBadge Text="@permission.GrupoNombre" 
+                                                               BadgeStyle="BadgeStyle.Light" 
+                                                               Variant="Variant.Filled"
+                                                               Style="font-size: 10px;" />
+                                                }
+                                            </RadzenStack>
+                                            @if (!string.IsNullOrEmpty(permission.Descripcion))
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Body2" 
+                                                           Style="color: var(--rz-text-secondary-color); margin: 0; line-height: 1.4;">
+                                                    @permission.Descripcion
+                                                </RadzenText>
+                                            }
+                                        </RadzenStack>
+                                    </RadzenCard>
+                                }
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
+            }
+
+            @* Permisos a remover *@
+            @if (PermissionsToRemove.Any())
+            {
+                <RadzenColumn SizeXS="@(PermissionsToAdd.Any() ? 6 : 12)" SizeMD="@(PermissionsToAdd.Any() ? 6 : 12)" SizeSM="12">
+                    <RadzenCard Style="border-left: 3px solid var(--rz-danger); background: var(--rz-danger-lighter);">
+                        <RadzenStack Gap="1rem">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenIcon Icon="remove_circle" Style="color: var(--rz-danger);" />
+                                <RadzenText TextStyle="TextStyle.H6" Style="color: var(--rz-danger-dark); margin: 0; font-weight: 600;">
+                                    Permisos a Remover (@PermissionsToRemove.Count)
+                                </RadzenText>
+                            </RadzenStack>
+                            
+                            <RadzenStack Gap="0.5rem" Style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+                                @foreach (var permission in PermissionsToRemove)
+                                {
+                                    <RadzenCard Variant="Variant.Outlined" Style="background: white;">
+                                        <RadzenStack Gap="0.25rem">
+                                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                                                <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600; margin: 0;">
+                                                    @permission.Nombre
+                                                </RadzenText>
+                                                @if (!string.IsNullOrEmpty(permission.GrupoNombre))
+                                                {
+                                                    <RadzenBadge Text="@permission.GrupoNombre" 
+                                                               BadgeStyle="BadgeStyle.Light" 
+                                                               Variant="Variant.Filled"
+                                                               Style="font-size: 10px;" />
+                                                }
+                                            </RadzenStack>
+                                            @if (!string.IsNullOrEmpty(permission.Descripcion))
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Body2" 
+                                                           Style="color: var(--rz-text-secondary-color); margin: 0; line-height: 1.4;">
+                                                    @permission.Descripcion
+                                                </RadzenText>
+                                            }
+                                        </RadzenStack>
+                                    </RadzenCard>
+                                }
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
+            }
+        </RadzenRow>
+    </RadzenStack>
+
+    @* Warning para cambios importantes *@
+    @if (HasCriticalChanges)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
+                <RadzenIcon Icon="warning" Style="margin-top: 2px;" />
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600; margin: 0;">
+                        ¡Atención!
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
+                        Está modificando permisos del sistema que pueden afectar el acceso de los usuarios.
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color); margin: 0;">
+                        Asegúrese de que estos cambios sean correctos antes de continuar.
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenAlert>
+    }
+
+    @* Sin cambios *@
+    @if (!HasChanges)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Secondary" Variant="Variant.Flat" Shade="Shade.Lighter">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenIcon Icon="info" />
+                <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0;">
+                    No hay cambios pendientes para aplicar.
+                </RadzenText>
+            </RadzenStack>
+        </RadzenAlert>
+    }
+
+    @* Botones de acción *@
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cancelar" 
+                     Icon="cancel" 
+                     ButtonStyle="ButtonStyle.Light"
+                     Size="ButtonSize.Medium"
+                     Click="Cancel"
+                     Variant="Variant.Outlined" />
+        
+        <RadzenButton Text="Confirmar Cambios" 
+                     Icon="check" 
+                     ButtonStyle="ButtonStyle.Success"
+                     Size="ButtonSize.Medium"
+                     Click="Confirm"
+                     Disabled="@(!HasChanges)"
+                     Variant="Variant.Filled" />
+    </RadzenStack>
+</RadzenStack>

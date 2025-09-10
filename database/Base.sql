@@ -444,8 +444,14 @@ BEGIN
     ('SYSTEMUSER.RESTORE', 'Restaurar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.RESTORE', 'SYSTEMUSER', 'SystemUser'),
     ('SYSTEMUSER.UPDATE', 'Actualizar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.UPDATE', 'SYSTEMUSER', 'SystemUser'),
     ('SYSTEMUSER.VIEW', 'Ver usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.VIEW', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.VIEWMENU', 'Ver menú de usuarios', @OrgId, 1, 'SYSTEMUSER.VIEWMENU', 'SYSTEMUSER', 'SystemUser');
-    PRINT '✅ Permisos SYSTEMUSER creados (6)';
+    ('SYSTEMUSER.VIEWMENU', 'Ver menú de usuarios', @OrgId, 1, 'SYSTEMUSER.VIEWMENU', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.MANAGEROLES', 'Gestionar roles de usuarios', @OrgId, 1, 'SYSTEMUSER.MANAGEROLES', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.ADDROLES', 'Agregar roles a usuarios', @OrgId, 1, 'SYSTEMUSER.ADDROLES', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.REMOVEROLES', 'Remover roles de usuarios', @OrgId, 1, 'SYSTEMUSER.REMOVEROLES', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.MANAGEPERMISSIONS', 'Gestionar permisos directos de usuarios', @OrgId, 1, 'SYSTEMUSER.MANAGEPERMISSIONS', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.ADDPERMISSIONS', 'Agregar permisos directos a usuarios', @OrgId, 1, 'SYSTEMUSER.ADDPERMISSIONS', 'SYSTEMUSER', 'SystemUser'),
+    ('SYSTEMUSER.REMOVEPERMISSIONS', 'Remover permisos directos de usuarios', @OrgId, 1, 'SYSTEMUSER.REMOVEPERMISSIONS', 'SYSTEMUSER', 'SystemUser');
+    PRINT '✅ Permisos SYSTEMUSER creados (12)';
 END
 ELSE
 BEGIN
@@ -463,8 +469,11 @@ BEGIN
     ('SYSTEMROLE.RESTORE', 'Restaurar roles del sistema', @OrgId, 1, 'SYSTEMROLE.RESTORE', 'SYSTEMROLE', 'SystemRole'),
     ('SYSTEMROLE.UPDATE', 'Actualizar roles del sistema', @OrgId, 1, 'SYSTEMROLE.UPDATE', 'SYSTEMROLE', 'SystemRole'),
     ('SYSTEMROLE.VIEW', 'Ver roles del sistema', @OrgId, 1, 'SYSTEMROLE.VIEW', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', @OrgId, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole');
-    PRINT '✅ Permisos SYSTEMROLE creados (6)';
+    ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', @OrgId, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.MANAGEPERMISSIONS', 'Gestionar permisos de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.ADDPERMISSIONS', 'Agregar permisos a roles', @OrgId, 1, 'SYSTEMROLE.ADDPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
+    ('SYSTEMROLE.REMOVEPERMISSIONS', 'Remover permisos de roles', @OrgId, 1, 'SYSTEMROLE.REMOVEPERMISSIONS', 'SYSTEMROLE', 'SystemRole');
+    PRINT '✅ Permisos SYSTEMROLE creados (9)';
 END
 ELSE
 BEGIN
@@ -534,12 +543,12 @@ PRINT '🏢 Organización: Organización Base';
 PRINT '👤 Usuario Admin: admin@admin.cl';
 PRINT '🔑 Password: U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5';
 PRINT '👥 Rol: Administrador';
-PRINT '🔐 Permisos: SuperAdmin + Sistema (18 permisos CRUD)';
+PRINT '🔐 Permisos: SuperAdmin + Sistema (27 permisos CRUD + Gestión)';
 PRINT '';
 PRINT '📋 Permisos del sistema incluidos:';
 PRINT '   🔐 SYSTEMPERMISSION.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
-PRINT '   👤 SYSTEMUSER.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
-PRINT '   🛡️  SYSTEMROLE.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU)';
+PRINT '   👤 SYSTEMUSER.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU, MANAGEROLES, ADDROLES, REMOVEROLES, MANAGEPERMISSIONS, ADDPERMISSIONS, REMOVEPERMISSIONS)';
+PRINT '   🛡️  SYSTEMROLE.* (CREATE, DELETE, RESTORE, UPDATE, VIEW, VIEWMENU, MANAGEPERMISSIONS, ADDPERMISSIONS, REMOVEPERMISSIONS)';
 PRINT '';
 PRINT '📊 Tablas creadas:';
 PRINT '   • system_organization';
