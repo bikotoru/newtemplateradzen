@@ -203,15 +203,8 @@ namespace Frontend.Services
                 return await ExecuteSearchAsync(autoInclude);
             }
 
-            // Usar endpoint de Query normal
-            var request = new QueryRequest
-            {
-                Filter = BuildFilterString(),
-                OrderBy = BuildOrderByString(),
-                Include = autoInclude ? null : new string[0],
-                Skip = _skip,
-                Take = _take
-            };
+            // Usar el método ToQueryRequest para consistencia
+            var request = ToQueryRequest(autoInclude);
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/query" : $"/api/{_entityName}/query";
@@ -229,6 +222,20 @@ namespace Frontend.Services
         /// </summary>
         public QueryRequest ToQueryRequest(bool autoInclude = false)
         {
+            // Determinar qué includes usar
+            string[]? includes = null;
+            if (autoInclude)
+            {
+                // AutoInclude = true significa que el backend decide automáticamente
+                includes = null;
+            }
+            else if (_includeExpressions.Any())
+            {
+                // Usar los includes explícitos definidos en el QueryBuilder
+                includes = _includeExpressions.ToArray();
+            }
+            // Si autoInclude = false y no hay includes explícitos, includes = null
+
             // Si hay búsqueda, crear un SearchRequest en lugar de QueryRequest
             if (!string.IsNullOrWhiteSpace(_searchTerm))
             {
@@ -237,7 +244,7 @@ namespace Frontend.Services
                 {
                     Filter = BuildFilterString(),
                     OrderBy = BuildOrderByString(),
-                    Include = autoInclude ? null : _includeExpressions.ToArray(),
+                    Include = includes,
                     Skip = _skip,
                     Take = _take
                 };
@@ -252,7 +259,7 @@ namespace Frontend.Services
             {
                 Filter = BuildFilterString(),
                 OrderBy = BuildOrderByString(),
-                Include = autoInclude ? null : _includeExpressions.ToArray(),
+                Include = includes,
                 Skip = _skip,
                 Take = _take
             };
@@ -435,16 +442,9 @@ namespace Frontend.Services
 
         private SearchRequest BuildSearchRequest(bool autoInclude)
         {
-            // Crear BaseQuery con los filtros y configuración actual
-            var baseQuery = new QueryRequest
-            {
-                Filter = BuildFilterString(),
-                OrderBy = BuildOrderByString(),
-                Include = autoInclude ? null : _includeExpressions.ToArray(),
-                Skip = _skip,
-                Take = _take
-            };
-
+            // Usar ToQueryRequest para consistencia y obtener la configuración completa
+            var baseQuery = ToQueryRequest(autoInclude);
+            
             // Crear SearchRequest con el BaseQuery
             var searchRequest = new SearchRequest
             {

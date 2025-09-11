@@ -16,6 +16,7 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
     [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
+    [Inject] private DialogService DialogService { get; set; } = null!;
     {{LOOKUP_SERVICE_INJECTIONS}}
     [Parameter] public Guid? Id { get; set; }
 

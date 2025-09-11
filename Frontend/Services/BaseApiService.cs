@@ -335,6 +335,16 @@ namespace Frontend.Services
         {
             try
             {
+                // Si hay filtros de columna (args.Filters), usar QueryRequest en lugar de QueryBuilder
+                // porque la conversión de filtros Radzen a expresiones LINQ no está completamente implementada
+                if (args.Filters != null && args.Filters.Any())
+                {
+                    _logger.LogInformation($"Using QueryRequest approach for column filters in {typeof(T).Name}");
+                    var queryRequest = ConvertLoadDataArgsToQueryRequest(args, baseQuery, searchFields?.Select(sf => GetPropertyName(sf)).ToList());
+                    return await QueryPagedAsync(queryRequest);
+                }
+                
+                // Para otros casos sin filtros de columna, usar el QueryBuilder original
                 var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
@@ -534,22 +544,35 @@ namespace Frontend.Services
             QueryBuilder<T>? baseQuery = null,
             List<string>? searchFields = null)
         {
-            var queryRequest = new QueryRequest();
+            // Si hay un baseQuery, usarlo como base y aplicar filtros/sorts adicionales
+            var queryRequest = baseQuery?.ToQueryRequest() ?? new QueryRequest();
 
-            if (baseQuery != null)
+            // Agregar filtros de columna si existen
+            var allFilters = new List<string>();
+            
+            // Si ya hay filtro del baseQuery, agregarlo
+            if (!string.IsNullOrEmpty(queryRequest.Filter))
             {
-                _logger.LogWarning("Base query extraction not fully implemented for QueryRequest conversion");
+                allFilters.Add($"({queryRequest.Filter})");
             }
-
+            
+            // Agregar filtros de las columnas (args.Filters)
             if (args.Filters != null && args.Filters.Any())
             {
                 var filters = args.Filters.Select(ConvertRadzenFilterToString).Where(f => !string.IsNullOrEmpty(f));
-                if (filters.Any())
+                foreach (var filter in filters)
                 {
-                    queryRequest.Filter = string.Join(" && ", filters);
+                    allFilters.Add($"({filter})");
                 }
             }
 
+            // Combinar todos los filtros con AND
+            if (allFilters.Any())
+            {
+                queryRequest.Filter = string.Join(" && ", allFilters);
+            }
+
+            // Aplicar ordenamiento - los args tienen prioridad sobre baseQuery
             if (args.Sorts != null && args.Sorts.Any())
             {
                 var sorts = args.Sorts.Select(ConvertRadzenSortToString).Where(s => !string.IsNullOrEmpty(s));
@@ -560,6 +583,7 @@ namespace Frontend.Services
                 }
             }
 
+            // Aplicar paginación
             queryRequest.Skip = args.Skip;
             queryRequest.Take = args.Top;
 
@@ -713,6 +737,16 @@ namespace Frontend.Services
 
             var direction = sort.SortOrder == SortOrder.Descending ? " desc" : " asc";
             return $"{sort.Property}{direction}";
+        }
+
+        private string GetPropertyName(Expression<Func<T, object>> expression)
+        {
+            return expression switch
+            {
+                { Body: MemberExpression member } => member.Member.Name,
+                { Body: UnaryExpression { Operand: MemberExpression member } } => member.Member.Name,
+                _ => throw new ArgumentException($"Expression '{expression}' is not a valid property expression.")
+            };
         }
 
         #endregion

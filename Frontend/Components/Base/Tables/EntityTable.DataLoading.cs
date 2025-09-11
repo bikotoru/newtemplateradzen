@@ -95,7 +95,9 @@ public partial class EntityTable<T>
                 else if (hasFilters && !hasSearch)
                 {
                     
-                    var response = await apiService.LoadDataAsync(args);
+                    var response = queryWithFilters != null 
+                        ? await apiService.LoadDataAsync(args, queryWithFilters)
+                        : await apiService.LoadDataAsync(args);
                     
                     if (response.Success && response.Data != null)
                     {

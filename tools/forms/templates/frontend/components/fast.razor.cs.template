@@ -12,6 +12,7 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
 {
     [Inject] private {{ENTITY_NAME}}Service {{ENTITY_NAME}}Service { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
+    [Inject] private DialogService DialogService { get; set; } = null!;
     {{LOOKUP_SERVICE_INJECTIONS}}
     [Parameter] public EventCallback<{{ENTITY_NAME}}Entity> OnEntityCreated { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -56,8 +57,15 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
                     Detail = "{{ENTITY_DISPLAY_NAME}} creado exitosamente",
                     Duration = 4000
                 });
-                
-                await OnEntityCreated.InvokeAsync(response.Data);
+
+                if (OnEntityCreated.HasDelegate)
+                {
+                    await OnEntityCreated.InvokeAsync(response.Data);
+                }
+                else
+                {
+                    DialogService.Close(response.Data);
+                }
                 
                 // Resetear el formulario
                 entity = new {{ENTITY_NAME}}Entity 

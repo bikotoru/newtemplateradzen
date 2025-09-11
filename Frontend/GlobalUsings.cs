@@ -35,3 +35,5 @@ global using Radzen;
 
 // System
 global using Microsoft.Extensions.Logging;
+global using Frontend.Componentes.CustomRadzen.Dialog;
+
