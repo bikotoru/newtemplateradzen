@@ -118,6 +118,46 @@ class EntityConfigurator:
         except Exception:
             return []
     
+    def convert_entity_name_to_table_name(self, entity_name):
+        """Convertir nombre de entidad a nombre de tabla (minúsculas)"""
+        # Las tablas en PostgreSQL/SQL Server se crean simplemente en minúsculas
+        # No se agrega _ automáticamente, eso solo ocurre si el usuario lo especifica
+        return entity_name.lower()
+    
+    def convert_table_name_to_ef_class_name(self, table_name):
+        """Convertir nombre de tabla a nombre de clase que generaría Entity Framework Core"""
+        # Dividir por _ y convertir cada parte a PascalCase
+        parts = table_name.split('_')
+        ef_class_name = ''.join(part.capitalize() for part in parts if part)
+        return ef_class_name
+    
+    def normalize_entity_name_for_ef(self, user_entity_name):
+        """
+        Normalizar nombre de entidad siguiendo las reglas de Entity Framework Core
+        
+        Flujo:
+        1. Usuario: "TipoCuenta" 
+        2. Tabla: "tipocuenta" (se crea en minúsculas)
+        3. EF Core genera: "Tipocuenta" (primera mayúscula, resto minúscula)
+        
+        Para casos con _:
+        1. Usuario: "TiposDeCuenta"
+        2. Tabla: "tipos_de_cuenta" 
+        3. EF Core genera: "TiposDeCuenta"
+        """
+        # Paso 1: Convertir a nombre de tabla
+        table_name = self.convert_entity_name_to_table_name(user_entity_name)
+        
+        # Paso 2: Aplicar lógica de EF Core para generar nombre de clase
+        ef_class_name = self.convert_table_name_to_ef_class_name(table_name)
+        
+        print(f"🔄 Conversión de nombres:")
+        print(f"   Usuario: {user_entity_name}")
+        print(f"   Tabla: {table_name}")
+        print(f"   EF Core: {ef_class_name}")
+        
+        return ef_class_name
+    
     def configure_nn_table(self, entity_name):
         """Configurar tabla NN interactivamente"""
         print("🔗 DETECTADA TABLA MUCHOS-A-MUCHOS (NN)")
@@ -237,10 +277,18 @@ class EntityConfigurator:
             )
             
         else:
-            # Modo entidad normal
+            # Modo entidad normal - normalizar nombre siguiendo reglas de EF Core
+            normalized_entity_name = self.normalize_entity_name_for_ef(args.entity)
+            
+            # Normalizar plural también si fue especificado por el usuario
+            if args.plural:
+                normalized_plural = self.normalize_entity_name_for_ef(args.plural)
+            else:
+                normalized_plural = f"{normalized_entity_name}s"
+            
             config = EntityConfiguration(
-                entity_name=args.entity,
-                entity_plural=args.plural or f"{args.entity}s",
+                entity_name=normalized_entity_name,
+                entity_plural=normalized_plural,
                 module=args.module,
                 target=args.target,
                 is_nn_relation=getattr(args, 'nn_relation_entity', False)
