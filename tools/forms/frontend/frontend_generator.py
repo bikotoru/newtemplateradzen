@@ -60,9 +60,9 @@ class FrontendGenerator:
         frontend_module_path.mkdir(parents=True, exist_ok=True)
         return frontend_module_path
     
-    def generate_viewmanager(self, entity_name, module, module_path):
+    def generate_viewmanager(self, entity_name, module, module_path, config=None):
         """Generar ViewManager del frontend"""
-        return self.viewmanager_generator.generate_viewmanager(entity_name, module, module_path)
+        return self.viewmanager_generator.generate_viewmanager(entity_name, module, module_path, config)
     
     def generate_service_only(self, entity_name, module):
         """Generar solo el service frontend (FASE 3.1)"""
@@ -203,7 +203,7 @@ class FrontendGenerator:
                 return False
             
             # 3. Generar ViewManager
-            if not self.generate_viewmanager(entity_name, module, module_path):
+            if not self.generate_viewmanager(entity_name, module, module_path, None):
                 return False
             
             return True
@@ -227,7 +227,7 @@ class FrontendGenerator:
                 return False
             
             # 3. Generar ViewManager
-            if not self.generate_viewmanager(entity_name, module, module_path):
+            if not self.generate_viewmanager(entity_name, module, module_path, None):
                 return False
             
             # 4. Generar componente List
@@ -255,7 +255,7 @@ class FrontendGenerator:
                 return False
             
             # 3. Generar ViewManager
-            if not self.generate_viewmanager(entity_name, module, module_path):
+            if not self.generate_viewmanager(entity_name, module, module_path, None):
                 return False
             
             # 4. Generar componente List
@@ -272,7 +272,7 @@ class FrontendGenerator:
             print(f"❌ ERROR en frontend generator: {e}")
             return False
     
-    def generate_frontend_with_formulario(self, entity_name, module):
+    def generate_frontend_with_formulario(self, entity_name, module, config=None):
         """Generar Service + ViewManager + List + Fast + Formulario (FASE 3.5)"""
         try:
             print(f"🎨 Generando frontend completo con Formulario para entidad: {entity_name}")
@@ -287,7 +287,7 @@ class FrontendGenerator:
                 return False
             
             # 3. Generar ViewManager
-            if not self.generate_viewmanager(entity_name, module, module_path):
+            if not self.generate_viewmanager(entity_name, module, module_path, config):
                 return False
             
             # 4. Generar componente List

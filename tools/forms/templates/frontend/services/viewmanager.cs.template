@@ -21,7 +21,7 @@ namespace {{FRONTEND_NAMESPACE}}
             {
                 DisplayName = "Vista Completa",
                 QueryBuilder = _queryService?.For<Shared.Models.Entities.{{ENTITY_NAME}}>()?
-                    .Where(x => x.Active == true)
+                    .Where(x => x.Active == true){{INCLUDES}}
                     .OrderBy(x => x.{{PRIMARY_FIELD}}),
                 ColumnConfigs = new List<ColumnConfig<Shared.Models.Entities.{{ENTITY_NAME}}>>
                 {

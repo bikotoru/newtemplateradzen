@@ -339,7 +339,7 @@ class EntityGenerator:
             
             # Paso 2: Generar Frontend completo
             print("🎨 PASO 2: Generando Frontend completo...")
-            if not self.frontend_generator.generate_frontend_with_formulario(config.entity_name, config.module):
+            if not self.frontend_generator.generate_frontend_with_formulario(config.entity_name, config.module, config):
                 return False
             
             if not self.frontend_registry.update(config.entity_name, config.module):

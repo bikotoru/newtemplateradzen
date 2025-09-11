@@ -122,29 +122,106 @@ class ViewManagerGenerator:
         
         return config
     
+    def generate_from_config(self, config):
+        """Generar configuraciones desde config parseado de grid_fields"""
+        column_configs = []
+        includes = []
+        primary_field = 'Nombre'  # Default
+        
+        # Procesar grid_fields de la configuración
+        order = 1
+        for field_name, grid_field in config.grid_fields.items():
+            # Determinar Property y Title
+            if grid_field.display_field:
+                # Navegación: region_id -> Region.Nombre
+                property_name = grid_field.display_field  # "Region.Nombre"
+                
+                # Extraer nombre de entidad para Title (Region.Nombre -> Region)
+                entity_name = grid_field.display_field.split('.')[0]  # "Region"
+                title = entity_name
+                
+                # Generar include automáticamente
+                include_statement = f".Include(x=>x.{entity_name})"
+                if include_statement not in includes:
+                    includes.append(include_statement)
+                    
+            else:
+                # Campo directo - capitalizar primera letra
+                property_name = field_name.capitalize()
+                title = self.get_title_for_field(field_name)
+                
+                # Si es el primer campo, usarlo como primary_field (capitalizado)
+                if order == 1:
+                    primary_field = property_name
+            
+            # Generar configuración de columna
+            sortable = "true" if grid_field.sortable else "false"
+            filterable = "true" if grid_field.filterable else "false"
+            
+            # Mapear alineación
+            align_map = {
+                'left': 'TextAlign.Left',
+                'right': 'TextAlign.Right', 
+                'center': 'TextAlign.Center'
+            }
+            text_align = align_map.get(grid_field.align.value, 'TextAlign.Left')
+            
+            config_text = f"""new ColumnConfig<Shared.Models.Entities.ENTITY_NAME_PLACEHOLDER>
+                    {{
+                        Property = "{property_name}",
+                        Title = "{title}",
+                        Width = "{grid_field.width}",
+                        Sortable = {sortable},
+                        Filterable = {filterable},
+                        TextAlign = {text_align},
+                        Visible = true,
+                        Order = {order}
+                    }}"""
+            
+            column_configs.append(config_text)
+            order += 1
+        
+        return column_configs, includes, primary_field
     
-    def generate_viewmanager(self, entity_name, module, module_path):
+    def get_title_for_field(self, field_name):
+        """Obtener título apropiado para un campo"""
+        title_map = {
+            'nombre': 'Nombre',
+            'descripcion': 'Descripción', 
+            'precio': 'Precio',
+            'codigo_interno': 'Código',
+            'cantidad': 'Cantidad',
+            'stock': 'Stock'
+        }
+        return title_map.get(field_name.lower(), field_name)
+    
+    def generate_viewmanager(self, entity_name, module, module_path, config=None):
         """Generar ViewManager completo"""
         try:
-            # Detectar campos de la entidad
-            fields = self.detect_entity_fields(entity_name)
-            
-            # Campo principal (primer campo, generalmente Nombre)
-            primary_field = fields[0]['name'] if fields else 'Nombre'
-            primary_field_title = primary_field
-            
-            # Generar configuraciones de columna
-            column_configs = []
-            
-            for i, field in enumerate(fields, 1):
-                column_configs.append(self.generate_column_config(field, i))
+            # Si tenemos configuración, usar grid_fields; sino detectar campos automáticamente
+            if config and config.grid_fields:
+                column_configs, includes, primary_field = self.generate_from_config(config)
+            else:
+                # Detectar campos de la entidad (comportamiento original)
+                fields = self.detect_entity_fields(entity_name)
+                
+                # Campo principal (primer campo, generalmente Nombre)
+                primary_field = fields[0]['name'] if fields else 'Nombre'
+                
+                # Generar configuraciones de columna
+                column_configs = []
+                for i, field in enumerate(fields, 1):
+                    column_configs.append(self.generate_column_config(field, i))
+                
+                includes = []  # Sin includes automáticos en modo legacy
             
             # Preparar variables para el template
             variables = self.template_engine.prepare_entity_variables(entity_name, module)
             variables.update({
                 'PRIMARY_FIELD': primary_field,
-                'PRIMARY_FIELD_TITLE': primary_field_title,
-                'COLUMN_CONFIGS': ',\n                    '.join(column_configs)
+                'PRIMARY_FIELD_TITLE': primary_field,
+                'COLUMN_CONFIGS': ',\n                    '.join(column_configs),
+                'INCLUDES': '\n                    '.join(includes) if includes else ''
             })
             
             # Renderizar template
