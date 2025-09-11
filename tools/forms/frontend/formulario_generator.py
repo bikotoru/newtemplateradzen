@@ -112,6 +112,7 @@ class FormularioFieldGenerator:
                                                            TValue="{lookup_config['value_type']}" 
                                                            @bind-Value="entity.{field_name}"
                                                            Service="{lookup_config['service_name']}"
+                                                           FastCreateComponentType="typeof({lookup_config['entity_name']}Fast)"
                                                            DisplayProperty="{lookup_config['display_property']}"
                                                            EntityDisplayName="{lookup_config['entity_display']}"
                                                            SearchableFields="@{lookup_config['entity_name'].lower()}SearchFields"

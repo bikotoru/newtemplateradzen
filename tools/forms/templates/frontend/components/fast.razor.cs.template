@@ -105,6 +105,13 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
 
     private async Task Cancel()
     {
-        await OnCancel.InvokeAsync();
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+        else
+        {
+            DialogService.Close();
+        }
     }
 }
