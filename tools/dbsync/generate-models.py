@@ -118,7 +118,7 @@ class DatabaseModelGenerator:
             print(f"   🔧 Ejecutando: dotnet ef dbcontext scaffold...")
             print(f"   📂 Directorio: {self.backend_utils_path}")
             
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             if result.returncode != 0:
                 print(f"❌ ERROR ejecutando EF Core CLI:")
@@ -253,7 +253,7 @@ class DatabaseModelGenerator:
         print("-" * 40)
         
         try:
-            result = subprocess.run(["dotnet", "build"], capture_output=True, text=True, cwd=self.root_path)
+            result = subprocess.run(["dotnet", "build"], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=self.root_path)
             
             if result.returncode == 0:
                 print("   ✅ Compilación exitosa")

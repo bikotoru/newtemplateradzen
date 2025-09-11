@@ -15,6 +15,7 @@ public partial class {{ENTITY_NAME}}Fast : ComponentBase
     {{LOOKUP_SERVICE_INJECTIONS}}
     [Parameter] public EventCallback<{{ENTITY_NAME}}Entity> OnEntityCreated { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    private bool CanEdit => true;
 
     private {{ENTITY_NAME}}Entity entity = new() 
     { 

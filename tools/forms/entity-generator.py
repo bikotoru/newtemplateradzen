@@ -104,7 +104,8 @@ class EntityGenerator:
             execute=True,
             preview=False,
             autosync=True,
-            add_fields_mode=False
+            add_fields_mode=False,
+            module=config.module
         )
         
         if not success:

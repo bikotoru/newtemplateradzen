@@ -99,7 +99,7 @@ WHERE TABLE_NAME = '{table_name}' AND TABLE_TYPE = 'BASE TABLE'
             result = subprocess.run([
                 'sqlcmd', '-S', 'localhost', '-U', 'sa', '-P', 'Soporte.2019', '-C',
                 '-Q', check_query
-            ], capture_output=True, text=True)
+            ], capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             if result.returncode == 0:
                 # Buscar el número en la salida
@@ -242,15 +242,28 @@ WHERE TABLE_NAME = '{table_name}' AND TABLE_TYPE = 'BASE TABLE'
         
         return ",\n" + ",\n".join(constraints) if constraints else ""
     
-    def generate_sql(self, table_name, fields=None, foreign_keys=None, unique_fields=None):
+    def generate_sql(self, table_name, fields=None, foreign_keys=None, unique_fields=None, module=None):
         """Genera el SQL completo para crear la tabla"""
         fields = fields or []
         foreign_keys = foreign_keys or []
         unique_fields = unique_fields or []
         
+        # Generar comentario del módulo si se proporciona
+        module_comment = ""
+        if module:
+            module_comment = f"""
+    
+    -- Agregar comentario con el módulo
+    EXEC sp_addextendedproperty 
+        @name = N'MS_Description', 
+        @value = N'{module}', 
+        @level0type = N'SCHEMA', @level0name = N'dbo', 
+        @level1type = N'TABLE', @level1name = N'{table_name}';"""
+        
         sql = f"""-- ========================================
 -- 📊 TABLA: {table_name}
 -- Generada automáticamente con BaseEntity
+{f'-- {module}' if module else ''}
 -- ========================================
 
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U')
@@ -258,7 +271,7 @@ BEGIN
     CREATE TABLE {table_name} (
 {self.generate_base_fields()}{self.generate_custom_fields(fields)}{self.generate_fk_fields(foreign_keys)},
 {self.generate_base_constraints(table_name)}{self.generate_custom_constraints(table_name, foreign_keys, unique_fields)}
-    );
+    );{module_comment}
     
     PRINT '✅ Tabla {table_name} creada exitosamente';
 END
@@ -391,7 +404,7 @@ PRINT '✅ Campos agregados exitosamente a tabla {table_name}';
             print(f"   👤 Usuario: {user_id}")
             print()
             
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             # Limpiar archivo temporal
             temp_file.unlink()
@@ -429,7 +442,7 @@ PRINT '✅ Campos agregados exitosamente a tabla {table_name}';
             
             result = subprocess.run([
                 sys.executable, str(dbsync_script)
-            ], capture_output=True, text=True, cwd=self.root_path)
+            ], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=self.root_path)
             
             if result.returncode == 0:
                 print("   ✅ Modelos regenerados exitosamente")
@@ -471,7 +484,7 @@ VALUES
             result = subprocess.run([
                 'sqlcmd', '-S', 'localhost', '-U', 'sa', '-P', 'Soporte.2019', '-C',
                 '-Q', sql_commands
-            ], capture_output=True, text=True)
+            ], capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             if result.returncode == 0:
                 print(f"      ✅ Registros system_config creados")
@@ -539,7 +552,7 @@ VALUES
             print(f"   ❌ ERROR agregando metadata: {e}")
             return False
     
-    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False, add_fields_mode=False):
+    def run(self, table_name, fields=None, foreign_keys=None, unique_fields=None, execute=False, preview=False, autosync=False, add_fields_mode=False, module=None):
         """Ejecuta el proceso completo"""
         self.print_header()
         
@@ -590,7 +603,7 @@ VALUES
             if add_fields_mode:
                 sql = self.generate_alter_sql(table_name, parsed_fields, parsed_fks, unique_fields)
             else:
-                sql = self.generate_sql(table_name, parsed_fields, parsed_fks, unique_fields)
+                sql = self.generate_sql(table_name, parsed_fields, parsed_fks, unique_fields, module)
             
             if preview:
                 print("📋 SQL GENERADO:")
