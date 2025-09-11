@@ -164,19 +164,9 @@ class PermissionsGenerator:
             return f"Driver={{ODBC Driver 17 for SQL Server}};Server={db_server};Database={db_name};Trusted_Connection=yes;"
     
     def get_organization_id(self, cursor):
-        """Obtener el OrganizationId de la base de datos (asume que hay uno por defecto)"""
-        try:
-            cursor.execute("SELECT TOP 1 Id FROM system_organizations WHERE Active = 1")
-            row = cursor.fetchone()
-            if row:
-                return str(row[0])
-            else:
-                # Si no hay organizaciones, crear una por defecto
-                print("⚠️ No se encontró una organización activa, usando GUID por defecto")
-                return "F5B94C07-FAE1-4A2B-90AB-B73D4AAD67DC"
-        except Exception:
-            # Fallback si la tabla no existe o hay error
-            return "F5B94C07-FAE1-4A2B-90AB-B73D4AAD67DC"
+        """Retorna NULL para OrganizationId - los permisos son globales para todas las organizaciones"""
+        print("🌐 Usando OrganizationId = NULL (permiso global para todas las organizaciones)")
+        return None
     
     def permission_exists(self, cursor, action_key):
         """Verificar si el permiso ya existe"""
@@ -266,13 +256,13 @@ class PermissionsGenerator:
             
             if preview:
                 print("👀 MODO PREVIEW - No se ejecutarán cambios")
-                organization_id = "F5B94C07-FAE1-4A2B-90AB-B73D4AAD67DC"
+                organization_id = None
             else:
                 conn = pyodbc.connect(connection_string)
                 cursor = conn.cursor()
                 organization_id = self.get_organization_id(cursor)
             
-            print(f"🏢 Organization ID: {organization_id}")
+            print(f"🏢 Organization ID: {organization_id or 'NULL (global)'}")
             print()
             
             # Generar cada permiso NN
@@ -372,13 +362,14 @@ class PermissionsGenerator:
             print("📋 SQL QUE SE EJECUTARÍA:")
             print("-" * 60)
             for perm in permissions_to_create:
+                organization_value = 'NULL' if perm['organization_id'] is None else f"'{perm['organization_id']}'"
                 sql = f"""INSERT INTO [dbo].[system_permissions] 
 ([Id], [Nombre], [Descripcion], [FechaCreacion], [FechaModificacion], 
 [OrganizationId], [CreadorId], [ModificadorId], [Active], [ActionKey], [GroupKey], [GrupoNombre]) 
 VALUES ('{perm['id']}', N'{perm['name']}', N'{perm['description']}', 
 '{perm['fecha_creacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
 '{perm['fecha_modificacion'].strftime('%Y-%m-%d %H:%M:%S.%f')}', 
-'{perm['organization_id']}', NULL, NULL, '1', '{perm['action_key']}', 
+{organization_value}, NULL, NULL, '1', '{perm['action_key']}', 
 '{perm['group_key']}', N'{perm['group_name']}');"""
                 print(sql)
                 print()
@@ -490,13 +481,13 @@ VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, '1', ?, ?, ?)"""
             
             if preview:
                 print("👀 MODO PREVIEW - No se ejecutarán cambios")
-                organization_id = "F5B94C07-FAE1-4A2B-90AB-B73D4AAD67DC"
+                organization_id = None
             else:
                 conn = pyodbc.connect(connection_string)
                 cursor = conn.cursor()
                 organization_id = self.get_organization_id(cursor)
             
-            print(f"🏢 Organization ID: {organization_id}")
+            print(f"🏢 Organization ID: {organization_id or 'NULL (global)'}")
             print()
             
             # Generar cada permiso
