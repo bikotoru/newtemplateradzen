@@ -14,4 +14,6 @@ public partial class ZToken
     public bool? Refresh { get; set; }
 
     public bool? Logout { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
 }

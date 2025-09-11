@@ -28,7 +28,7 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
     // Propiedades de permisos
     private bool CanView => AuthService.HasPermission("{{ENTITY_UPPER}}.VIEW");
     private bool CanCreate => AuthService.HasPermission("{{ENTITY_UPPER}}.CREATE");
-    private bool CanEdit => isEditMode ? AuthService.HasPermission("{{ENTITY_UPPER}}.EDIT") : AuthService.HasPermission("{{ENTITY_UPPER}}.CREATE");
+    private bool CanEdit => isEditMode ? AuthService.HasPermission("{{ENTITY_UPPER}}.UPDATE") : AuthService.HasPermission("{{ENTITY_UPPER}}.CREATE");
     private bool CanSave => CanEdit;
 
     {{LOOKUP_SEARCH_FIELDS}}
@@ -83,6 +83,7 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
         try
         {
             isLoading = true;
+            await DialogService.OpenLoadingAsync("Obteniendo datos...");
             var response = await {{ENTITY_NAME}}Service.GetByIdAsync(Id!.Value);
             
             if (response.Success && response.Data != null)
@@ -114,6 +115,7 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
         finally
         {
             isLoading = false;
+            DialogService.Close();
             StateHasChanged();
         }
     }
@@ -168,7 +170,9 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
                 var updateRequest = new UpdateRequestBuilder<{{ENTITY_NAME}}Entity>(entity)
                     .Build();
 
+                await DialogService.OpenLoadingAsync("Actualizando...");
                 var response = await {{ENTITY_NAME}}Service.UpdateAsync(updateRequest);
+                DialogService.Close();
 
                 if (response.Success)
                 {
@@ -196,7 +200,9 @@ public partial class {{ENTITY_NAME}}Formulario : AuthorizedPageBase
                 var createRequest = new CreateRequestBuilder<{{ENTITY_NAME}}Entity>(entity)
                     .Build();
 
+                await DialogService.OpenLoadingAsync("Creando...");
                 var response = await {{ENTITY_NAME}}Service.CreateAsync(createRequest);
+                DialogService.Close();
 
                 if (response.Success && response.Data != null)
                 {

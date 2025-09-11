@@ -40,9 +40,12 @@ class TemplateEngine:
         return {
             'ENTITY_NAME': entity_name,
             'ENTITY_NAME_LOWER': entity_name.lower(),
+            'ENTITY_UPPER': entity_name.upper(),
+            'ENTITY_LOWER': entity_name.lower(),
+            'ENTITY_DISPLAY_NAME': entity_name,
             'ENTITY_PLURAL': entity_plural,
             'MODULE': module,
-            'MODULE_PATH': module.replace('.', '/'),
+            'MODULE_PATH': module.replace('.', '/').lower(),
             'MODULE_ROUTE': module_route,
             'BACKEND_NAMESPACE': f"Backend.Modules.{module}.{entity_plural}",
             'FRONTEND_NAMESPACE': f"Frontend.Modules.{module}.{entity_plural}",

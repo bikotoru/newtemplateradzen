@@ -5,7 +5,7 @@
 @using Frontend.Components.Validation
 @using Shared.Models.Entities
 @inherits AuthorizedPageBase
-@attribute [AuthorizePermission("{{ENTITY_UPPER}}.VIEW", "{{ENTITY_UPPER}}.CREATE", "{{ENTITY_UPPER}}.EDIT")]
+@attribute [AuthorizePermission("{{ENTITY_UPPER}}.VIEW", "{{ENTITY_UPPER}}.CREATE", "{{ENTITY_UPPER}}.UPDATE")]
 
 <PageTitle>@(isEditMode ? $"Editar {{ENTITY_DISPLAY_NAME}} - {entity?.{{PRIMARY_FIELD}}}" : "Nuevo {{ENTITY_DISPLAY_NAME}}")</PageTitle>
 
@@ -37,7 +37,14 @@
                                     </EssentialsTemplate>
                                     
                                     <ChildContent>
-                                        @if (entity != null)
+                                        @if (isLoading)
+                                        {
+                                            <div class="loading-container" style="text-align: center; padding: 2rem;">
+                                                <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+                                                <p style="margin-top: 1rem; color: #666;">Cargando datos...</p>
+                                            </div>
+                                        }
+                                        else if (entity != null)
                                         {
                                             <FormValidator Entity="entity" Rules="@GetValidationRules()">
                                                 
@@ -68,7 +75,7 @@
                 <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
                 @if (isEditMode)
                 {
-                    <text>Necesitas el permiso "{{ENTITY_UPPER}}.EDIT" para modificarlo.</text>
+                    <text>Necesitas el permiso "{{ENTITY_UPPER}}.UPDATE" para modificarlo.</text>
                 }
                 else
                 {

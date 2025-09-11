@@ -39,12 +39,33 @@ public partial class {{ENTITY_NAME}}List : AuthorizedPageBase
 
     private async Task HandleDelete({{ENTITY_NAME}}Entity {{ENTITY_LOWER}})
     {
-        var response = await {{ENTITY_NAME}}Service.DeleteAsync({{ENTITY_LOWER}}.Id);
-        
-        if (!response.Success)
+        try
         {
+            await DialogService.OpenLoadingAsync("Eliminando...");
+            var response = await {{ENTITY_NAME}}Service.DeleteAsync({{ENTITY_LOWER}}.Id);
+            DialogService.Close();
+            
+            if (!response.Success)
+            {
+                await DialogService.Alert(
+                    response.Message ?? "Error al eliminar", 
+                    "Error"
+                );
+            }
+            else
+            {
+                // Refrescar la tabla después de eliminar
+                if (entityTable != null)
+                {
+                    await entityTable.Reload();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            DialogService.Close();
             await DialogService.Alert(
-                response.Message ?? "Error al eliminar {{ENTITY_LOWER}}", 
+                $"Error inesperado al eliminar: {ex.Message}", 
                 "Error"
             );
         }

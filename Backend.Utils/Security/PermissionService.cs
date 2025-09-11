@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Backend.Utils.Data;
@@ -33,7 +34,7 @@ namespace Backend.Utils.Security
                     .Where(up => up.SystemUsersId == userId && up.Active)
                     .Include(up => up.SystemPermissions)
                     .Where(up => up.SystemPermissions.Active && 
-                                up.SystemPermissions.OrganizationId == organizationId)
+                                up.SystemPermissions.OrganizationId == organizationId || up.SystemPermissions.OrganizationId == null)
                     .Select(up => up.SystemPermissions.Nombre!)
                     .ToListAsync();
 
@@ -45,7 +46,7 @@ namespace Backend.Utils.Security
                     // Obtener todos los permisos disponibles (excepto SuperAdmin para evitar recursión)
                     var allSystemPermissions = await _context.SystemPermissions
                         .Where(p => p.Active && 
-                                   p.OrganizationId == organizationId &&
+                                   (p.OrganizationId == organizationId || p.OrganizationId == null )&&
                                    !string.IsNullOrEmpty(p.ActionKey) &&
                                    p.ActionKey != "SuperAdmin")
                         .Select(p => p.ActionKey!)
@@ -231,13 +232,16 @@ namespace Backend.Utils.Security
                 var token = await _context.ZToken.FirstOrDefaultAsync(t => t.Id == tokenId);
                 if (token?.Refresh != true) return true; // No necesita refresh
 
-                if (token.Organizationid == null) return false;
+                if (token.Organizationid == null || string.IsNullOrEmpty(token.Data)) return false;
 
-                // Necesitamos reconstruir la sesión - pero necesitamos organizationId
-                // Como el campo está mal nombrado, Organizationid contiene userId
-                var userId = token.Organizationid.Value;
+                // Extraer userId de los datos del token
+                var sessionData = JsonSerializer.Deserialize<SessionDataDto>(token.Data);
+                if (sessionData == null) return false;
                 
-                // Buscar organización del usuario (asumiendo una por ahora)
+                var userId = sessionData.Id;
+                var organizationId = token.Organizationid.Value;
+                
+                // Buscar organización del usuario
                 var userOrg = await _context.SystemUsers
                     .Include(u => u.Organization)
                     .FirstOrDefaultAsync(u => u.Id == userId);

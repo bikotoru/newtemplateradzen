@@ -30,7 +30,7 @@ namespace Backend.Utils.Security
 
                 // Eliminar tokens anteriores del usuario en esta organización
                 var existingTokens = await _context.ZToken
-                    .Where(t => t.Organizationid == userId && t.Organizationid == organizationId)
+                    .Where(t => t.Organizationid == organizationId && t.Data != null && t.Data.Contains($"\"Id\":\"{userId}\""))
                     .ToListAsync();
 
                 if (existingTokens.Any())
@@ -42,7 +42,7 @@ namespace Backend.Utils.Security
                 var newToken = new ZToken
                 {
                     Id = tokenId,
-                    Organizationid = userId, // Nota: campo mal nombrado en BD, pero guarda userId
+                    Organizationid = organizationId,
                     Data = serializedData,
                     Refresh = false,
                     Logout = false
@@ -124,10 +124,15 @@ namespace Backend.Utils.Security
 
                 if (!userIds.Any()) return;
 
-                // Marcar tokens para refresh
-                var tokens = await _context.ZToken
-                    .Where(t => userIds.Contains((Guid)t.Organizationid!)) // Campo mal nombrado
-                    .ToListAsync();
+                // Marcar tokens para refresh - buscar por userId en Data JSON
+                var tokens = new List<ZToken>();
+                foreach(var userId in userIds)
+                {
+                    var userTokens = await _context.ZToken
+                        .Where(t => t.Data != null && t.Data.Contains($"\"Id\":\"{userId}\""))
+                        .ToListAsync();
+                    tokens.AddRange(userTokens);
+                }
 
                 foreach (var token in tokens)
                 {
@@ -152,7 +157,7 @@ namespace Backend.Utils.Security
             try
             {
                 var tokens = await _context.ZToken
-                    .Where(t => t.Organizationid == userId) // Campo mal nombrado
+                    .Where(t => t.Data != null && t.Data.Contains($"\"Id\":\"{userId}\""))
                     .ToListAsync();
 
                 foreach (var token in tokens)
@@ -178,7 +183,7 @@ namespace Backend.Utils.Security
             try
             {
                 var tokens = await _context.ZToken
-                    .Where(t => t.Organizationid == userId) // Campo mal nombrado
+                    .Where(t => t.Data != null && t.Data.Contains($"\"Id\":\"{userId}\""))
                     .ToListAsync();
 
                 foreach (var token in tokens)

@@ -548,7 +548,19 @@ BEGIN
     PRINT '📄 Rol ya asignado al usuario';
 END
 
--- 6. Asignar Permiso al Rol
+-- 6. Asignar Permiso SuperAdmin directamente al Usuario admin@admin.cl
+IF NOT EXISTS (SELECT 1 FROM system_users_permissions WHERE system_users_id = @AdminUserId AND system_permissions_id = @SuperAdminPermissionId)
+BEGIN
+    INSERT INTO system_users_permissions (system_users_id, system_permissions_id, OrganizationId, CreadorId, Active)
+    VALUES (@AdminUserId, @SuperAdminPermissionId, @OrgId, @AdminUserId, 1);
+    PRINT '✅ Permiso SuperAdmin asignado directamente al usuario admin@admin.cl';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permiso SuperAdmin ya asignado directamente al usuario';
+END
+
+-- 7. Asignar Permiso SuperAdmin al Rol (adicional)
 IF NOT EXISTS (SELECT 1 FROM system_roles_permissions WHERE system_roles_id = @AdminRoleId AND system_permissions_id = @SuperAdminPermissionId)
 BEGIN
     INSERT INTO system_roles_permissions (system_roles_id, system_permissions_id, OrganizationId, CreadorId, Active)
@@ -557,7 +569,7 @@ BEGIN
 END
 ELSE
 BEGIN
-    PRINT '📄 Permiso ya asignado al rol';
+    PRINT '📄 Permiso SuperAdmin ya asignado al rol';
 END
 
 -- ========================================
