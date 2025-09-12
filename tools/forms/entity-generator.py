@@ -483,7 +483,7 @@ class EntityGenerator:
             print("🎨 Generando Frontend completo...")
             
             # Generar frontend completo (Service + ViewManager + List + Fast + Formulario)
-            if not self.frontend_generator.generate_frontend_with_formulario(entity_name, module):
+            if not self.frontend_generator.generate_frontend_with_formulario(entity_name, module, config):
                 return False
             
             # Actualizar ServiceRegistry frontend

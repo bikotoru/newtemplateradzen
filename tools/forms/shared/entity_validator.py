@@ -238,12 +238,23 @@ class EntityConfigValidator:
                         errors.append(f"Tabla referenciada '{table_name}' no existe en la base de datos (FK: {fk.field})")
                         errors.append(f"💡 Crea primero la tabla '{table_name}' o usa una tabla existente")
                 else:
-                    errors.append(f"⚠️ Error verificando tabla '{table_name}': {result.stderr}")
+                    stderr_content = result.stderr
+                    # Si es un error SSL, solo advertir no bloquear
+                    if "SSL" in stderr_content or "certificate" in stderr_content:
+                        print(f"⚠️ Error SSL verificando tabla '{table_name}' - se omite validación de BD")
+                        print("💡 Verifica manualmente que las tablas referenciadas existan")
+                    else:
+                        errors.append(f"⚠️ Error verificando tabla '{table_name}': {result.stderr}")
         
         except Exception as e:
             # Si no podemos verificar, solo advertir
-            errors.append(f"⚠️ No se pudo verificar existencia de tablas referenciadas: {e}")
-            errors.append("💡 Verifica manualmente que las tablas en --fk existan antes de continuar")
+            error_msg = str(e)
+            if "SSL" in error_msg or "certificate" in error_msg:
+                print(f"⚠️ Error SSL conectando a BD - se omite validación de tablas referenciadas")
+                print("💡 Verifica manualmente que las tablas en --fk existan")
+            else:
+                errors.append(f"⚠️ No se pudo verificar existencia de tablas referenciadas: {e}")
+                errors.append("💡 Verifica manualmente que las tablas en --fk existan antes de continuar")
         
         return errors
     

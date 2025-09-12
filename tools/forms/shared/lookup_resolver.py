@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 class LookupResolver:
-    def __init__(self, root_path):
+    def __init__(self, root_path, fk_config=None):
         self.root_path = Path(root_path)
         
         # Patrones para detectar FK
@@ -22,6 +22,9 @@ class LookupResolver:
         self.system_fields = [
             'Id', 'OrganizationId', 'CreadorId', 'ModificadorId'
         ]
+        
+        # Configuración de FK del usuario (puede venir del constructor o setearse externamente)
+        self.user_fks_config = fk_config
     
     def detect_fk_fields(self, fields):
         """Detectar campos que son FK"""
@@ -44,6 +47,33 @@ class LookupResolver:
     
     def _resolve_fk_info(self, field_name):
         """Resolver información de FK desde el nombre del campo"""
+        # PRIORIDAD 1: Usar configuración de FK del usuario
+        if self.user_fks_config:
+            # Normalizar nombre del campo para comparar
+            field_normalized = self._normalize_field_name(field_name)
+            
+            for fk_config in self.user_fks_config:
+                fk_field_normalized = self._normalize_field_name(fk_config.field)
+                if fk_field_normalized == field_normalized:
+                    # Convertir nombre de tabla a entidad (capitalize y manejar plurales)
+                    table_name = fk_config.ref_table.lower()
+                    if table_name.endswith('s'):
+                        entity_name = table_name.capitalize()  # "areas" -> "Areas"
+                    else:
+                        entity_name = table_name.capitalize()  # "categoria" -> "Categoria"
+                    
+                    print(f"✅ Usando FK configurado por usuario: {field_name} -> {entity_name} (tabla: {fk_config.ref_table})")
+                    
+                    return {
+                        'fk_field': field_name,
+                        'entity_name': entity_name,
+                        'service_name': f"{entity_name}Service",
+                        'display_property': 'Nombre',
+                        'search_fields': ['Nombre'],
+                        'value_type': 'Guid?'
+                    }
+        
+        # PRIORIDAD 2: Detección automática por patrones
         for pattern in self.fk_patterns:
             match = re.match(pattern, field_name)
             if match:
@@ -51,6 +81,7 @@ class LookupResolver:
                 
                 # Convertir a PascalCase si viene snake_case
                 entity_name = self._to_pascal_case(entity_base_name)
+                print(f"✅ FK detectado por patrón: {field_name} -> {entity_name}")
                 
                 return {
                     'fk_field': field_name,
@@ -62,6 +93,19 @@ class LookupResolver:
                 }
         
         return None
+    
+    def _normalize_field_name(self, field_name):
+        """Normalizar nombre de campo para comparación (snake_case)"""
+        # Convertir "AreaId" -> "area_id" y "area_id" -> "area_id"
+        import re
+        # Si ya está en snake_case, dejarlo
+        if '_' in field_name and field_name.islower():
+            return field_name
+        
+        # Si está en PascalCase, convertir a snake_case
+        # "AreaId" -> "area_id"
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', field_name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
     
     def _to_pascal_case(self, snake_str):
         """Convertir snake_case a PascalCase"""

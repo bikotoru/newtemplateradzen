@@ -35,7 +35,7 @@ class FieldParsers:
         if len(parts) < 2:
             raise ValueError(f"Formato de campo inválido: {field_str}. Use 'nombre:tipo' o 'nombre:tipo:tamaño'")
         
-        field_name = parts[0].lower()
+        field_name = parts[0]
         field_type_str = parts[1].lower()
         field_size = parts[2] if len(parts) > 2 else None
         
@@ -62,7 +62,7 @@ class FieldParsers:
         if len(parts) != 2:
             raise ValueError(f"Formato de FK inválido: {fk_str}. Use 'campo:tabla_referencia'")
         
-        field_name = parts[0].lower()
+        field_name = parts[0]
         ref_table = parts[1].lower()
         
         return ForeignKeyConfig(

@@ -22,17 +22,28 @@ class FastFieldGenerator:
         else:
             self.template_engine = None
             self.lookup_resolver = None
+        
+        # Configuración de lookups del usuario (se setea externamente)
+        self.user_lookups_config = None
     
     def generate_form_field(self, field):
         """Generar campo de formulario basado en el tipo usando templates"""
         field_name = field['name']
         field_type = field['type']
         
-        # IMPORTANTE: Detectar si es un campo FK (Lookup)
+        # PRIORIDAD 1: Usar configuración de lookups del usuario
+        if self.user_lookups_config:
+            user_lookup = self._find_user_lookup_for_field(field_name)
+            if user_lookup:
+                print(f"✅ Usando lookup configurado por usuario en Fast: {field_name} -> {user_lookup.target_table}")
+                lookup_config = self._convert_user_lookup_to_config(user_lookup, field_name)
+                return self.lookup_resolver.generate_lookup_input(lookup_config, self.template_engine)
+        
+        # PRIORIDAD 2: Detectar si es un campo FK (Lookup) automáticamente
         if field_type == 'Guid' and self.lookup_resolver:
             lookup_config = self.lookup_resolver.resolve_lookup_config(field_name)
             if lookup_config:
-                print(f"✅ Detectado Lookup: {field_name} -> {lookup_config['entity_name']}")
+                print(f"✅ Detectado Lookup automático en Fast: {field_name} -> {lookup_config['entity_name']}")
                 return self.lookup_resolver.generate_lookup_input(lookup_config, self.template_engine)
         
         # Campos normales (no FK)
@@ -101,6 +112,56 @@ class FastFieldGenerator:
             return f"Ingrese {display_name.lower()} (opcional)"
         else:
             return f"Ingrese {display_name.lower()}"
+    
+    def _find_user_lookup_for_field(self, field_name):
+        """Buscar configuración de lookup para un campo, normalizando nombres"""
+        if not self.user_lookups_config:
+            return None
+        
+        # Normalizar el nombre del campo para comparar
+        field_normalized = self._normalize_field_name(field_name)
+        
+        for lookup_key, lookup_config in self.user_lookups_config.items():
+            lookup_key_normalized = self._normalize_field_name(lookup_key)
+            if lookup_key_normalized == field_normalized:
+                return lookup_config
+        
+        return None
+    
+    def _normalize_field_name(self, field_name):
+        """Normalizar nombre de campo para comparación (snake_case)"""
+        # Convertir "AreaId" -> "area_id" y "area_id" -> "area_id"
+        import re
+        # Si ya está en snake_case, dejarlo
+        if '_' in field_name and field_name.islower():
+            return field_name
+        
+        # Si está en PascalCase, convertir a snake_case
+        # "AreaId" -> "area_id"
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', field_name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    
+    def _convert_user_lookup_to_config(self, user_lookup, actual_field_name):
+        """Convertir configuración de lookup del usuario al formato esperado"""
+        # Convertir nombre de tabla a nombre de entidad (capitalize)
+        # Para auto-referencias como "areas" -> usar plural "Areas" 
+        table_name = user_lookup.target_table.lower()
+        
+        # Casos especiales para plurales comunes
+        if table_name.endswith('s'):
+            entity_name = table_name.capitalize()  # "areas" -> "Areas"
+        else:
+            entity_name = table_name.capitalize()  # "categoria" -> "Categoria"
+        
+        return {
+            'field_name': actual_field_name,  # Usar el nombre real del campo
+            'entity_name': entity_name,
+            'service_name': f"{entity_name}Service",
+            'display_property': user_lookup.display_field,
+            'value_type': 'Guid?',  # Asumir Guid para FKs
+            'entity_display': entity_name,
+            'cache_enabled': user_lookup.cache
+        }
     
     def _generate_fallback_field(self, field_name, field_type):
         """Generar campo usando código hardcodeado (fallback)"""
@@ -299,3 +360,66 @@ class FastFieldGenerator:
             }}'''
         
         return f"// {field_name} - Sin validación específica"
+    
+    def collect_lookup_dependencies(self, fields, main_entity_name=None):
+        """Recopilar dependencias de lookups para inyección de servicios"""
+        lookup_services = []
+        lookup_search_fields = []
+        lookup_initializations = []
+        added_services = set()  # Para evitar duplicados
+        
+        # IMPORTANTE: Excluir el servicio principal que ya está definido en el template
+        if main_entity_name:
+            main_service_name = f"{main_entity_name}Service"
+            added_services.add(main_service_name)  # Marcar como ya agregado
+            print(f"🔇 Servicio principal omitido (ya existe en template): {main_service_name}")
+        
+        if not self.lookup_resolver:
+            return {
+                'service_injections': '',
+                'search_fields': '',
+                'initializations': ''
+            }
+        
+        for field in fields:
+            field_name = field['name']
+            lookup_config = None
+            
+            # PRIORIDAD 1: Usar configuración de lookups del usuario
+            if self.user_lookups_config:
+                user_lookup = self._find_user_lookup_for_field(field_name)
+                if user_lookup:
+                    lookup_config = self._convert_user_lookup_to_config(user_lookup, field_name)
+            # PRIORIDAD 2: Usar resolver (incluye FK del usuario + detección automática)
+            if not lookup_config and field['type'] == 'Guid' and self.lookup_resolver:
+                lookup_config = self.lookup_resolver.resolve_lookup_config(field_name)
+            
+            if lookup_config:
+                entity_name = lookup_config['entity_name']
+                service_name = lookup_config['service_name']
+                
+                # VALIDAR SI YA EXISTE EL SERVICIO ANTES DE AGREGARLO
+                if service_name not in added_services:
+                    lookup_services.append(f"[Inject] private {service_name} {service_name} {{ get; set; }} = null!;")
+                    added_services.add(service_name)
+                    print(f"✅ Servicio agregado en Fast: {service_name}")
+                else:
+                    print(f"⚠️ Servicio duplicado omitido en Fast: {service_name}")
+                
+                # Campo de búsqueda (estos pueden repetirse sin problema)
+                search_field_name = f"{entity_name.lower()}SearchFields"
+                # IMPORTANTE: Usar namespace completo para evitar conflictos
+                full_entity_name = f"Shared.Models.Entities.{entity_name}"
+                search_field_definition = f"private Expression<Func<{full_entity_name}, object>>[] {search_field_name} = new Expression<Func<{full_entity_name}, object>>[] {{ x => x.Nombre }};"
+                
+                # También evitar duplicados en search fields
+                if search_field_definition not in lookup_search_fields:
+                    lookup_search_fields.append(search_field_definition)
+                
+                # No necesitamos inicialización especial por ahora
+        
+        return {
+            'service_injections': '\n    '.join(lookup_services),
+            'search_fields': '\n    '.join(lookup_search_fields),
+            'initializations': '\n        '.join(lookup_initializations) if lookup_initializations else '// No lookups to initialize'
+        }

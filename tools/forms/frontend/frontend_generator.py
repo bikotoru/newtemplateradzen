@@ -84,7 +84,7 @@ class FrontendGenerator:
             print(f"❌ ERROR en frontend generator: {e}")
             return False
     
-    def generate_razor_component(self, entity_name, module, module_path, component_type):
+    def generate_razor_component(self, entity_name, module, module_path, component_type, config=None):
         """Generar un componente Razor específico"""
         try:
             # Preparar variables básicas para el template
@@ -105,9 +105,9 @@ class FrontendGenerator:
             
             # Variables específicas por tipo de componente
             if component_type == 'fast':
-                self._prepare_fast_variables(entity_name, variables)
+                self._prepare_fast_variables(entity_name, variables, config)
             elif component_type == 'formulario':
-                self._prepare_formulario_variables(entity_name, variables)
+                self._prepare_formulario_variables(entity_name, variables, config)
             
             # Renderizar templates
             razor_content = self.template_engine.render_template(f"frontend/components/{component_type}.razor.template", variables)
@@ -128,8 +128,18 @@ class FrontendGenerator:
             print(f"❌ ERROR generando {component_type}: {e}")
             return False
     
-    def _prepare_fast_variables(self, entity_name, variables):
+    def _prepare_fast_variables(self, entity_name, variables, config=None):
         """Preparar variables específicas para componente Fast"""
+        # Configurar lookups del usuario si existe config
+        if config and hasattr(config, 'lookups'):
+            self.fast_generator.user_lookups_config = config.lookups
+            print(f"🔗 Configuración de lookups cargada en Fast: {list(config.lookups.keys())}")
+            
+        # Configurar FK del usuario en el lookup resolver
+        if config and hasattr(config, 'foreign_keys'):
+            self.fast_generator.lookup_resolver.user_fks_config = config.foreign_keys
+            print(f"🔗 Configuración de FK cargada en Fast resolver: {[fk.field + ':' + fk.ref_table for fk in config.foreign_keys]}")
+        
         # Detectar campos de la entidad
         fields = self.viewmanager_generator.detect_entity_fields(entity_name)
         
@@ -143,8 +153,8 @@ class FrontendGenerator:
             validation_rules.append(self.fast_generator.generate_validation_rule(field))
             field_validations.append(self.fast_generator.generate_field_validation_check(field))
         
-        # Recopilar dependencias de lookups
-        lookup_deps = self.formulario_generator.collect_lookup_dependencies(fields)
+        # Recopilar dependencias de lookups (excluyendo servicio principal)
+        lookup_deps = self.fast_generator.collect_lookup_dependencies(fields, entity_name)
         
         # Agregar a variables
         variables.update({
@@ -156,8 +166,18 @@ class FrontendGenerator:
             'LOOKUP_FIELD_INITIALIZATIONS': lookup_deps['initializations']
         })
     
-    def _prepare_formulario_variables(self, entity_name, variables):
+    def _prepare_formulario_variables(self, entity_name, variables, config=None):
         """Preparar variables específicas para componente Formulario"""
+        # Configurar lookups del usuario si existe config
+        if config and hasattr(config, 'lookups'):
+            self.formulario_generator.user_lookups_config = config.lookups
+            print(f"🔗 Configuración de lookups cargada: {list(config.lookups.keys())}")
+            
+        # Configurar FK del usuario en el lookup resolver
+        if config and hasattr(config, 'foreign_keys'):
+            self.formulario_generator.lookup_resolver.user_fks_config = config.foreign_keys
+            print(f"🔗 Configuración de FK cargada en resolver: {[fk.field + ':' + fk.ref_table for fk in config.foreign_keys]}")
+        
         # Detectar campos de la entidad
         fields = self.viewmanager_generator.detect_entity_fields(entity_name)
         
@@ -175,8 +195,8 @@ class FrontendGenerator:
             validation_rules.append(self.fast_generator.generate_validation_rule(field))  # Reutilizar validaciones
             field_validations.append(self.fast_generator.generate_field_validation_check(field))  # Reutilizar validaciones
         
-        # Recopilar dependencias de lookups
-        lookup_deps = self.formulario_generator.collect_lookup_dependencies(fields)
+        # Recopilar dependencias de lookups (excluyendo servicio principal)
+        lookup_deps = self.formulario_generator.collect_lookup_dependencies(fields, entity_name)
         
         # Agregar a variables
         variables.update({
@@ -291,15 +311,15 @@ class FrontendGenerator:
                 return False
             
             # 4. Generar componente List
-            if not self.generate_razor_component(entity_name, module, module_path, "list"):
+            if not self.generate_razor_component(entity_name, module, module_path, "list", config):
                 return False
             
             # 5. Generar componente Fast
-            if not self.generate_razor_component(entity_name, module, module_path, "fast"):
+            if not self.generate_razor_component(entity_name, module, module_path, "fast", config):
                 return False
             
             # 6. Generar componente Formulario
-            if not self.generate_razor_component(entity_name, module, module_path, "formulario"):
+            if not self.generate_razor_component(entity_name, module, module_path, "formulario", config):
                 return False
             
             return True

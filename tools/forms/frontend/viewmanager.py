@@ -65,6 +65,57 @@ class ViewManagerGenerator:
             print(f"⚠️ Error detectando campos de {entity_name}: {e}")
             return self.get_default_fields(entity_name)
     
+    def detect_navigation_properties(self, entity_name):
+        """Detectar propiedades de navegación reales del modelo"""
+        try:
+            entity_file = self.root_path / "Shared.Models" / "Entities" / f"{entity_name}.cs"
+            
+            if not entity_file.exists():
+                return {}
+            
+            content = entity_file.read_text(encoding='utf-8')
+            navigation_props = {}
+            
+            lines = content.split('\n')
+            for line in lines:
+                line = line.strip()
+                # Buscar propiedades virtuales (navegación): public virtual EntityName? PropName { get; set; }
+                if line.startswith('public virtual ') and '{ get; set; }' in line and 'ICollection' not in line:
+                    # Extraer información
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        entity_type = parts[2].replace('?', '').replace(' ', '')  # "Areas", "Centrodecosto"
+                        prop_name = parts[3].replace('?', '').replace(' ', '')   # "Area", "Centrodecosto", etc.
+                        
+                        # Mapear: nombre de entidad → nombre real de propiedad
+                        navigation_props[entity_type] = prop_name
+            
+            return navigation_props
+            
+        except Exception as e:
+            return {}
+    
+    def _find_navigation_property(self, entity_name, navigation_props):
+        """Buscar propiedad de navegación con fuzzy matching"""
+        # 1. Búsqueda exacta
+        if entity_name in navigation_props:
+            return navigation_props[entity_name]
+        
+        # 2. Búsqueda case-insensitive
+        entity_lower = entity_name.lower()
+        for nav_entity, nav_prop in navigation_props.items():
+            if nav_entity.lower() == entity_lower:
+                return nav_prop
+        
+        # 3. Búsqueda por similitud (CentroDeCosto vs Centrodecosto)
+        entity_clean = entity_name.lower().replace('de', '')  # "centrodecosto"
+        for nav_entity, nav_prop in navigation_props.items():
+            nav_clean = nav_entity.lower().replace('de', '')
+            if nav_clean == entity_clean:
+                return nav_prop
+        
+        return None
+    
     def get_default_fields(self, entity_name):
         """Campos por defecto si no se puede detectar"""
         return [
@@ -128,6 +179,9 @@ class ViewManagerGenerator:
         includes = []
         primary_field = 'Nombre'  # Default
         
+        # IMPORTANTE: Detectar propiedades de navegación reales del modelo
+        navigation_props = self.detect_navigation_properties(config.entity_name)
+        
         # Procesar grid_fields de la configuración
         order = 1
         for field_name, grid_field in config.grid_fields.items():
@@ -140,8 +194,16 @@ class ViewManagerGenerator:
                 entity_name = grid_field.display_field.split('.')[0]  # "Region"
                 title = entity_name
                 
-                # Generar include automáticamente
-                include_statement = f".Include(x=>x.{entity_name})"
+                # CORRECCIÓN: Usar propiedades de navegación reales
+                real_nav_prop = self._find_navigation_property(entity_name, navigation_props)
+                if real_nav_prop:
+                    include_statement = f".Include(x=>x.{real_nav_prop})"
+                    print(f"✅ Include corregido: {entity_name} -> x.{real_nav_prop}")
+                else:
+                    # Fallback al método anterior si no se encuentra
+                    include_statement = f".Include(x=>x.{entity_name})"
+                    print(f"⚠️ Include fallback para {entity_name}: x.{entity_name}")
+                
                 if include_statement not in includes:
                     includes.append(include_statement)
                     
