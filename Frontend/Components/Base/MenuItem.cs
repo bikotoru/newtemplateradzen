@@ -6,4 +6,5 @@ public class MenuItem
     public string Icon { get; set; } = "";
     public string Path { get; set; } = "";
     public List<string> Permissions { get; set; } = new();
+    public List<MenuItem> SubItems { get; set; } = new();
 }

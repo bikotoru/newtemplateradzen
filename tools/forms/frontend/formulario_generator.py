@@ -49,6 +49,8 @@ class FormularioFieldGenerator:
             return self._generate_formulario_numeric(field_name, field_display, field_type)
         elif field_type == 'DateTime':
             return self._generate_formulario_datetime(field_name, field_display)
+        elif field_type == 'bool':
+            return self._generate_formulario_switch(field_name, field_display)
         else:
             return self._generate_formulario_textbox(field_name, field_display, field_placeholder)  # Fallback
     
@@ -116,9 +118,16 @@ class FormularioFieldGenerator:
                                                            DisplayProperty="{lookup_config['display_property']}"
                                                            EntityDisplayName="{lookup_config['entity_display']}"
                                                            SearchableFields="@{lookup_config['entity_name'].lower()}SearchFields"
-                                                           {"EnableCache=\"true\"" if lookup_config['cache_enabled'] else ""} />
+                                                           {('EnableCache="true"' if lookup_config['cache_enabled'] else '')} />
                                                 </RadzenFormField>
                                             </ValidatedInput>'''
+    
+    def _generate_formulario_switch(self, field_name, field_display):
+        """Generar RadzenSwitch para campos booleanos"""
+        return f'''<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                                <RadzenLabel Text="{field_display}" Component="{field_name}" />
+                                                <RadzenSwitch @bind-Value="entity.{field_name}" Name="{field_name}" />
+                                            </RadzenStack>'''
     
     def _get_display_name(self, field_name):
         """Obtener nombre para mostrar"""

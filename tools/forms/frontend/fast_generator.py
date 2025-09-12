@@ -56,6 +56,8 @@ class FastFieldGenerator:
                 return self._render_numeric_template(field_type, base_variables)
             elif field_type == 'DateTime':
                 return self._render_datetime_template(base_variables)
+            elif field_type == 'bool':
+                return self._render_switch_template(base_variables)
             else:
                 return self._render_input_template('textbox_input', base_variables)  # Fallback
         else:
@@ -88,6 +90,10 @@ class FastFieldGenerator:
             'DATE_FORMAT': 'dd/MM/yyyy HH:mm'
         })
         return self._render_input_template('datetime_input', variables)
+    
+    def _render_switch_template(self, variables):
+        """Renderizar template para campo booleano (switch)"""
+        return self._render_input_template('switch_input', variables)
     
     def _get_placeholder(self, field_name, display_name):
         """Generar placeholder apropiado"""

@@ -2,6 +2,7 @@ import asyncio
 import sys
 import os
 import re
+import json
 from pathlib import Path
 from claude_code_sdk import ClaudeSDKClient, ClaudeCodeOptions
 
@@ -28,34 +29,56 @@ async def auto_confirm(client):
                     if any(word in text.lower() for word in ["permission", "permisos", "proceed", "continuar"]):
                         await client.query("Sí, procede.")
 
-def parse_batch_file(file_path):
+def parse_json_file(json_path):
     """
-    Lee un archivo con entidades en formato:
-    modulo/entidad
-    modulo/submodulo/entidad
-    # comentarios ignorados
+    Lee el archivo entities-urls.json desde la ruta especificada
+    y convierte las entidades al formato requerido
     """
     entities = []
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+        
+        for item in json_data:
+            entidad = item['entidad']
+            modulo_json = item['modulo']
             
-            # Ignorar líneas vacías y comentarios
-            if not line or line.startswith('#'):
-                continue
+            # Convertir módulo jerárquico a estructura de paths
+            # Ej: "RRHH.Configuracion.Mantenedores.Empleado" -> "rrhh/configuracion/mantenedores/empleado"
+            modulo_parts = modulo_json.lower().split('.')
+            modulo = modulo_parts[0]  # rrhh, core, ventas, etc.
             
-            try:
-                modulo, submodulo, entidad = parse_input(line)
-                entities.append({
-                    'line': line_num,
-                    'input': line,
-                    'modulo': modulo,
-                    'submodulo': submodulo,
-                    'entidad': entidad
-                })
-            except ValueError as e:
-                print(f"⚠️  Línea {line_num} ignorada: '{line}' - {e}")
+            # Manejar submódulos jerárquicos
+            if len(modulo_parts) > 1:
+                # Unir todos los submódulos con "/"
+                submodulo_path = "/".join(modulo_parts[1:])
+                input_line = f"{modulo}/{submodulo_path}/{entidad.lower()}"
+            else:
+                input_line = f"{modulo}/{entidad.lower()}"
+            
+            # Para compatibilidad con el sistema actual, usar solo el primer submódulo
+            submodulo = modulo_parts[1] if len(modulo_parts) > 1 else None
+            
+            entities.append({
+                'line': len(entities) + 1,
+                'input': input_line,
+                'modulo': modulo,
+                'submodulo': submodulo,
+                'entidad': entidad.lower(),
+                'entidad_original': entidad,
+                'permiso': f"{entidad.upper()}.VIEWMENU"
+            })
+            
+    except FileNotFoundError:
+        print(f"❌ Error: No se encontró el archivo {json_path}")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"❌ Error al parsear JSON: {e}")
+        return []
+    except Exception as e:
+        print(f"❌ Error inesperado: {e}")
+        return []
     
     return entities
 
@@ -119,7 +142,9 @@ async def add_multiple_menu_items(config_path, menu_items):
         entities_context.append({
             'entidad': entity['entidad'],
             'submodulo': entity['submodulo'],
-            'input_original': entity['input']
+            'input_original': entity['input'],
+            'permiso': entity.get('permiso', f"{entity['entidad'].upper()}.VIEWMENU"),
+            'entidad_original': entity.get('entidad_original', entity['entidad'])
         })
     
     # Cargar contexto de MenuIA
@@ -136,48 +161,93 @@ async def add_multiple_menu_items(config_path, menu_items):
         )
     ) as client:
         
-        # Crear prompt inteligente con TODO el contexto
-        entities_list = "\n".join([
-            f"- {ctx['entidad']} (desde: {ctx['input_original']})" 
-            for ctx in entities_context
-        ])
+        # Agrupar entidades por submódulo para jerarquía
+        submodule_groups = {}
+        for ctx in entities_context:
+            entity = ctx['entidad']
+            submodule = ctx.get('submodulo', '')
+            if submodule:
+                if submodule not in submodule_groups:
+                    submodule_groups[submodule] = []
+                submodule_groups[submodule].append(ctx)
+            else:
+                # Entidades sin submódulo van directo
+                if 'direct' not in submodule_groups:
+                    submodule_groups['direct'] = []
+                submodule_groups['direct'].append(ctx)
+        
+        # Crear contexto jerárquico
+        hierarchical_context = []
+        for submodule, entities in submodule_groups.items():
+            if submodule == 'direct':
+                hierarchical_context.append(f"\n=== ENTIDADES DIRECTAS ===")
+                for ctx in entities:
+                    hierarchical_context.append(f"- {ctx['entidad']} → Permiso: {ctx['permiso']} → Path: {ctx['input_original']}")
+            else:
+                submodule_name = submodule.replace('_', ' ').title()
+                hierarchical_context.append(f"\n=== SUBMÓDULO: {submodule_name.upper()} ===")
+                for ctx in entities:
+                    hierarchical_context.append(f"- {ctx['entidad']} → Permiso: {ctx['permiso']} → Path: {ctx['input_original']}")
+        
+        entities_list = "\n".join(hierarchical_context)
         
         prompt = f"""
 {context}
 
-TAREA: Agregar múltiples entidades al archivo de menú de forma inteligente.
+TAREA CRÍTICA: Agregar múltiples entidades al archivo de menú reemplazando el comentario vacío.
 
 Archivo a modificar: {config_path}
 
 Entidades a agregar:
 {entities_list}
 
-INSTRUCCIONES INTELIGENTES:
-1. Lee el archivo actual para entender el contexto y patrones existentes
-2. Para cada entidad, decide inteligentemente:
-   - El ICONO más apropiado según su nombre/función
-   - La RUTA siguiendo el patrón existente
-   - El ORDEN correcto (alfabético o por funcionalidad)
-   - El PERMISO en formato [ENTIDAD].VIEWMENU
+INSTRUCCIONES CRÍTICAS - GENERAR ESTRUCTURA CON SUBMENÚS:
+1. Lee el archivo actual - verás que tiene un comentario: "// Los elementos del menú se agregarán aquí"
+2. DEBES REEMPLAZAR ese comentario con los MenuItems organizados jerárquicamente
+3. ESTRUCTURA JERÁRQUICA requerida:
+   - Para módulos como RRHH: crear MenuItems principales por cada submódulo
+   - Cada MenuItem principal tendrá SubItems con las entidades específicas
+   - Para módulos simples como Core: crear MenuItems directos
 
-3. Usa tu conocimiento del contexto para:
-   - Elegir iconos coherentes (productos→inventory, usuarios→people, etc.)
-   - Mantener consistencia en rutas
-   - Agrupar lógicamente si es apropiado
-   - Evitar duplicados
+4. FORMATO JERÁRQUICO requerido:
+// Para submódulos (ej: RRHH.AsistenciayTiempo)
+new MenuItem
+{{
+    Text = "Asistencia y Tiempo",
+    Icon = "schedule",
+    Path = "", // Vacío para items padre
+    Permissions = new List<string>(),
+    SubItems = new List<MenuItem>
+    {{
+        new MenuItem {{ Text = "Estado Horas Extras", Icon = "timer", Path = "/rrhh/asistenciaytiempo/estadohorasextras/list", Permissions = new List<string> {{ "ESTADOHORASEXTRAS.VIEWMENU" }} }},
+        new MenuItem {{ Text = "Tipo Registro Asistencia", Icon = "access_time", Path = "/rrhh/asistenciaytiempo/tiporegistroasistencia/list", Permissions = new List<string> {{ "TIPOREGISTROASISTENCIA.VIEWMENU" }} }}
+    }}
+}},
 
-4. Genera todos los MenuItems con el formato correcto:
-   new MenuItem
-   {{
-       Text = "[Nombre]",
-       Icon = "[icono_inteligente]",
-       Path = "/[ruta/siguiendo/patron]/list",
-       Permissions = new List<string>{{ "[ENTIDAD].VIEWMENU"}}
-   }}
+5. REGLAS IMPORTANTES:
+   - Submódulos se convierten en MenuItems padre con SubItems
+   - Items padre tienen Path vacío y Permissions vacío
+   - SubItems tienen Path y Permissions reales
+   - Ordenar alfabéticamente por Text en cada nivel
+   - Usar iconos coherentes por categoría
 
-5. Agrega todo al archivo manteniendo formato y orden correcto.
+EJEMPLO COMPLETO para RRHH:
+MenuItems = new List<MenuItem>
+{{
+    new MenuItem
+    {{
+        Text = "Asistencia y Tiempo",
+        Icon = "schedule", 
+        Path = "",
+        Permissions = new List<string>(),
+        SubItems = new List<MenuItem>
+        {{
+            new MenuItem {{ Text = "Estado Horas Extras", Icon = "timer", Path = "/rrhh/asistenciaytiempo/estadohorasextras/list", Permissions = new List<string> {{ "ESTADOHORASEXTRAS.VIEWMENU" }} }}
+        }}
+    }}
+}}
 
-La IA debe tomar decisiones inteligentes sobre iconos y orden basándose en el contexto completo.
+¡CRÍTICO: Generar estructura jerárquica real con SubItems!
 """
         
         await client.query(prompt)
@@ -219,35 +289,29 @@ Mantén el formato y estructura existente del archivo. Los nuevos módulos deben
         await auto_confirm(client)
 
 async def main():
-    print("🚀 GenerateMenu BATCH - Procesador masivo de menús")
+    print("🚀 GenerateMenu BATCH - Procesador masivo de menús desde JSON")
     print("=" * 60)
     
     # Verificar argumentos
     if len(sys.argv) != 2:
-        print("❌ Error: Se requiere un archivo de entidades")
-        print("\nUso: python generate_menu_batch.py <archivo_entidades.txt>")
-        print("\nEjemplos:")
-        print("  python generate_menu_batch.py entidades.txt")
-        print("  python generate_menu_batch.py mis_menus.txt")
-        print("\nFormato del archivo:")
-        print("  principal/productos")
-        print("  principal/categorias")
-        print("  inventario/core/marcas")
-        print("  administracion/usuarios")
-        print("  # comentarios son ignorados")
+        print("❌ Error: Se requiere la ruta del archivo JSON")
+        print("\nUso: python generate_menu_batch.py <ruta_entities_urls.json>")
+        print("\nEjemplo:")
+        print("  python generate_menu_batch.py ./entities-urls.json")
+        print("  python generate_menu_batch.py ../datos/entities-urls.json")
         return
     
-    batch_file = sys.argv[1]
+    json_file = sys.argv[1]
     
     # Verificar que existe el archivo
-    if not os.path.exists(batch_file):
-        print(f"❌ Error: El archivo '{batch_file}' no existe")
+    if not os.path.exists(json_file):
+        print(f"❌ Error: El archivo '{json_file}' no existe")
         return
     
-    print(f"📄 Procesando archivo: {batch_file}")
+    print(f"📄 Leyendo archivo JSON: {json_file}")
     
-    # 1. Leer y parsear entidades
-    entities = parse_batch_file(batch_file)
+    # 1. Leer y parsear entidades desde JSON
+    entities = parse_json_file(json_file)
     
     if not entities:
         print("❌ No se encontraron entidades válidas en el archivo")
@@ -266,11 +330,8 @@ async def main():
         
         print(f"  🔹 {entity['entidad'].capitalize()} → {path} (IA elegirá icono)")
     
-    # Confirmar procesamiento
-    response = input(f"\n¿Procesar {len(entities)} entidades? (s/n): ")
-    if response.lower() not in ['s', 'si', 'sí', 'y', 'yes']:
-        print("❌ Operación cancelada")
-        return
+    # Confirmar procesamiento (auto-confirmar en modo batch)
+    print(f"\n✅ Procesando {len(entities)} entidades desde JSON automáticamente...")
     
     # 2. Agrupar por módulos
     modules = group_entities_by_module(entities)
@@ -356,42 +417,51 @@ reportes/finanzas
 
 def show_help():
     """Muestra ayuda de uso"""
-    print("🚀 GenerateMenu BATCH - Procesador masivo de menús")
+    print("🚀 GenerateMenu BATCH - Procesador masivo de menús desde JSON")
     print("=" * 60)
     print()
     print("Uso:")
-    print("  python generate_menu_batch.py <archivo_entidades.txt>")
+    print("  python generate_menu_batch.py <ruta_entities_urls.json>")
+    print()
+    print("Ejemplos:")
+    print("  python generate_menu_batch.py ./entities-urls.json")
+    print("  python generate_menu_batch.py ../datos/entities-urls.json")
+    print("  python generate_menu_batch.py C:\\proyecto\\entities-urls.json")
     print()
     print("Comandos especiales:")
-    print("  python generate_menu_batch.py --example    # Crea archivo de ejemplo")
     print("  python generate_menu_batch.py --help       # Muestra esta ayuda")
     print()
-    print("Formato del archivo de entidades:")
-    print("  principal/productos")
-    print("  inventario/core/marcas")
-    print("  administracion/usuarios")
-    print("  # Los comentarios son ignorados")
+    print("Formato del archivo JSON:")
+    print("  📄 Debe contener array de objetos con: entidad, modulo, urllista")
+    print("  🔑 Genera permisos en formato: [ENTIDAD_MAYUSCULA].VIEWMENU")
+    print("  📝 Ejemplo: NIVELEDUCACIONALEMPLEADO.VIEWMENU")
     print()
     print("¿Qué hace?")
-    print("  ✅ Procesa múltiples entidades de una vez")
+    print("  ✅ Lee entidades desde el archivo JSON especificado")
+    print("  ✅ Convierte módulos: 'RRHH.Core' → 'rrhh/core'")
+    print("  ✅ Genera permisos automáticamente en mayúsculas")
     print("  ✅ Crea módulos automáticamente si no existen")
     print("  ✅ Registra módulos nuevos en MenuUnificado.razor")
     print("  ✅ Genera MenuItems con iconos inteligentes")
-    print("  ✅ Mantiene orden alfabético en cada módulo")
     print()
-    print("Ventajas del procesamiento masivo:")
-    print("  ⚡ Procesa 20+ entidades en segundos")
+    print("Ventajas del procesamiento desde JSON:")
+    print("  ⚡ Procesa todas las entidades del JSON")
     print("  🎯 Agrupa por módulos para eficiencia")
     print("  🔄 Una sola operación de IA por módulo")
-    print("  📊 Resumen completo al final")
+    print("  📊 Permisos consistentes automáticamente")
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 1:
+        print("❌ Error: Se requiere la ruta del archivo JSON")
+        print("Uso: python generate_menu_batch.py <ruta_entities_urls.json>")
+        print("Para ayuda: python generate_menu_batch.py --help")
+    elif len(sys.argv) == 2:
         if sys.argv[1] in ["-h", "--help", "help"]:
             show_help()
-        elif sys.argv[1] == "--example":
-            create_sample_file()
         else:
+            # Archivo JSON especificado, ejecutar
             asyncio.run(main())
     else:
-        show_help()
+        print("❌ Demasiados argumentos.")
+        print("Uso: python generate_menu_batch.py <ruta_entities_urls.json>")
+        print("Para ayuda: python generate_menu_batch.py --help")

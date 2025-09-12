@@ -146,11 +146,11 @@ class ViewManagerGenerator:
                     includes.append(include_statement)
                     
             else:
-                # Campo directo - capitalizar primera letra
-                property_name = field_name.capitalize()
+                # Campo directo - normalizar siguiendo reglas de EF Core
+                property_name = self.normalize_field_name_for_ef(field_name)
                 title = self.get_title_for_field(field_name)
                 
-                # Si es el primer campo, usarlo como primary_field (capitalizado)
+                # Si es el primer campo, usarlo como primary_field (normalizado)
                 if order == 1:
                     primary_field = property_name
             
@@ -194,6 +194,13 @@ class ViewManagerGenerator:
             'stock': 'Stock'
         }
         return title_map.get(field_name.lower(), field_name)
+    
+    def normalize_field_name_for_ef(self, field_name):
+        """Normalizar nombre de campo siguiendo reglas de Entity Framework Core"""
+        # Dividir por _ y convertir cada parte a PascalCase
+        parts = field_name.split('_')
+        ef_field_name = ''.join(part.capitalize() for part in parts if part)
+        return ef_field_name
     
     def generate_viewmanager(self, entity_name, module, module_path, config=None):
         """Generar ViewManager completo"""

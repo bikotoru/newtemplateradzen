@@ -26,9 +26,23 @@
                 <RadzenPanelMenu>
                     @foreach (var item in GetFilteredMenuItems(module))
                     {
-                        <RadzenPanelMenuItem Text="@item.Text" 
-                                           Icon="@item.Icon" 
-                                           Path="@item.Path" />
+                        @if (item.SubItems.Any())
+                        {
+                            <RadzenPanelMenuItem Text="@item.Text" Icon="@item.Icon">
+                                @foreach (var subItem in item.SubItems.Where(si => HasPermission(si.Permissions)))
+                                {
+                                    <RadzenPanelMenuItem Text="@subItem.Text" 
+                                                       Icon="@subItem.Icon" 
+                                                       Path="@subItem.Path" />
+                                }
+                            </RadzenPanelMenuItem>
+                        }
+                        else
+                        {
+                            <RadzenPanelMenuItem Text="@item.Text" 
+                                               Icon="@item.Icon" 
+                                               Path="@item.Path" />
+                        }
                     }
                 </RadzenPanelMenu>
             </ModuleExpander>
@@ -83,10 +97,11 @@
                 // Buscar en el nombre del módulo
                 var moduleMatches = module.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
                 
-                // Buscar en los items del módulo
+                // Buscar en los items del módulo y sus subitems
                 var matchingItems = module.MenuItems.Where(item => 
-                    item.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) &&
-                    HasPermission(item.Permissions)
+                    (item.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) &&
+                     (HasPermission(item.Permissions) || item.SubItems.Any())) ||
+                    item.SubItems.Any(sub => sub.Text.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) && HasPermission(sub.Permissions))
                 ).ToList();
 
                 // Si el módulo o algún item coincide, incluir el módulo

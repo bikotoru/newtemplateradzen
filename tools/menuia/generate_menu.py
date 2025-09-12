@@ -51,17 +51,23 @@ def get_icon_for_entity(entidad):
 
 def parse_input(input_str):
     """
-    Parsea el input en formato: modulo/submodulo/entidad o modulo/entidad
-    Retorna: (modulo, submodulo, entidad)
+    Parsea el input en formato jerárquico: modulo/sub1/sub2/.../entidad
+    Retorna: (modulo, submodulo_path, entidad)
     """
     parts = input_str.strip().split('/')
     
-    if len(parts) == 2:
-        return parts[0], None, parts[1]
-    elif len(parts) == 3:
-        return parts[0], parts[1], parts[2]
-    else:
+    if len(parts) < 2:
         raise ValueError("Formato debe ser: modulo/entidad o modulo/submodulo/entidad")
+    
+    modulo = parts[0]
+    entidad = parts[-1]  # La entidad siempre es el último elemento
+    
+    # Si hay elementos intermedios, crear el path de submódulos
+    if len(parts) > 2:
+        submodulo_path = "/".join(parts[1:-1])  # Todos los elementos entre modulo y entidad
+        return modulo, submodulo_path, entidad
+    else:
+        return modulo, None, entidad
 
 def get_config_filename(modulo):
     """Genera el nombre del archivo de configuración"""
@@ -114,15 +120,15 @@ public static class {modulo_capitalized}MenuConfig
     }}
 }}"""
 
-def generate_menu_item(modulo, submodulo, entidad):
+def generate_menu_item(modulo, submodulo_path, entidad):
     """Genera el MenuItem listo para insertar"""
     entidad_capitalized = entidad.capitalize()
     entidad_upper = entidad.upper()
     icon = get_icon_for_entity(entidad)
     
-    # Generar path
-    if submodulo:
-        path = f"/{modulo.lower()}/{submodulo.lower()}/{entidad.lower()}/list"
+    # Generar path jerárquico
+    if submodulo_path:
+        path = f"/{modulo.lower()}/{submodulo_path.lower()}/{entidad.lower()}/list"
     else:
         path = f"/{modulo.lower()}/{entidad.lower()}/list"
     
@@ -186,11 +192,13 @@ Mantén el formato y estructura existente del archivo.
 async def main():
     if len(sys.argv) != 2:
         print("❌ Error: Se requiere un argumento")
-        print("Uso: python generate_menu.py <modulo/entidad> o <modulo/submodulo/entidad>")
+        print("Uso: python generate_menu.py <modulo/[submódulos]/entidad>")
         print("Ejemplos:")
         print("  python generate_menu.py principal/productos")
         print("  python generate_menu.py administracion/usuarios")
-        print("  python generate_menu.py ventas/facturas/facturas")
+        print("  python generate_menu.py rrhh/configuracion/mantenedores/empleado/tipobonificacion")
+        print("  python generate_menu.py rrhh/configuracion/global/configuraciongeneralrrhh")
+        print("  python generate_menu.py core/localidades/region")
         return
     
     try:

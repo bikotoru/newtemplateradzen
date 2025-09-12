@@ -65,46 +65,6 @@ else
         {
             var modulesToAdd = new List<MenuModule>();
 
-            // Módulo de Administración
-            var adminModule = new MenuModule
-            {
-                Text = "Administración",
-                Icon = "admin_panel_settings",
-                MenuItems = new List<MenuItem>
-                {
-                    new MenuItem
-                    {
-                        Text = "Usuarios",
-                        Icon = "people",
-                        Path = "/users",
-                        Permissions = new List<string> { "users.view", "users.read" }
-                    },
-                    new MenuItem
-                    {
-                        Text = "Roles",
-                        Icon = "security",
-                        Path = "/systemroles",
-                        Permissions = new List<string> { "roles.view", "roles.read", "systemroles.view" }
-                    },
-                    new MenuItem
-                    {
-                        Text = "Permisos",
-                        Icon = "verified_user",
-                        Path = "/systempermissions",
-                        Permissions = new List<string> { "permissions.view", "permissions.read", "systempermissions.view" }
-                    }
-                }
-            };
-
-            // Solo agregar el módulo de administración si el usuario tiene permisos para al menos una opción
-            var hasAnyAdminPermission = adminModule.MenuItems.Any(item => 
-                item.Permissions.Any(permission => userPermissions.Contains(permission)));
-
-            if (hasAnyAdminPermission)
-            {
-                modulesToAdd.Add(adminModule);
-            }
-
             allModules = modulesToAdd;
         }
         catch (Exception ex)

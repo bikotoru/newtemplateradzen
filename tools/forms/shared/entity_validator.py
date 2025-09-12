@@ -204,8 +204,17 @@ class EntityConfigValidator:
             user_id = parts.get('user id', 'sa')
             password = parts.get('password', 'Soporte.2019')
             
+            # Tabla que estamos creando (para detectar auto-referencias)
+            current_table = config.entity_name.lower()
+            
             for fk in config.foreign_keys:
-                table_name = fk.ref_table
+                table_name = fk.ref_table.lower()
+                
+                # CASO ESPECIAL: Auto-referencia (la tabla se referencia a sí misma)
+                if table_name == current_table:
+                    print(f"🔄 Auto-referencia detectada: {fk.field} -> {table_name}")
+                    print(f"   💡 EF Core manejará la auto-referencia correctamente")
+                    continue  # Saltamos la validación para auto-referencias
                 
                 # Query para verificar existencia
                 check_query = f"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table_name}'"

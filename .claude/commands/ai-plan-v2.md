@@ -167,14 +167,122 @@ EJEMPLO_MÚLTIPLES_FASES:
     - Fase 3: Entidades de Contabilidad (5 entidades)
 ```
 
-### Asignación de Módulos
-```yaml
-MAPEO_AUTOMÁTICO:
-  producto,categoria,marca: "Catalogo"
-  venta,cliente,factura: "Ventas" 
-  empleado,cargo,departamento: "RRHH"
-  default: "General"
+### Asignación de Módulos (INTELIGENCIA ARTIFICIAL)
+
+La IA debe analizar cada entidad y determinar su módulo usando estos criterios:
+
+```python
+def determinar_modulo_inteligente(nombre_entidad, campos, relaciones, contexto):
+    """
+    Determina el módulo correcto usando análisis inteligente
+    """
+    
+    # 1. ANÁLISIS DEL NOMBRE DE LA ENTIDAD
+    if nombre_entidad.startswith(("Tipo", "Estado", "Modalidad")):
+        # Es un mantenedor - determinar submódulo por contexto
+        if "Empleado" in nombre_entidad or "Ausencia" in nombre_entidad:
+            return "RRHH.Configuracion.Mantenedores.Empleado"
+        elif "Solicitud" in nombre_entidad:
+            return "RRHH.Configuracion.Mantenedores.Solicitudes"
+        elif "Contrato" in nombre_entidad or "Cargo" in nombre_entidad:
+            return "RRHH.Configuracion.Mantenedores.Organizacion"
+        elif "Asistencia" in nombre_entidad or "Horas" in nombre_entidad:
+            return "RRHH.Configuracion.Mantenedores.Tiempo"
+        else:
+            return determinar_por_dominio(contexto) + ".Configuracion.Mantenedores"
+    
+    # 2. CONFIGURACIONES GLOBALES
+    if "Configuracion" in nombre_entidad and "General" in nombre_entidad:
+        return determinar_por_dominio(contexto) + ".Configuracion.Global"
+    
+    # 3. ENTIDADES CORE/COMPARTIDAS
+    if nombre_entidad in ["Region", "Comuna", "Ciudad"]:
+        return "Core.Localidades"
+    elif nombre_entidad in ["Banco", "TipoCuenta", "FormaPagoBancario"]:
+        return "Core.Bancario"
+    elif nombre_entidad in ["CentroDeCosto", "Areas", "Empresa"]:
+        return "Core.General"
+    
+    # 4. ANÁLISIS POR DOMINIO Y COMPLEJIDAD
+    dominio = determinar_dominio(nombre_entidad, contexto)
+    
+    if dominio == "RRHH":
+        # Análisis específico para RRHH
+        if es_entidad_central(nombre_entidad, relaciones):
+            return "RRHH.Empleado"  # Empleado y entidades centrales
+        elif es_transaccional(campos, relaciones):
+            if "Solicitud" in nombre_entidad:
+                return "RRHH.Solicitudes"
+            elif "Asistencia" in nombre_entidad or "Horas" in nombre_entidad:
+                return "RRHH.AsistenciayTiempo"
+            else:
+                return "RRHH.Empleado"  # Otras transaccionales van con empleado
+        elif es_previsional(nombre_entidad):
+            return "RRHH.Previsional"
+        else:
+            return "RRHH.Configuracion.Mantenedores"
+    
+    # 5. OTROS DOMINIOS
+    elif dominio == "Ventas":
+        if es_mantenedor(campos, relaciones):
+            return "Ventas.Configuracion"
+        else:
+            return "Ventas"
+    
+    elif dominio == "Catalogo":
+        return "Catalogo"
+    
+    # 6. DEFAULT
+    return "General"
+
+def determinar_dominio(nombre_entidad, contexto):
+    """Detecta el dominio principal"""
+    # Buscar en contexto palabras clave
+    contexto_lower = contexto.lower()
+    
+    if any(palabra in contexto_lower for palabra in ["rrhh", "empleado", "personal", "recursos humanos"]):
+        return "RRHH"
+    elif any(palabra in contexto_lower for palabra in ["venta", "cliente", "factura"]):
+        return "Ventas"
+    elif any(palabra in contexto_lower for palabra in ["producto", "categoria", "marca"]):
+        return "Catalogo"
+    
+    # Analizar por nombre de entidad
+    nombre_lower = nombre_entidad.lower()
+    if "empleado" in nombre_lower or "rrhh" in nombre_lower:
+        return "RRHH"
+    elif "venta" in nombre_lower or "cliente" in nombre_lower:
+        return "Ventas"
+    elif "producto" in nombre_lower or "categoria" in nombre_lower:
+        return "Catalogo"
+    
+    return "General"
+
+def es_entidad_central(nombre, relaciones):
+    """Una entidad central tiene muchas relaciones O es la entidad principal del dominio"""
+    return len(relaciones) >= 10 or nombre in ["Empleado", "Cliente", "Producto"]
+
+def es_transaccional(campos, relaciones):
+    """Entidades transaccionales tienen fechas y FK a entidades centrales"""
+    tiene_fechas = any("fecha" in campo.lower() for campo in campos)
+    tiene_fk_central = len(relaciones) >= 2
+    return tiene_fechas and tiene_fk_central
+
+def es_mantenedor(campos, relaciones):
+    """Mantenedores típicamente tienen pocos campos básicos y pocas/ninguna relación"""
+    return len(relaciones) <= 1 and len(campos) <= 4
+
+def es_previsional(nombre):
+    """Detectar entidades previsionales"""
+    return any(palabra in nombre.lower() for palabra in ["afp", "salud", "seguro", "previsional"])
 ```
+
+**EJEMPLOS DE APLICACIÓN:**
+- **TipoBonificacion** → Tipo + Empleado en contexto → `RRHH.Configuracion.Mantenedores.Empleado`
+- **ConfiguracionGeneralRRHH** → Configuracion + General → `RRHH.Configuracion.Global`
+- **TipoSolicitudEmpleado** → Tipo + Solicitud → `RRHH.Configuracion.Mantenedores.Solicitudes`
+- **Empleado** → Entidad central + muchas FK → `RRHH.Empleado`
+- **Region** → Entidad Core → `Core.Localidades`
 
 ### Generación de Comandos
 - Usar parámetros de `docs/auto-generacion-with-python-script.md`
@@ -310,6 +418,43 @@ python3 tools/forms/entity-generator.py --source producto --to categoria --alias
 - ✅ Usar `--alias nombre` para casos especiales (opcional)
 - ✅ Colocar al final del orden de creación
 - ✅ **Generación automática**: tabla `nn_source_to[_alias]` y modelo en `NN/`
+
+## 🧠 APLICAR INTELIGENCIA ARTIFICIAL
+
+### INSTRUCCIONES PARA LA IA:
+1. **ANALIZAR CADA ENTIDAD INDIVIDUALMENTE**: 
+   - Examinar nombre, campos mencionados, relaciones detectadas
+   - Aplicar la lógica de `determinar_modulo_inteligente()`
+   - No usar mapeos hardcodeados
+
+2. **DETECTAR PATRONES INTELIGENTEMENTE**:
+   - Prefijos: "Tipo", "Estado", "Modalidad" → Mantenedores
+   - Contenido: "Configuracion" + "General" → Global  
+   - Contexto: palabras clave en la solicitud del usuario
+   - Complejidad: cantidad de campos y relaciones
+
+3. **AGRUPAR COHERENTEMENTE**:
+   - Entidades similares van al mismo submódulo
+   - Mantener jerarquía lógica (Configuracion.Mantenedores.Empleado)
+   - Separar transaccionales de mantenedores
+
+4. **EJEMPLOS DE RAZONAMIENTO**:
+```
+"TipoBonificacion" → 
+  ✓ Empieza con "Tipo" (es mantenedor)
+  ✓ Contexto menciona "empleado" 
+  → RESULTADO: "RRHH.Configuracion.Mantenedores.Empleado"
+
+"ConfiguracionGeneralRRHH" →
+  ✓ Contiene "Configuracion" + "General"
+  ✓ Contexto es RRHH
+  → RESULTADO: "RRHH.Configuracion.Global"
+
+"Empleado" →
+  ✓ Entidad central con muchas FK (15+)
+  ✓ Es la entidad principal del dominio RRHH
+  → RESULTADO: "RRHH.Empleado"
+```
 
 ## 🚨 REGLAS CRÍTICAS
 

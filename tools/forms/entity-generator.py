@@ -28,6 +28,7 @@ Usage:
 import sys
 import os
 import argparse
+import json
 from pathlib import Path
 
 # Configurar encoding UTF-8 para Windows
@@ -281,6 +282,58 @@ class EntityGenerator:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
             print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
+    def update_entities_urls_json(self, entity_name, module, entity_plural):
+        """Actualizar archivo JSON con URLs de entidades generadas"""
+        try:
+            urls_file = self.root_path / "entities-urls.json"
+            
+            # Leer archivo existente o crear uno nuevo
+            if urls_file.exists():
+                with open(urls_file, 'r', encoding='utf-8') as f:
+                    entities_data = json.load(f)
+            else:
+                entities_data = []
+            
+            # Generar URL de lista basada en la lógica real del @page
+            # Convertir módulo: "Core.Localidades" -> "core/localidades"
+            module_path = '/'.join(part.lower() for part in module.split('.'))
+            entity_lower = entity_name.lower()
+            lista_url = f"/{module_path}/{entity_lower}/list"
+            
+            # Crear entrada para la nueva entidad
+            new_entry = {
+                "entidad": entity_name,
+                "modulo": module,
+                "urllista": lista_url
+            }
+            
+            # Verificar si ya existe la entidad y actualizar o agregar
+            existing_index = -1
+            for i, entry in enumerate(entities_data):
+                if entry.get("entidad") == entity_name and entry.get("modulo") == module:
+                    existing_index = i
+                    break
+            
+            if existing_index >= 0:
+                entities_data[existing_index] = new_entry
+                print(f"🔄 Actualizada entrada existente en entities-urls.json")
+            else:
+                entities_data.append(new_entry)
+                print(f"➕ Agregada nueva entrada a entities-urls.json")
+            
+            # Ordenar por módulo y luego por entidad
+            entities_data.sort(key=lambda x: (x["modulo"], x["entidad"]))
+            
+            # Escribir archivo actualizado
+            with open(urls_file, 'w', encoding='utf-8') as f:
+                json.dump(entities_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"✅ entities-urls.json actualizado con {len(entities_data)} entidades")
+            
+        except Exception as e:
+            print(f"⚠️ Error actualizando entities-urls.json: {e}")
+            print("💡 El archivo se puede crear/editar manualmente")
+    
     def find_model_namespace(self, entity_name):
         """Buscar el modelo en Shared.Models y extraer su namespace"""
         try:
@@ -362,8 +415,14 @@ class EntityGenerator:
             print(f"✅ Frontend ServiceRegistry actualizado")
             print()
             print("🌐 URLS DISPONIBLES:")
-            print(f"   Lista: /{''.join(config.module.lower().split('.'))}/{config.entity_name.lower()}/list")
-            print(f"   Formulario: /{''.join(config.module.lower().split('.'))}/{config.entity_name.lower()}/formulario")
+            module_path = '/'.join(part.lower() for part in config.module.split('.'))
+            lista_url = f"/{module_path}/{config.entity_name.lower()}/list"
+            formulario_url = f"/{module_path}/{config.entity_name.lower()}/formulario"
+            print(f"   Lista: {lista_url}")
+            print(f"   Formulario: {formulario_url}")
+            
+            # Actualizar archivo JSON con URLs
+            self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
             
             return True
             
@@ -398,6 +457,9 @@ class EntityGenerator:
         print("✅ Backend y Frontend completamente generados")
         print("🔗 Con soporte automático para lookups")
         print("⚡ Incluye creación rápida como componente independiente")
+        
+        # Actualizar archivo JSON con URLs  
+        self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
         
         return True
 
@@ -445,8 +507,8 @@ class EntityGenerator:
             print(f"✅ Frontend ServiceRegistry actualizado")
             print()
             print("🌐 URLS DISPONIBLES:")
-            print(f"   Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
-            print(f"   Formulario: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/formulario")
+            print(f"   Lista: /{'/'.join(part.lower() for part in module.split('.'))}/{entity_name.lower()}/list")
+            print(f"   Formulario: /{'/'.join(part.lower() for part in module.split('.'))}/{entity_name.lower()}/formulario")
             print()
             print("🎊 ENTIDAD CRUD COMPLETAMENTE FUNCIONAL!")
             print("🔗 Con soporte automático para lookups")
@@ -564,7 +626,7 @@ class EntityGenerator:
             print(f"✅ Frontend ServiceRegistry actualizado")
             print()
             print("🎊 ENTIDAD CON CREACIÓN RÁPIDA COMPLETAMENTE FUNCIONAL!")
-            print(f"🌐 Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
+            print(f"🌐 Lista: /{'/'.join(part.lower() for part in module.split('.'))}/{entity_name.lower()}/list")
             print(f"⚡ Creación rápida disponible como componente independiente")
             print()
             print("📋 SIGUIENTE PASO:")
@@ -601,8 +663,8 @@ class EntityGenerator:
             print(f"✅ Frontend ServiceRegistry actualizado")
             print()
             print("🎊🎊 ENTIDAD CRUD COMPLETAMENTE FUNCIONAL! 🎊🎊")
-            print(f"🌐 Lista: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/list")
-            print(f"📝 Formulario: /{''.join(module.lower().split('.'))}/{entity_name.lower()}/formulario")
+            print(f"🌐 Lista: /{'/'.join(part.lower() for part in module.split('.'))}/{entity_name.lower()}/list")
+            print(f"📝 Formulario: /{'/'.join(part.lower() for part in module.split('.'))}/{entity_name.lower()}/formulario")
             print(f"⚡ Creación rápida disponible como componente")
             print(f"🔗 Con soporte completo para lookups automáticos")
             return True
