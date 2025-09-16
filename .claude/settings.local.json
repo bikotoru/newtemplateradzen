@@ -8,7 +8,9 @@
       "Bash(python:*)",
       "Bash(ls:*)",
       "Bash(tail:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(del:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

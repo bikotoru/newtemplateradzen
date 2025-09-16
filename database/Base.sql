@@ -1184,6 +1184,301 @@ BEGIN
     PRINT '📄 Entidades base de FormDesigner ya existen';
 END
 
+-- ========================================
+-- 🔐 PERMISOS ADICIONALES DE GESTIÓN
+-- ========================================
+
+PRINT '🔐 Agregando permisos de gestión avanzada...';
+
+-- 2.4. Insertar Permiso SYSTEMROLE.MANAGEUSERS
+PRINT '📊 Insertando permiso SYSTEMROLE.MANAGEUSERS...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.MANAGEUSERS')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
+    VALUES 
+    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
+    PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS creado';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permiso SYSTEMROLE.MANAGEUSERS ya existe';
+END
+
+-- Asignar nuevo permiso al rol Administrador
+DECLARE @NewManageUsersPermissionId UNIQUEIDENTIFIER;
+SELECT @NewManageUsersPermissionId = Id FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.MANAGEUSERS';
+
+IF NOT EXISTS (SELECT 1 FROM system_roles_permissions WHERE system_roles_id = @AdminRoleId AND system_permissions_id = @NewManageUsersPermissionId)
+BEGIN
+    INSERT INTO system_roles_permissions (system_roles_id, system_permissions_id, OrganizationId, CreadorId, Active)
+    VALUES (@AdminRoleId, @NewManageUsersPermissionId, @OrgId, @AdminUserId, 1);
+    PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS asignado al rol Administrador';
+END
+
+-- ========================================
+-- 🎨 SISTEMA DE CAMPOS PERSONALIZADOS
+-- ========================================
+
+PRINT '🚀 Iniciando creación del sistema de campos personalizados...';
+
+-- ========================================
+-- 📋 TABLA: system_custom_field_definitions
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_custom_field_definitions' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_custom_field_definitions...';
+
+    CREATE TABLE system_custom_field_definitions (
+        -- Identificador único
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Información básica del campo
+        EntityName NVARCHAR(100) NOT NULL,           -- "Empleado", "Empresa", etc.
+        FieldName NVARCHAR(100) NOT NULL,            -- "telefono_emergencia", "nivel_ingles"
+        DisplayName NVARCHAR(255) NOT NULL,          -- "Teléfono de Emergencia"
+        Description NVARCHAR(500) NULL,              -- Descripción/ayuda
+
+        -- Configuración del tipo de campo
+        FieldType NVARCHAR(50) NOT NULL DEFAULT 'text', -- "text", "number", "date", "boolean", "select", "multiselect", "textarea"
+        IsRequired BIT DEFAULT 0 NOT NULL,           -- Campo requerido u opcional
+        DefaultValue NVARCHAR(MAX) NULL,             -- Valor por defecto (JSON)
+        SortOrder INT DEFAULT 0 NOT NULL,            -- Orden de aparición
+
+        -- Configuraciones avanzadas (JSON)
+        ValidationConfig NVARCHAR(MAX) NULL,         -- JSON: validaciones específicas
+        UIConfig NVARCHAR(MAX) NULL,                 -- JSON: configuración de UI
+        ConditionsConfig NVARCHAR(MAX) NULL,         -- JSON: condiciones show_if, required_if, etc.
+
+        -- Permisos granulares
+        PermissionCreate NVARCHAR(255) NULL,         -- "EMPLEADO.TELEFONO_EMERGENCIA.CREATE"
+        PermissionUpdate NVARCHAR(255) NULL,         -- "EMPLEADO.TELEFONO_EMERGENCIA.UPDATE"
+        PermissionView NVARCHAR(255) NULL,           -- "EMPLEADO.TELEFONO_EMERGENCIA.VIEW"
+
+        -- Metadatos
+        IsEnabled BIT DEFAULT 1 NOT NULL,            -- Campo habilitado/deshabilitado
+        Version INT DEFAULT 1 NOT NULL,              -- Versión del campo (para migraciones)
+        Tags NVARCHAR(500) NULL,                     -- Tags para categorización
+
+        -- Auditoría estándar (BaseEntity pattern)
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_custom_field_definitions_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_custom_field_definitions_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_custom_field_definitions_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id),
+
+        -- Constraints
+        CONSTRAINT CK_system_custom_field_definitions_field_type
+            CHECK (FieldType IN ('text', 'textarea', 'number', 'date', 'boolean', 'select', 'multiselect')),
+
+        CONSTRAINT CK_system_custom_field_definitions_sort_order
+            CHECK (SortOrder >= 0),
+
+        CONSTRAINT CK_system_custom_field_definitions_version
+            CHECK (Version > 0),
+
+        -- Unique constraint: Un campo por entidad por organización
+        CONSTRAINT UQ_system_custom_field_definitions_entity_field_org
+            UNIQUE (EntityName, FieldName, OrganizationId)
+    );
+
+    -- Índices para system_custom_field_definitions
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_definitions_entity_org_active
+        ON system_custom_field_definitions(EntityName, OrganizationId, Active, IsEnabled)
+        INCLUDE (Id, FieldName, DisplayName, FieldType, SortOrder, IsRequired);
+        
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_definitions_field_name
+        ON system_custom_field_definitions(FieldName, EntityName, OrganizationId)
+        WHERE Active = 1 AND IsEnabled = 1;
+        
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_definitions_sort_order
+        ON system_custom_field_definitions(EntityName, OrganizationId, SortOrder, Active)
+        INCLUDE (FieldName, DisplayName, FieldType);
+
+    PRINT '✅ Tabla system_custom_field_definitions creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_custom_field_definitions ya existe';
+END
+
+-- ========================================
+-- 📋 TABLA: system_custom_field_audit_log
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_custom_field_audit_log' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_custom_field_audit_log...';
+
+    CREATE TABLE system_custom_field_audit_log (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Referencia al campo modificado
+        CustomFieldDefinitionId UNIQUEIDENTIFIER NOT NULL,
+        EntityName NVARCHAR(100) NOT NULL,
+        FieldName NVARCHAR(100) NOT NULL,
+
+        -- Tipo de cambio
+        ChangeType NVARCHAR(50) NOT NULL,            -- "CREATE", "UPDATE", "DELETE", "ENABLE", "DISABLE"
+
+        -- Datos del cambio
+        OldDefinition NVARCHAR(MAX) NULL,            -- JSON de la definición anterior
+        NewDefinition NVARCHAR(MAX) NULL,            -- JSON de la nueva definición
+        ChangedProperties NVARCHAR(1000) NULL,       -- Lista de propiedades que cambiaron
+        ChangeReason NVARCHAR(500) NULL,             -- Razón del cambio
+
+        -- Impacto del cambio
+        ImpactAssessment NVARCHAR(MAX) NULL,         -- JSON: {"affectedRecords": 1500, "migrationRequired": true}
+
+        -- Auditoría estándar
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_custom_field_audit_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_custom_field_audit_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+
+        -- Constraints
+        CONSTRAINT CK_system_custom_field_audit_log_change_type
+            CHECK (ChangeType IN ('CREATE', 'UPDATE', 'DELETE', 'ENABLE', 'DISABLE', 'MIGRATE')),
+
+        -- Foreign Key
+        CONSTRAINT FK_system_custom_field_audit_definition
+            FOREIGN KEY (CustomFieldDefinitionId)
+            REFERENCES system_custom_field_definitions(Id)
+            ON DELETE CASCADE
+    );
+
+    -- Índices para system_custom_field_audit_log
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_audit_log_definition
+        ON system_custom_field_audit_log(CustomFieldDefinitionId, FechaCreacion DESC);
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_audit_log_entity_date
+        ON system_custom_field_audit_log(EntityName, OrganizationId, FechaCreacion DESC);
+
+    PRINT '✅ Tabla system_custom_field_audit_log creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_custom_field_audit_log ya existe';
+END
+
+-- ========================================
+-- 📋 TABLA: system_custom_field_templates
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_custom_field_templates' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_custom_field_templates...';
+
+    CREATE TABLE system_custom_field_templates (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Información del template
+        TemplateName NVARCHAR(255) NOT NULL,         -- "Datos de Contacto Extendidos"
+        Description NVARCHAR(1000) NULL,             -- Descripción del template
+        Category NVARCHAR(100) NULL,                 -- "RRHH", "Ventas", "Administración"
+
+        -- Configuración del template
+        TargetEntityName NVARCHAR(100) NOT NULL,     -- Entidad objetivo
+        FieldsDefinition NVARCHAR(MAX) NOT NULL,     -- JSON con array de definiciones
+
+        -- Metadatos
+        IsSystemTemplate BIT DEFAULT 0 NOT NULL,     -- Template del sistema vs usuario
+        UsageCount INT DEFAULT 0 NOT NULL,           -- Contador de uso
+
+        -- Auditoría estándar
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        OrganizationId UNIQUEIDENTIFIER NULL,        -- NULL para templates globales
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_custom_field_templates_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_custom_field_templates_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_custom_field_templates_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+    );
+
+    -- Índices para system_custom_field_templates
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_templates_target_entity
+        ON system_custom_field_templates(TargetEntityName, OrganizationId, Active);
+    CREATE NONCLUSTERED INDEX IX_system_custom_field_templates_category
+        ON system_custom_field_templates(Category, Active);
+
+    PRINT '✅ Tabla system_custom_field_templates creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_custom_field_templates ya existe';
+END
+
+-- ========================================
+-- 🔧 FUNCIONES DE UTILIDAD
+-- ========================================
+PRINT '🔧 Creando funciones de utilidad...';
+
+-- Función para validar JSON de configuración
+CREATE OR ALTER FUNCTION fn_ValidateCustomFieldConfig(
+    @FieldType NVARCHAR(50),
+    @ValidationConfig NVARCHAR(MAX),
+    @UIConfig NVARCHAR(MAX),
+    @ConditionsConfig NVARCHAR(MAX)
+)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @IsValid BIT = 1;
+
+    -- Validar que los JSON sean válidos
+    IF @ValidationConfig IS NOT NULL AND ISJSON(@ValidationConfig) = 0
+        SET @IsValid = 0;
+
+    IF @UIConfig IS NOT NULL AND ISJSON(@UIConfig) = 0
+        SET @IsValid = 0;
+
+    IF @ConditionsConfig IS NOT NULL AND ISJSON(@ConditionsConfig) = 0
+        SET @IsValid = 0;
+
+    -- Validaciones específicas por tipo de campo
+    IF @FieldType = 'select' OR @FieldType = 'multiselect'
+    BEGIN
+        -- Verificar que UIConfig tenga options
+        IF @UIConfig IS NULL OR JSON_VALUE(@UIConfig, '$.options') IS NULL
+            SET @IsValid = 0;
+    END
+
+    RETURN @IsValid;
+END
+GO
+
+PRINT '✅ Función fn_ValidateCustomFieldConfig creada';
+
+PRINT '✅ Sistema de campos personalizados implementado exitosamente';
+PRINT '';
+PRINT '🎯 SISTEMA COMPLETO CONSOLIDADO:';
+PRINT '   • Sistema de usuarios, roles y permisos completo';
+PRINT '   • Sistema de auditoría dinámico';
+PRINT '   • Sistema de campos personalizados completo';
+PRINT '   • FormDesigner con entidades base';
+PRINT '   • Configuración completa de tokens y autenticación';
+PRINT '   • Todos los permisos de gestión avanzada incluidos';
+PRINT '';
+PRINT '🚀 Base.sql consolidado - Listo para usar!';
+PRINT '========================================';
+
 -- Mostrar información de conexión
 SELECT
     'admin@admin.cl' as Usuario,
