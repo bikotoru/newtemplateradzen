@@ -8,7 +8,7 @@ using Shared.Models.DTOs.Auth;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
-
+using Backend.Utils.Extensions;
 namespace Backend.Utils.Services
 {
     public class BaseQueryService<T> where T : class
@@ -103,7 +103,7 @@ namespace Backend.Utils.Services
                 }
 
                 // Guardar cambios
-                await _context.SaveChangesAsync();
+                await _context.ForceSaveChangesAsync("Preuab");
                 
                 _logger.LogInformation($"Updated {typeof(T).Name} with ID: {GetEntityId(entityToUpdate)} by user {sessionData.Id}");
                 
@@ -1124,7 +1124,7 @@ namespace Backend.Utils.Services
             if (property != null && property.CanWrite)
             {
                 // Manejar tipos nullable
-                if (property.PropertyType.IsGenericType && 
+                if (property.PropertyType.IsGenericType &&
                     property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
                     if (value != null)
@@ -1138,6 +1138,7 @@ namespace Backend.Utils.Services
                 }
             }
         }
+
 
         #endregion
     }

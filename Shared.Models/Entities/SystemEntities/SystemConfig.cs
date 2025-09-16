@@ -23,11 +23,5 @@ public partial class SystemConfig
 
     public bool Active { get; set; }
 
-    public virtual SystemUsers? Creador { get; set; }
-
-    public virtual SystemUsers? Modificador { get; set; }
-
-    public virtual SystemOrganization? Organization { get; set; }
-
     public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();
 }

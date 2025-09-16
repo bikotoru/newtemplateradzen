@@ -282,6 +282,74 @@ class EntityGenerator:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
             print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
+    def register_in_system_form_entity(self, config):
+        """Registrar entidad en SystemFormEntity para FormDesigner"""
+        import subprocess
+
+        try:
+            # Obtener valores de configuración con defaults
+            entity_name = config.entity_name
+            entity_plural = getattr(config, 'entity_plural', entity_name + 's')
+            table_name = entity_plural  # Usar el plural como nombre de tabla
+            icon = getattr(config, 'icon', 'table_chart')  # Default icon
+            category = getattr(config, 'category', 'Custom')  # Default category
+            allow_custom_fields = getattr(config, 'allow_custom_fields', True)
+            system_entity = getattr(config, 'system_entity', False)
+
+            # Determinar OrganizationId basado en system_entity
+            org_id = 'NULL' if system_entity else 'NULL'  # Por ahora siempre NULL hasta implementar org específicas
+
+            # Preparar descripción
+            description = f"Gestión de {entity_plural.lower()}"
+
+            # Construir SQL de inserción
+            sql_command = f"""
+            IF NOT EXISTS (SELECT 1 FROM system_form_entities WHERE EntityName = '{entity_name}')
+            BEGIN
+                INSERT INTO system_form_entities (
+                    Id, OrganizationId, FechaCreacion, FechaModificacion,
+                    CreadorId, ModificadorId, Active,
+                    EntityName, DisplayName, Description, TableName,
+                    IconName, Category, AllowCustomFields, SortOrder
+                ) VALUES (
+                    NEWID(), {org_id}, GETUTCDATE(), GETUTCDATE(),
+                    '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 1,
+                    '{entity_name}', '{entity_plural}', '{description}', '{table_name}',
+                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999
+                );
+                PRINT 'Entidad {entity_name} registrada en system_form_entities';
+            END
+            ELSE
+            BEGIN
+                PRINT 'Entidad {entity_name} ya existe en system_form_entities';
+            END
+            """
+
+            # Ejecutar SQL usando sqlcmd
+            cmd = [
+                'sqlcmd', '-S', 'localhost,1333', '-U', 'sa', '-P', 'Soporte.2019',
+                '-d', 'AgendaGes', '-C', '-Q', sql_command
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                print(f"✅ Entidad '{entity_name}' registrada exitosamente")
+                if result.stdout:
+                    print(f"   📄 SQL: {result.stdout.strip()}")
+                return True
+            else:
+                print(f"❌ Error registrando entidad '{entity_name}':")
+                if result.stderr:
+                    print(f"   Error: {result.stderr.strip()}")
+                if result.stdout:
+                    print(f"   Output: {result.stdout.strip()}")
+                return False
+
+        except Exception as e:
+            print(f"❌ Exception registrando entidad: {str(e)}")
+            return False
+
     def update_entities_urls_json(self, entity_name, module, entity_plural):
         """Actualizar archivo JSON con URLs de entidades generadas"""
         try:
@@ -458,8 +526,17 @@ class EntityGenerator:
         print("🔗 Con soporte automático para lookups")
         print("⚡ Incluye creación rápida como componente independiente")
         
-        # Actualizar archivo JSON con URLs  
+        # Actualizar archivo JSON con URLs
         self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
+
+        # Auto-registrar en SystemFormEntity si está habilitado
+        if hasattr(config, 'auto_register') and config.auto_register:
+            print()
+            print("📝 ETAPA 3: Auto-registro en SystemFormEntity...")
+            if not self.register_in_system_form_entity(config):
+                print("⚠️  ADVERTENCIA: Error en auto-registro, pero la entidad fue creada exitosamente")
+            else:
+                print("✅ Entidad registrada exitosamente en SystemFormEntity")
         
         return True
 
@@ -750,9 +827,21 @@ Ejemplo completo:
                        help='Lookups: "campo:tabla:campo_display:opciones"')
     
     # Configuración adicional
-    parser.add_argument('--search-fields', 
+    parser.add_argument('--search-fields',
                        help='Campos de búsqueda: "campo1,campo2,campo3"')
-    
+
+    # Configuración FormDesigner - Auto registro en SystemFormEntity
+    parser.add_argument('--auto-register', action='store_true',
+                       help='Auto-registrar en SystemFormEntity cuando target=todo')
+    parser.add_argument('--system-entity', action='store_true',
+                       help='Marcar como entidad del sistema (OrganizationId=NULL, global)')
+    parser.add_argument('--icon',
+                       help='Icono Material para la entidad (ej: person, business)')
+    parser.add_argument('--category',
+                       help='Categoría de la entidad (ej: RRHH, Core, Ventas)')
+    parser.add_argument('--allow-custom-fields', action='store_true', default=True,
+                       help='Permitir campos personalizados (default: True)')
+
     # Parámetros legacy (mantenidos por compatibilidad)
     parser.add_argument('--nn-relation-entity', action='store_true',
                        help='[DEPRECATED] Usa --source --to en su lugar')

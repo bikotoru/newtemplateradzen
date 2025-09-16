@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Backend.Utils.Data;
+using Shared.Models.DTOs.Auth;
 
 namespace Backend.Utils.EFInterceptors.Core
 {
@@ -8,6 +9,9 @@ namespace Backend.Utils.EFInterceptors.Core
     {
         private readonly EFInterceptorService? _interceptorService;
         private readonly ILogger<InterceptedAppDbContext> _logger;
+        
+        // Almacenar información del usuario actual
+        public SessionDataDto? CurrentUser { get; set; }
 
         public InterceptedAppDbContext(
             DbContextOptions<AppDbContext> options, 
@@ -17,6 +21,20 @@ namespace Backend.Utils.EFInterceptors.Core
         {
             _interceptorService = interceptorService;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            
+            // Log para debugging
+            _logger.LogInformation("🟡 [InterceptedAppDbContext] Constructor - Context creado con opciones");
+            
+            // Verificar si las opciones tienen interceptors
+            var extension = options.FindExtension<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>();
+            if (extension?.Interceptors?.Any() == true)
+            {
+                _logger.LogInformation($"✅ [InterceptedAppDbContext] {extension.Interceptors.Count()} interceptors encontrados en opciones");
+            }
+            else
+            {
+                _logger.LogWarning("❌ [InterceptedAppDbContext] NO HAY INTERCEPTORS en las opciones del contexto!");
+            }
         }
 
         public override Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<TEntity> Add<TEntity>(TEntity entity)
@@ -33,7 +51,7 @@ namespace Backend.Utils.EFInterceptors.Core
                 }
             }
 
-            _logger.LogDebug($"Adding entity of type {typeof(TEntity).Name}");
+            _logger.LogInformation($"[InterceptedAppDbContext] Adding entity of type {typeof(TEntity).Name}");
             return base.Add(entity);
         }
 
@@ -52,7 +70,7 @@ namespace Backend.Utils.EFInterceptors.Core
                 }
             }
 
-            _logger.LogDebug($"Updating entity of type {typeof(TEntity).Name}");
+            _logger.LogInformation($"[InterceptedAppDbContext] Updating entity of type {typeof(TEntity).Name}");
             return base.Update(entity);
         }
 
@@ -60,7 +78,7 @@ namespace Backend.Utils.EFInterceptors.Core
         {
             if (_interceptorService != null)
             {
-                _logger.LogDebug("Executing BeforeSave interceptors");
+                _logger.LogInformation("📌 [InterceptedAppDbContext] Executing BeforeSave interceptors (handlers)");
                 var beforeResult = await _interceptorService.HandleBeforeSaveAsync(this);
                 
                 if (!beforeResult)
@@ -70,12 +88,12 @@ namespace Backend.Utils.EFInterceptors.Core
                 }
             }
 
-            _logger.LogDebug("Executing SaveChangesAsync");
+            _logger.LogInformation("🔵 [InterceptedAppDbContext] Llamando base.SaveChangesAsync() - Los interceptors deberían ejecutarse AQUÍ");
             var affectedRows = await base.SaveChangesAsync(cancellationToken);
 
             if (_interceptorService != null)
             {
-                _logger.LogDebug($"Executing AfterSave interceptors (affected rows: {affectedRows})");
+                _logger.LogInformation($"📌 [InterceptedAppDbContext] Executing AfterSave interceptors (handlers) - affected rows: {affectedRows}");
                 var afterResult = await _interceptorService.HandleAfterSaveAsync(this, affectedRows);
                 
                 if (!afterResult)
@@ -91,7 +109,7 @@ namespace Backend.Utils.EFInterceptors.Core
         {
             if (_interceptorService != null)
             {
-                _logger.LogDebug("Executing BeforeSave interceptors (sync)");
+                _logger.LogInformation("📌 [InterceptedAppDbContext] Executing BeforeSave interceptors (sync/handlers)");
                 var beforeTask = _interceptorService.HandleBeforeSaveAsync(this);
                 var beforeResult = beforeTask.GetAwaiter().GetResult();
                 
@@ -102,12 +120,12 @@ namespace Backend.Utils.EFInterceptors.Core
                 }
             }
 
-            _logger.LogDebug("Executing SaveChanges (sync)");
+            _logger.LogInformation("🔵 [InterceptedAppDbContext] Executing SaveChanges (sync) - Los interceptors deberían ejecutarse AQUÍ");
             var affectedRows = base.SaveChanges();
 
             if (_interceptorService != null)
             {
-                _logger.LogDebug($"Executing AfterSave interceptors (sync, affected rows: {affectedRows})");
+                _logger.LogInformation($"📌 [InterceptedAppDbContext] Executing AfterSave interceptors (sync/handlers) - affected rows: {affectedRows}");
                 var afterTask = _interceptorService.HandleAfterSaveAsync(this, affectedRows);
                 var afterResult = afterTask.GetAwaiter().GetResult();
                 

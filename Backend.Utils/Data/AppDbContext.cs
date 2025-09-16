@@ -16,6 +16,14 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemConfigValues> SystemConfigValues { get; set; }
 
+    public virtual DbSet<SystemCustomFieldAuditLog> SystemCustomFieldAuditLog { get; set; }
+
+    public virtual DbSet<SystemCustomFieldDefinitions> SystemCustomFieldDefinitions { get; set; }
+
+    public virtual DbSet<SystemCustomFieldTemplates> SystemCustomFieldTemplates { get; set; }
+
+    public virtual DbSet<SystemFormEntities> SystemFormEntities { get; set; }
+
     public virtual DbSet<SystemOrganization> SystemOrganization { get; set; }
 
     public virtual DbSet<SystemPermissions> SystemPermissions { get; set; }
@@ -24,6 +32,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemRolesPermissions> SystemRolesPermissions { get; set; }
 
+    public virtual DbSet<SystemTablasAuditables> SystemTablasAuditables { get; set; }
+
     public virtual DbSet<SystemUsers> SystemUsers { get; set; }
 
     public virtual DbSet<SystemUsersPermissions> SystemUsersPermissions { get; set; }
@@ -31,6 +41,9 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<SystemUsersRoles> SystemUsersRoles { get; set; }
 
     public virtual DbSet<ZToken> ZToken { get; set; }
+    public virtual DbSet<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; }
+
+    public virtual DbSet<SystemCamposAuditables> SystemCamposAuditables { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,17 +70,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Field).HasMaxLength(255);
             entity.Property(e => e.TypeField).HasMaxLength(255);
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemConfigCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_system_config_CreadorId");
-
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemConfigModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_system_config_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.SystemConfig)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_system_config_OrganizationId");
         });
 
         modelBuilder.Entity<SystemConfigValues>(entity =>
@@ -89,21 +91,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
 
-            entity.HasOne(d => d.Creador).WithMany(p => p.SystemConfigValuesCreador)
-                .HasForeignKey(d => d.CreadorId)
-                .HasConstraintName("FK_system_config_values_CreadorId");
 
-            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemConfigValuesModificador)
-                .HasForeignKey(d => d.ModificadorId)
-                .HasConstraintName("FK_system_config_values_ModificadorId");
-
-            entity.HasOne(d => d.Organization).WithMany(p => p.SystemConfigValues)
-                .HasForeignKey(d => d.OrganizationId)
-                .HasConstraintName("FK_system_config_values_OrganizationId");
-
-            entity.HasOne(d => d.SystemConfig).WithMany(p => p.SystemConfigValues)
-                .HasForeignKey(d => d.SystemConfigId)
-                .HasConstraintName("FK_system_config_values_SystemConfigId");
         });
 
         modelBuilder.Entity<SystemOrganization>(entity =>

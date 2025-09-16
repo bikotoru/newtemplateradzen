@@ -1,0 +1,369 @@
+@page "/admin/custom-fields/example"
+@using Forms.Models.DTOs
+@inject NotificationService NotificationService
+
+<PageTitle>Ejemplo de Integración - Campos Personalizados</PageTitle>
+
+<RadzenCard class="rz-mx-auto" style="max-width: 1200px;">
+    <RadzenText TextStyle="TextStyle.H3" class="rz-mb-4">
+        <RadzenIcon Icon="integration_instructions" class="rz-mr-2" />
+        Ejemplo de Integración - Formulario de Empleado
+    </RadzenText>
+
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-4">
+        Este ejemplo muestra cómo integrar campos personalizados en un formulario existente de empleado.
+        Los campos se cargan automáticamente y se evalúan las condiciones en tiempo real.
+    </RadzenText>
+
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="🧑‍💼 Formulario Demo">
+                <div class="rz-p-4">
+                    <!-- Formulario base de empleado -->
+                    <RadzenRow Gap="2rem">
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    Información Básica del Empleado
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <RadzenFormField Text="Nombre" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="empleado.Nombre"
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Apellido" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="empleado.Apellido"
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Email" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="empleado.Email"
+                                                     Type="email"
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Cargo" Variant="Variant.Outlined">
+                                        <RadzenDropDown @bind-Value="empleado.Cargo"
+                                                      Data="cargosDisponibles"
+                                                      Placeholder="Selecciona un cargo"
+                                                      Style="width: 100%;" />
+                                    </RadzenFormField>
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    Vista Previa en Tiempo Real
+                                </RadzenText>
+
+                                <RadzenAlert AlertStyle="AlertStyle.Info" class="rz-mb-3">
+                                    <RadzenIcon Icon="info" class="rz-mr-2" />
+                                    Los campos personalizados se muestran dinámicamente según las condiciones configuradas.
+                                </RadzenAlert>
+
+                                <div style="background: var(--rz-base-50); padding: 1rem; border-radius: 8px; border: 1px solid var(--rz-border-color);">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-mb-2">
+                                        <strong>Datos actuales:</strong>
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                        Nombre: @empleado.Nombre<br/>
+                                        Cargo: @empleado.Cargo<br/>
+                                        Campos personalizados: @fieldValues.Count
+                                    </RadzenText>
+                                </div>
+                            </RadzenCard>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <!-- Aquí se integran los campos personalizados -->
+                    <CustomFieldsSection EntityName="Empleado"
+                                       SectionTitle="📋 Información Adicional"
+                                       OrganizationId="organizationId"
+                                       UserId="currentUserId"
+                                       @bind-FieldValues="fieldValues"
+                                       ReadOnly="false" />
+
+                    <!-- Botones de acción -->
+                    <RadzenCard class="rz-mt-4">
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenButton Text="Validar Campos"
+                                        Icon="check_circle"
+                                        ButtonStyle="ButtonStyle.Secondary"
+                                        Click="ValidateFields" />
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+                                <RadzenButton Text="Limpiar"
+                                            Icon="clear"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Click="ClearForm" />
+
+                                <RadzenButton Text="Guardar Empleado"
+                                            Icon="save"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Click="SaveEmployee"
+                                            IsBusy="isSaving" />
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </div>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="💻 Código de Integración">
+                <div class="rz-p-4">
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                        Cómo Integrar en tu Formulario
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-3">
+                        Para integrar campos personalizados en cualquier formulario, simplemente agrega el componente CustomFieldsSection:
+                    </RadzenText>
+
+                    <RadzenCard class="rz-mb-4" style="background-color: var(--rz-base-100);">
+                        <pre><code>@@using Frontend.Modules.Admin.CustomFields
+
+&lt;!-- En tu formulario existente --&gt;
+&lt;CustomFieldsSection EntityName="Empleado"
+                   SectionTitle="📋 Información Adicional"
+                   OrganizationId="@@currentOrganizationId"
+                   UserId="@@currentUserId"
+                   @@bind-FieldValues="customFieldValues"
+                   ReadOnly="false" /&gt;</code></pre>
+                    </RadzenCard>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                        Parámetros del Componente:
+                    </RadzenText>
+
+                    <RadzenDataList Data="componentParameters" class="rz-mb-4">
+                        <Template Context="param">
+                            <RadzenCard class="rz-p-3 rz-mb-2">
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.2rem">
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        <strong>@param.Name</strong> - @param.Type
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                        @param.Description
+                                    </RadzenText>
+                                </RadzenStack>
+                            </RadzenCard>
+                        </Template>
+                    </RadzenDataList>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                        Manejo de Eventos:
+                    </RadzenText>
+
+                    <RadzenCard style="background-color: var(--rz-base-100);">
+                        <pre><code>@@code {
+    private Dictionary&lt;string, object?&gt; customFieldValues = new();
+
+    private async Task OnCustomFieldChanged()
+    {
+        // Los valores se actualizan automáticamente
+        // Puedes acceder a ellos mediante customFieldValues["nombreCampo"]
+
+        // Ejemplo: validar campos
+        await ValidateCustomFields();
+
+        // Ejemplo: guardar en base de datos
+        await SaveCustomFieldValues();
+    }
+}</code></pre>
+                    </RadzenCard>
+                </div>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="🎯 Casos de Uso">
+                <div class="rz-p-4">
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                        Casos de Uso Implementados
+                    </RadzenText>
+
+                    <RadzenRow Gap="1rem">
+                        @foreach (var useCase in useCases)
+                        {
+                            <RadzenColumn Size="6">
+                                <RadzenCard>
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Start">
+                                        <RadzenIcon Icon="@useCase.Icon" Style="color: var(--rz-primary); font-size: 2rem;" />
+                                        <div style="flex: 1;">
+                                            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-2">
+                                                @useCase.Title
+                                            </RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Body2" class="rz-mb-2">
+                                                @useCase.Description
+                                            </RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Caption">
+                                                <strong>Ejemplo:</strong> @useCase.Example
+                                            </RadzenText>
+                                        </div>
+                                    </RadzenStack>
+                                </RadzenCard>
+                            </RadzenColumn>
+                        }
+                    </RadzenRow>
+                </div>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenCard>
+
+@code {
+    // Datos del empleado (formulario base)
+    private EmpleadoDemo empleado = new();
+    private readonly List<string> cargosDisponibles = new() { "Desarrollador", "Analista", "Gerente", "Director" };
+
+    // Campos personalizados
+    private Dictionary<string, object?> fieldValues = new();
+
+    // Estados
+    private bool isSaving = false;
+    private Guid? organizationId = null;
+    private Guid? currentUserId = Guid.NewGuid(); // Simular usuario actual
+
+    // Datos para documentación
+    private readonly List<ComponentParameter> componentParameters = new()
+    {
+        new() { Name = "EntityName", Type = "string", Description = "Nombre de la entidad (ej: 'Empleado', 'Cliente')" },
+        new() { Name = "SectionTitle", Type = "string", Description = "Título de la sección de campos personalizados" },
+        new() { Name = "OrganizationId", Type = "Guid?", Description = "ID de la organización para filtrar campos" },
+        new() { Name = "UserId", Type = "Guid?", Description = "ID del usuario para verificar permisos" },
+        new() { Name = "FieldValues", Type = "Dictionary<string, object?>", Description = "Valores actuales de los campos personalizados" },
+        new() { Name = "ReadOnly", Type = "bool", Description = "Si los campos deben ser de solo lectura" }
+    };
+
+    private readonly List<UseCase> useCases = new()
+    {
+        new()
+        {
+            Icon = "visibility",
+            Title = "Campos Condicionales",
+            Description = "Los campos se muestran/ocultan según valores de otros campos.",
+            Example = "Campo 'Certificaciones' aparece solo si salario > $1M"
+        },
+        new()
+        {
+            Icon = "security",
+            Title = "Permisos Granulares",
+            Description = "Control de acceso por campo según el usuario.",
+            Example = "Solo gerentes pueden ver campos de salario"
+        },
+        new()
+        {
+            Icon = "rule",
+            Title = "Validaciones Dinámicas",
+            Description = "Validaciones que cambian según el contexto.",
+            Example = "Campo se vuelve requerido si el empleado es remoto"
+        },
+        new()
+        {
+            Icon = "tune",
+            Title = "Configuración Flexible",
+            Description = "Diferentes tipos de campo con configuraciones específicas.",
+            Example = "Select con opciones, números con rangos, fechas con límites"
+        }
+    };
+
+    private async Task ValidateFields()
+    {
+        try
+        {
+            var request = new CustomFieldValidationRequest
+            {
+                EntityName = "Empleado",
+                OrganizationId = organizationId,
+                Values = fieldValues.ToDictionary(kv => kv.Key, kv => kv.Value ?? "")
+            };
+
+            // Aquí llamarías a la API de validación
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Validación Completa",
+                Detail = $"Se validaron {fieldValues.Count} campos personalizados correctamente.",
+                Duration = 3000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error de Validación",
+                Detail = ex.Message,
+                Duration = 4000
+            });
+        }
+    }
+
+    private async Task SaveEmployee()
+    {
+        try
+        {
+            isSaving = true;
+
+            // Simular guardado
+            await Task.Delay(2000);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Empleado Guardado",
+                Detail = $"Se guardó el empleado {empleado.Nombre} {empleado.Apellido} con {fieldValues.Count} campos personalizados.",
+                Duration = 4000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error al Guardar",
+                Detail = ex.Message,
+                Duration = 4000
+            });
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ClearForm()
+    {
+        empleado = new EmpleadoDemo();
+        fieldValues.Clear();
+        StateHasChanged();
+    }
+
+    #region Clases auxiliares
+
+    public class EmpleadoDemo
+    {
+        public string Nombre { get; set; } = "";
+        public string Apellido { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Cargo { get; set; } = "";
+    }
+
+    public class ComponentParameter
+    {
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
+    public class UseCase
+    {
+        public string Icon { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Example { get; set; } = "";
+    }
+
+    #endregion
+}

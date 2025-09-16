@@ -341,9 +341,21 @@ class EntityConfigurator:
         if hasattr(args, 'search_fields') and args.search_fields:
             config.search_fields = self.parsers.parse_search_fields(args.search_fields)
         
+        # Configurar parámetros de FormDesigner
+        if hasattr(args, 'auto_register'):
+            config.auto_register = args.auto_register
+        if hasattr(args, 'system_entity'):
+            config.system_entity = args.system_entity
+        if hasattr(args, 'icon'):
+            config.icon = args.icon
+        if hasattr(args, 'category'):
+            config.category = args.category
+        if hasattr(args, 'allow_custom_fields'):
+            config.allow_custom_fields = args.allow_custom_fields
+
         # Validar configuración completa
         self.validator.validate_and_raise(config)
-        
+
         return config
     
     def print_configuration_summary(self, config: EntityConfiguration):

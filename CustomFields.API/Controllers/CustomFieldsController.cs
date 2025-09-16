@@ -1,0 +1,563 @@
+using Microsoft.AspNetCore.Mvc;
+using Forms.Models.DTOs;
+using Backend.Utils.Data;
+using Shared.Models.Entities.SystemEntities;
+using Microsoft.EntityFrameworkCore;
+using Forms.Models.Configurations;
+using System.Text.Json;
+
+namespace CustomFields.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class CustomFieldsController : ControllerBase
+{
+    private readonly AppDbContext _context;
+    private readonly ILogger<CustomFieldsController> _logger;
+
+    public CustomFieldsController(AppDbContext context, ILogger<CustomFieldsController> logger)
+    {
+        _context = context;
+        _logger = logger;
+    }
+
+    #region Entidades
+
+    /// <summary>
+    /// Obtiene todas las entidades disponibles para campos personalizados
+    /// </summary>
+    [HttpGet("entities")]
+    public async Task<IActionResult> GetEntities()
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            // Devolver entidades predefinidas
+            var entities = new List<FormEntityDto>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    EntityName = "Empleado",
+                    DisplayName = "Empleados",
+                    Description = "Gestión de empleados de la organización",
+                    IconName = "person",
+                    Category = "RRHH",
+                    AllowCustomFields = true,
+                    IsActive = true
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    EntityName = "Empresa",
+                    DisplayName = "Empresas",
+                    Description = "Gestión de empresas",
+                    IconName = "business",
+                    Category = "Core",
+                    AllowCustomFields = true,
+                    IsActive = true
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    EntityName = "Cliente",
+                    DisplayName = "Clientes",
+                    Description = "Gestión de clientes",
+                    IconName = "person_outline",
+                    Category = "Ventas",
+                    AllowCustomFields = true,
+                    IsActive = true
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    EntityName = "Proveedor",
+                    DisplayName = "Proveedores",
+                    Description = "Gestión de proveedores",
+                    IconName = "local_shipping",
+                    Category = "Compras",
+                    AllowCustomFields = true,
+                    IsActive = true
+                }
+            };
+
+            return Ok(new { success = true, data = entities });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener entidades");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Agrega una nueva entidad para campos personalizados
+    /// </summary>
+    [HttpPost("entities")]
+    public async Task<IActionResult> AddEntity([FromBody] CreateEntityRequest request)
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            // Validar que no exista una entidad con el mismo nombre
+            // Por ahora simular la validación, en el futuro usar SystemFormEntities
+            var existingEntity = false; // await _context.SystemFormEntities.AnyAsync(e => e.EntityName == request.EntityName && e.OrganizationId == organizationId);
+
+            if (existingEntity)
+            {
+                return BadRequest(new { success = false, message = "Ya existe una entidad con ese nombre" });
+            }
+
+            // Crear nueva entidad (cuando tengamos la tabla SystemFormEntity)
+            var newEntity = new FormEntityDto
+            {
+                Id = Guid.NewGuid(),
+                EntityName = request.EntityName,
+                DisplayName = request.DisplayName,
+                Description = request.Description,
+                IconName = request.IconName,
+                Category = request.Category,
+                AllowCustomFields = true,
+                IsActive = true
+            };
+
+            return Ok(new { success = true, data = newEntity });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al agregar entidad");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene las tablas de la base de datos disponibles para agregar como entidades
+    /// </summary>
+    [HttpGet("available-tables")]
+    public async Task<IActionResult> GetAvailableTables()
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            // Consulta SQL para obtener tablas del esquema dbo que no comiencen con 'system'
+            var sqlQuery = @"
+                SELECT
+                    TABLE_NAME as TableName,
+                    TABLE_SCHEMA as SchemaName
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_TYPE = 'BASE TABLE'
+                AND TABLE_SCHEMA = 'dbo'
+                AND TABLE_NAME NOT LIKE 'system%'
+                AND TABLE_NAME NOT LIKE 'System%'
+                AND TABLE_NAME NOT LIKE '__EFMigrationsHistory'
+                ORDER BY TABLE_NAME";
+
+            var availableTables = await _context.Database.SqlQueryRaw<DatabaseTableInfo>(sqlQuery).ToListAsync();
+
+            // Obtener las entidades ya agregadas (actualmente las hardcodeadas)
+            var existingEntities = new List<string> { "Empleado", "Empresa", "Cliente", "Proveedor" };
+
+            // Filtrar las tablas que no están ya agregadas como entidades
+            var filteredTables = availableTables
+                .Where(t => !existingEntities.Contains(t.TableName, StringComparer.OrdinalIgnoreCase))
+                .Select(t => new AvailableTableDto
+                {
+                    TableName = t.TableName,
+                    SchemaName = t.SchemaName,
+                    DisplayName = FormatTableNameForDisplay(t.TableName),
+                    Description = $"Tabla {t.TableName} del sistema",
+                    Category = "Database"
+                })
+                .ToList();
+
+            return Ok(new { success = true, data = filteredTables });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener tablas disponibles");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Campos Personalizados
+
+    /// <summary>
+    /// Obtiene todos los campos personalizados
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetCustomFields()
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            var customFieldsRaw = await _context.SystemCustomFieldDefinitions
+                .Where(cf => cf.OrganizationId == organizationId && cf.IsEnabled)
+                .OrderBy(cf => cf.EntityName)
+                .ThenBy(cf => cf.SortOrder)
+                .ToListAsync();
+
+            var customFields = customFieldsRaw.Select(cf => new CustomFieldDefinitionDto
+            {
+                Id = cf.Id,
+                EntityName = cf.EntityName,
+                FieldName = cf.FieldName,
+                DisplayName = cf.DisplayName,
+                FieldType = cf.FieldType,
+                Description = cf.Description,
+                IsRequired = cf.IsRequired,
+                DefaultValue = cf.DefaultValue,
+                SortOrder = cf.SortOrder,
+                ValidationConfig = DeserializeValidationConfig(cf.ValidationConfig),
+                UIConfig = DeserializeUIConfig(cf.Uiconfig),
+                IsEnabled = cf.IsEnabled,
+                OrganizationId = cf.OrganizationId ?? Guid.Empty,
+                FechaCreacion = cf.FechaCreacion,
+                FechaModificacion = cf.FechaModificacion
+            }).ToList();
+
+            return Ok(new { success = true, data = customFields });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener campos personalizados");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene campos personalizados de una entidad específica
+    /// </summary>
+    [HttpGet("entity/{entityName}")]
+    public async Task<IActionResult> GetCustomFieldsByEntity(string entityName)
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            var customFieldsRaw = await _context.SystemCustomFieldDefinitions
+                .Where(cf => cf.EntityName == entityName && cf.OrganizationId == organizationId && cf.IsEnabled)
+                .OrderBy(cf => cf.SortOrder)
+                .ToListAsync();
+
+            var customFields = customFieldsRaw.Select(cf => new CustomFieldDefinitionDto
+            {
+                Id = cf.Id,
+                EntityName = cf.EntityName,
+                FieldName = cf.FieldName,
+                DisplayName = cf.DisplayName,
+                FieldType = cf.FieldType,
+                Description = cf.Description,
+                IsRequired = cf.IsRequired,
+                DefaultValue = cf.DefaultValue,
+                SortOrder = cf.SortOrder,
+                ValidationConfig = DeserializeValidationConfig(cf.ValidationConfig),
+                UIConfig = DeserializeUIConfig(cf.Uiconfig),
+                IsEnabled = cf.IsEnabled,
+                OrganizationId = cf.OrganizationId ?? Guid.Empty,
+                FechaCreacion = cf.FechaCreacion,
+                FechaModificacion = cf.FechaModificacion
+            }).ToList();
+
+            return Ok(new { success = true, data = customFields });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener campos personalizados de la entidad {EntityName}", entityName);
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Crea un nuevo campo personalizado
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> CreateCustomField([FromBody] CreateCustomFieldRequest request)
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            // Validar que no exista un campo con el mismo nombre en la entidad
+            var existingField = await _context.SystemCustomFieldDefinitions
+                .AnyAsync(cf => cf.EntityName == request.EntityName &&
+                               cf.FieldName == request.FieldName &&
+                               cf.OrganizationId == organizationId);
+
+            if (existingField)
+            {
+                return BadRequest(new { success = false, message = "Ya existe un campo con ese nombre en la entidad" });
+            }
+
+            var customField = new SystemCustomFieldDefinitions
+            {
+                Id = Guid.NewGuid(),
+                EntityName = request.EntityName,
+                FieldName = request.FieldName,
+                DisplayName = request.DisplayName,
+                FieldType = request.FieldType,
+                Description = request.Description,
+                IsRequired = request.IsRequired,
+                DefaultValue = request.DefaultValue,
+                SortOrder = request.SortOrder,
+                ValidationConfig = SerializeValidationConfig(request.ValidationConfig),
+                Uiconfig = SerializeUIConfig(request.UIConfig),
+                IsEnabled = true,
+                FechaCreacion = DateTime.UtcNow,
+                FechaModificacion = DateTime.UtcNow,
+                OrganizationId = organizationId,
+                Active = true,
+                Version = 1
+            };
+
+            _context.SystemCustomFieldDefinitions.Add(customField);
+            await _context.SaveChangesAsync();
+
+            var result = new CustomFieldDefinitionDto
+            {
+                Id = customField.Id,
+                EntityName = customField.EntityName,
+                FieldName = customField.FieldName,
+                DisplayName = customField.DisplayName,
+                FieldType = customField.FieldType,
+                Description = customField.Description,
+                IsRequired = customField.IsRequired,
+                DefaultValue = customField.DefaultValue,
+                SortOrder = customField.SortOrder,
+                ValidationConfig = DeserializeValidationConfig(customField.ValidationConfig),
+                UIConfig = DeserializeUIConfig(customField.Uiconfig),
+                IsEnabled = customField.IsEnabled,
+                OrganizationId = customField.OrganizationId ?? Guid.Empty,
+                FechaCreacion = customField.FechaCreacion,
+                FechaModificacion = customField.FechaModificacion
+            };
+
+            return Ok(new { success = true, data = result });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear campo personalizado");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Actualiza un campo personalizado existente
+    /// </summary>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCustomField(Guid id, [FromBody] UpdateCustomFieldRequest request)
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            var customField = await _context.SystemCustomFieldDefinitions
+                .FirstOrDefaultAsync(cf => cf.Id == id && cf.OrganizationId == organizationId);
+
+            if (customField == null)
+            {
+                return NotFound(new { success = false, message = "Campo personalizado no encontrado" });
+            }
+
+            // Actualizar campos (solo los campos permitidos para actualización)
+            if (request.DisplayName != null)
+                customField.DisplayName = request.DisplayName;
+
+            if (request.Description != null)
+                customField.Description = request.Description;
+
+            if (request.IsRequired.HasValue)
+                customField.IsRequired = request.IsRequired.Value;
+
+            if (request.DefaultValue != null)
+                customField.DefaultValue = request.DefaultValue;
+
+            if (request.SortOrder.HasValue)
+                customField.SortOrder = request.SortOrder.Value;
+
+            if (request.IsEnabled.HasValue)
+                customField.IsEnabled = request.IsEnabled.Value;
+
+            if (request.ValidationConfig != null)
+                customField.ValidationConfig = SerializeValidationConfig(request.ValidationConfig);
+
+            if (request.UIConfig != null)
+                customField.Uiconfig = SerializeUIConfig(request.UIConfig);
+            customField.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var result = new CustomFieldDefinitionDto
+            {
+                Id = customField.Id,
+                EntityName = customField.EntityName,
+                FieldName = customField.FieldName,
+                DisplayName = customField.DisplayName,
+                FieldType = customField.FieldType,
+                Description = customField.Description,
+                IsRequired = customField.IsRequired,
+                DefaultValue = customField.DefaultValue,
+                SortOrder = customField.SortOrder,
+                ValidationConfig = DeserializeValidationConfig(customField.ValidationConfig),
+                UIConfig = DeserializeUIConfig(customField.Uiconfig),
+                IsEnabled = customField.IsEnabled,
+                OrganizationId = customField.OrganizationId ?? Guid.Empty,
+                FechaCreacion = customField.FechaCreacion,
+                FechaModificacion = customField.FechaModificacion
+            };
+
+            return Ok(new { success = true, data = result });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar campo personalizado");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Elimina (deshabilita) un campo personalizado
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteCustomField(Guid id)
+    {
+        try
+        {
+            // Por ahora obtener organizationId desde claims o usar uno temporal
+            var organizationId = Guid.NewGuid(); // Temporal
+
+            var customField = await _context.SystemCustomFieldDefinitions
+                .FirstOrDefaultAsync(cf => cf.Id == id && cf.OrganizationId == organizationId);
+
+            if (customField == null)
+            {
+                return NotFound(new { success = false, message = "Campo personalizado no encontrado" });
+            }
+
+            // Deshabilitar en lugar de eliminar
+            customField.IsEnabled = false;
+            customField.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Campo personalizado eliminado correctamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar campo personalizado");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    private static string FormatTableNameForDisplay(string tableName)
+    {
+        // Convertir nombres de tabla como "empleado_documentos" a "Empleado Documentos"
+        return string.Join(" ", tableName
+            .Split('_', '-', ' ')
+            .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private static ValidationConfig? DeserializeValidationConfig(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<ValidationConfig>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static UIConfig? DeserializeUIConfig(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<UIConfig>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? SerializeValidationConfig(ValidationConfig? config)
+    {
+        if (config == null)
+            return null;
+
+        try
+        {
+            return JsonSerializer.Serialize(config);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? SerializeUIConfig(UIConfig? config)
+    {
+        if (config == null)
+            return null;
+
+        try
+        {
+            return JsonSerializer.Serialize(config);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    #endregion
+}
+
+// DTOs adicionales
+public class CreateEntityRequest
+{
+    public string EntityName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string IconName { get; set; } = "";
+    public string Category { get; set; } = "";
+}
+
+public class DatabaseTableInfo
+{
+    public string TableName { get; set; } = "";
+    public string SchemaName { get; set; } = "";
+}
+
+public class AvailableTableDto
+{
+    public string TableName { get; set; } = "";
+    public string SchemaName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Category { get; set; } = "";
+}
+

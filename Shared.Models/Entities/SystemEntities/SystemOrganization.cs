@@ -34,4 +34,9 @@ public partial class SystemOrganization
     public virtual ICollection<SystemUsersPermissions> SystemUsersPermissions { get; set; } = new List<SystemUsersPermissions>();
 
     public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
+
+    public virtual ICollection<SystemAuditoria> SystemAuditoria { get; set; } = new List<SystemAuditoria>();
+
+    public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; } = new List<SystemAuditoriaDetalle>();
+    public virtual ICollection<ZToken> ZToken { get; set; } = new List<ZToken>();
 }

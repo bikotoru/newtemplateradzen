@@ -799,10 +799,14 @@ public class API
         await _authService.EnsureInitializedAsync();
     }
 
-    private HttpRequestMessage CreateAuthenticatedRequest(HttpMethod method, string endpoint, object? data = null)
+    private HttpRequestMessage CreateAuthenticatedRequest(HttpMethod method, string endpoint, object? data = null, BackendType backendType = BackendType.GlobalBackend)
     {
-        var request = new HttpRequestMessage(method, endpoint);
-        
+        // Determinar la URL base según el tipo de backend
+        var baseUrl = Variables.GetBackendUrl(backendType);
+        var fullUrl = endpoint.StartsWith("http") ? endpoint : $"{baseUrl}/{endpoint.TrimStart('/')}";
+
+        var request = new HttpRequestMessage(method, fullUrl);
+
         // Agregar token de autorización si existe
         var token = _authService.Session?.Token;
         if (!string.IsNullOrEmpty(token))
@@ -894,6 +898,116 @@ public class API
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Error descargando archivo: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
+
+    #region Métodos con soporte para BackendType
+
+    /// <summary>
+    /// GET request que retorna ApiResponse&lt;T&gt; con especificación de backend
+    /// </summary>
+    public async Task<ApiResponse<T>> GetAsync<T>(string endpoint, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, backendType);
+            var response = await _httpClient.SendAsync(request);
+            var jsonString = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonString, JsonOptions);
+                return result ?? ApiResponse<T>.ErrorResponse("Respuesta vacía del servidor");
+            }
+            else
+            {
+                var errorResponse = TryDeserializeError<T>(jsonString);
+                return errorResponse ?? ApiResponse<T>.ErrorResponse($"Error HTTP {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<T>.ErrorResponse($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// POST request que retorna ApiResponse&lt;T&gt; con especificación de backend
+    /// </summary>
+    public async Task<ApiResponse<T>> PostAsync<T>(string endpoint, object? data, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, backendType);
+            var response = await _httpClient.SendAsync(request);
+            var jsonString = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonString, JsonOptions);
+                return result ?? ApiResponse<T>.ErrorResponse("Respuesta vacía del servidor");
+            }
+            else
+            {
+                var errorResponse = TryDeserializeError<T>(jsonString);
+                return errorResponse ?? ApiResponse<T>.ErrorResponse($"Error HTTP {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<T>.ErrorResponse($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// GET request que retorna T directamente con especificación de backend
+    /// </summary>
+    public async Task<T?> GetDirectAsync<T>(string endpoint, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, backendType);
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<T>(jsonString, JsonOptions);
+            }
+            return default(T);
+        }
+        catch
+        {
+            return default(T);
+        }
+    }
+
+    /// <summary>
+    /// POST request que retorna T directamente con especificación de backend
+    /// </summary>
+    public async Task<T?> PostDirectAsync<T>(string endpoint, object? data, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, backendType);
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<T>(jsonString, JsonOptions);
+            }
+            return default(T);
+        }
+        catch
+        {
+            return default(T);
         }
     }
 

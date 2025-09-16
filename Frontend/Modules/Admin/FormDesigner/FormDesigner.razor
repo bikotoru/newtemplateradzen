@@ -1,0 +1,576 @@
+@page "/admin/form-designer"
+@page "/admin/form-designer/{EntityName}"
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+
+<PageTitle>Diseñador de Formularios</PageTitle>
+
+<div class="form-designer-container">
+    <!-- Header -->
+    <RadzenCard class="rz-mb-4">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <RadzenText TextStyle="TextStyle.H4" class="rz-mb-2">
+                    <RadzenIcon Icon="extension" class="rz-mr-2" />
+                    Campos Adicionales
+                </RadzenText>
+                @if (!string.IsNullOrEmpty(currentEntityName))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-color-secondary">
+                        Editando: @currentEntityDisplayName
+                    </RadzenText>
+                }
+            </div>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                @if (!string.IsNullOrEmpty(currentEntityName))
+                {
+                    <RadzenButton Icon="preview" Text="Vista Previa"
+                                Variant="Variant.Outlined"
+                                Click="@PreviewForm" />
+                    <RadzenButton Icon="code" Text="Ver JSON"
+                                Variant="Variant.Outlined"
+                                Click="@ShowJsonPreview" />
+                    <RadzenButton Icon="save" Text="Guardar Layout"
+                                Variant="Variant.Filled"
+                                Click="@SaveLayout"
+                                IsBusy="@isSaving" />
+                }
+                <RadzenButton Icon="settings" Text="Configurar Entidades"
+                            Variant="Variant.Text"
+                            Click="@ConfigureEntities" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (string.IsNullOrEmpty(currentEntityName))
+    {
+        <!-- Selector de Entidad -->
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">
+                <RadzenIcon Icon="view_list" class="rz-mr-2" />
+                Selecciona una Entidad para Diseñar
+            </RadzenText>
+
+            <RadzenDataGrid @ref="entitiesGrid" Data="@availableEntities" TItem="FormEntityDto"
+                          AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                          AllowSorting="true" class="entities-grid">
+                <Columns>
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="IconName" Title="" Width="60px">
+                        <Template Context="entity">
+                            <RadzenIcon Icon="@(entity.IconName ?? "table_view")" Style="font-size: 1.5rem; color: var(--rz-primary);" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="DisplayName" Title="Entidad" />
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Category" Title="Categoría" Width="150px" />
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Description" Title="Descripción" />
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="AllowCustomFields" Title="Campos Personalizados" Width="120px">
+                        <Template Context="entity">
+                            <RadzenBadge Variant="@(entity.AllowCustomFields ? Variant.Filled : Variant.Outlined)"
+                                       IsPill="true"
+                                       BadgeStyle="@(entity.AllowCustomFields ? BadgeStyle.Success : BadgeStyle.Secondary)">
+                                @(entity.AllowCustomFields ? "Sí" : "No")
+                            </RadzenBadge>
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Id" Title="Acciones" Width="120px" Sortable="false" Filterable="false">
+                        <Template Context="entity">
+                            <RadzenButton Icon="design_services"
+                                        Variant="Variant.Filled"
+                                        Size="ButtonSize.Small"
+                                        Text="Diseñar"
+                                        Click="@(() => SelectEntity(entity))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
+    }
+    else
+    {
+        <!-- Diseñador Principal -->
+        <div class="designer-layout">
+            <!-- Panel Izquierdo: Campos Disponibles -->
+            <div class="fields-panel">
+                <RadzenCard class="rz-h-100">
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                        <RadzenIcon Icon="extension" class="rz-mr-2" />
+                        Campos Personalizados
+                    </RadzenText>
+
+                    <div class="add-custom-field rz-mb-3" @onclick="@ShowCreateFieldDialog">
+                        <RadzenIcon Icon="add" class="add-icon" />
+                        <span>Crear Nuevo Campo</span>
+                    </div>
+                    <div class="field-items-container">
+                        @foreach (var field in availableFields.CustomFields)
+                        {
+                            <div class="field-item custom-field"
+                                 @onclick="@(() => AddFieldToForm(field))">
+                                <RadzenIcon Icon="@GetFieldIcon(field.FieldType)" class="field-icon" />
+                                <div class="field-info">
+                                    <div class="field-name">@field.DisplayName</div>
+                                    <div class="field-type">@GetFieldTypeDisplay(field.FieldType)</div>
+                                </div>
+                                <RadzenButton Icon="edit" Size="ButtonSize.ExtraSmall"
+                                            Variant="Variant.Text"
+                                            class="edit-field-btn"
+                                            Click="@(() => EditCustomField(field))" />
+                            </div>
+                        }
+                    </div>
+                </RadzenCard>
+            </div>
+
+            <!-- Canvas Central: Diseño del Formulario -->
+            <div class="form-canvas">
+                <RadzenCard class="rz-h-100">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" class="rz-mb-3">
+                        <RadzenText TextStyle="TextStyle.H6">
+                            <RadzenIcon Icon="web" class="rz-mr-2" />
+                            Diseño del Formulario
+                        </RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                            <RadzenButton Icon="add" Text="Agregar Sección"
+                                        Size="ButtonSize.Small"
+                                        Variant="Variant.Outlined"
+                                        Click="@AddNewSection" />
+                        </RadzenStack>
+                    </RadzenStack>
+
+                    <div class="form-sections-container">
+
+                        @if (!currentLayout.Sections.Any())
+                        {
+                            <div class="empty-canvas">
+                                <RadzenIcon Icon="web_asset_off" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-color-disabled rz-mt-2">
+                                    Arrastra campos aquí o agrega una sección para comenzar
+                                </RadzenText>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var formSection in currentLayout.Sections.OrderBy(s => s.SortOrder))
+                            {
+                                <div class="form-section" data-section-id="@formSection.Id">
+                                    <RadzenFieldset Text="@formSection.Title" AllowCollapse="true" Collapsed="@(!formSection.IsExpanded)">
+                                        <HeaderTemplate>
+                                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <RadzenText TextStyle="TextStyle.Subtitle2">@formSection.Title</RadzenText>
+                                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                                    <RadzenDropDown @bind-Value="formSection.GridSize"
+                                                                  Data="@gridSizeOptions"
+                                                                  TextProperty="Text"
+                                                                  ValueProperty="Value"
+                                                                  Style="width: 100px;"
+                                                                  Size="ButtonSize.Small" />
+                                                    <RadzenButton Icon="settings" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                                Click="@(() => ConfigureSection(formSection))" />
+                                                    <RadzenButton Icon="delete" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                                Click="@(() => DeleteSection(formSection))" />
+                                                </RadzenStack>
+                                            </RadzenStack>
+                                        </HeaderTemplate>
+                                        <ChildContent>
+                                            <div class="section-content"
+                                                 style="@GetSectionGridStyle(formSection)"
+                                                 >
+
+                                                @if (!formSection.Fields.Any())
+                                                {
+                                                    <div class="empty-section">
+                                                        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-disabled">
+                                                            Arrastra campos aquí
+                                                        </RadzenText>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var field in formSection.Fields.OrderBy(f => f.SortOrder))
+                                                    {
+                                                        <div class="form-field-container"
+                                                             style="@GetFieldGridStyle(field)"
+                                                             data-field-id="@field.Id">
+                                                            <div class="field-wrapper">
+                                                                <div class="field-controls">
+                                                                    @{
+                                                                        var fieldsInSection = formSection.Fields.OrderBy(f => f.SortOrder).ToList();
+                                                                        var currentIndex = fieldsInSection.IndexOf(field);
+                                                                    }
+
+                                                                    @if (currentIndex > 0)
+                                                                    {
+                                                                        <RadzenButton Icon="keyboard_arrow_left" Size="ButtonSize.ExtraSmall"
+                                                                                    Variant="Variant.Text"
+                                                                                    Click="@(() => MoveFieldLeft(formSection, field))"
+                                                                                    Title="Mover izquierda" />
+                                                                    }
+
+                                                                    @if (currentIndex < fieldsInSection.Count - 1)
+                                                                    {
+                                                                        <RadzenButton Icon="keyboard_arrow_right" Size="ButtonSize.ExtraSmall"
+                                                                                    Variant="Variant.Text"
+                                                                                    Click="@(() => MoveFieldRight(formSection, field))"
+                                                                                    Title="Mover derecha" />
+                                                                    }
+
+                                                                    <RadzenDropDown @bind-Value="field.GridSize"
+                                                                                  Data="@fieldSizeOptions"
+                                                                                  TextProperty="Text"
+                                                                                  ValueProperty="Value"
+                                                                                  Style="width: 80px;"
+                                                                                  Size="ButtonSize.ExtraSmall" />
+                                                                    <RadzenButton Icon="settings" Size="ButtonSize.ExtraSmall"
+                                                                                Variant="Variant.Text"
+                                                                                Click="@(() => ConfigureField(field))" />
+                                                                    <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall"
+                                                                                Variant="Variant.Text"
+                                                                                Click="@(() => RemoveField(formSection, field))" />
+                                                                </div>
+                                                                @RenderFieldPreview(field)
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </ChildContent>
+                                    </RadzenFieldset>
+                                </div>
+                            }
+                        }
+                    </div>
+                </RadzenCard>
+            </div>
+
+            <!-- Panel Derecho: Propiedades -->
+            <div class="properties-panel">
+                <RadzenCard class="rz-h-100">
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                        <RadzenIcon Icon="tune" class="rz-mr-2" />
+                        Propiedades
+                    </RadzenText>
+
+                    @if (selectedField != null)
+                    {
+                        <div class="property-editor">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-3">
+                                Campo: @selectedField.DisplayName
+                            </RadzenText>
+
+                            <RadzenStack Gap="1rem">
+                                <RadzenFormField Text="Nombre para mostrar" Variant="Variant.Outlined" Style="width: 100%;">
+                                    <RadzenTextBox @bind-Value="selectedField.DisplayName" Style="width: 100%;" />
+                                </RadzenFormField>
+
+                                <RadzenFormField Text="Tamaño en grid" Variant="Variant.Outlined" Style="width: 100%;">
+                                    <RadzenDropDown @bind-Value="selectedField.GridSize"
+                                                  Data="@fieldSizeOptions"
+                                                  TextProperty="Text"
+                                                  ValueProperty="Value"
+                                                  Style="width: 100%;" />
+                                </RadzenFormField>
+
+                                <RadzenCheckBox @bind-Value="selectedField.IsRequired" Name="required" />
+                                <RadzenLabel Text="Campo obligatorio" Component="required" />
+
+                                <RadzenCheckBox @bind-Value="selectedField.IsReadOnly" Name="readonly" />
+                                <RadzenLabel Text="Solo lectura" Component="readonly" />
+
+                                <RadzenCheckBox @bind-Value="selectedField.IsVisible" Name="visible" />
+                                <RadzenLabel Text="Visible" Component="visible" />
+                            </RadzenStack>
+                        </div>
+                    }
+                    else if (selectedSection != null)
+                    {
+                        <div class="property-editor">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-3">
+                                Sección: @selectedSection.Title
+                            </RadzenText>
+
+                            <RadzenStack Gap="1rem">
+                                <RadzenFormField Text="Título de la sección" Variant="Variant.Outlined" Style="width: 100%;">
+                                    <RadzenTextBox @bind-Value="selectedSection.Title" Style="width: 100%;" />
+                                </RadzenFormField>
+
+                                <RadzenFormField Text="Descripción" Variant="Variant.Outlined" Style="width: 100%;">
+                                    <RadzenTextArea @bind-Value="selectedSection.Description" Style="width: 100%;" Rows="3" />
+                                </RadzenFormField>
+
+                                <RadzenFormField Text="Columnas de la sección" Variant="Variant.Outlined" Style="width: 100%;">
+                                    <RadzenDropDown @bind-Value="selectedSection.GridSize"
+                                                  Data="@gridSizeOptions"
+                                                  TextProperty="Text"
+                                                  ValueProperty="Value"
+                                                  Style="width: 100%;" />
+                                </RadzenFormField>
+
+                                <RadzenCheckBox @bind-Value="selectedSection.IsCollapsible" Name="collapsible" />
+                                <RadzenLabel Text="Permite colapsar" Component="collapsible" />
+
+                                <RadzenCheckBox @bind-Value="selectedSection.IsExpanded" Name="expanded" />
+                                <RadzenLabel Text="Expandida por defecto" Component="expanded" />
+                            </RadzenStack>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="no-selection">
+                            <RadzenIcon Icon="mouse" Style="font-size: 3rem; color: var(--rz-text-disabled-color);" />
+                            <RadzenText TextStyle="TextStyle.Body2" class="rz-color-disabled rz-mt-2">
+                                Selecciona un campo o sección para ver sus propiedades
+                            </RadzenText>
+                        </div>
+                    }
+                </RadzenCard>
+            </div>
+        </div>
+    }
+</div>
+
+
+<style>
+.form-designer-container {
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+}
+
+.designer-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 1rem;
+    height: 100%;
+    min-height: 600px;
+}
+
+.fields-panel, .properties-panel {
+    height: 100%;
+}
+
+.form-canvas {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.field-items-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.field-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.field-item:hover {
+    border-color: var(--rz-primary);
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-item.system-field {
+    background: var(--rz-info-lighter);
+    border-left: 3px solid var(--rz-info);
+}
+
+.field-item.custom-field {
+    background: var(--rz-warning-lighter);
+    border-left: 3px solid var(--rz-warning);
+}
+
+.field-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    color: var(--rz-primary);
+}
+
+.field-info {
+    flex: 1;
+}
+
+.field-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.field-type {
+    font-size: 0.75rem;
+    color: var(--rz-text-secondary-color);
+}
+
+.edit-field-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.field-item:hover .edit-field-btn {
+    opacity: 1;
+}
+
+.add-custom-field {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px dashed var(--rz-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--rz-text-secondary-color);
+    transition: all 0.2s ease;
+}
+
+.add-custom-field:hover {
+    border-color: var(--rz-primary);
+    color: var(--rz-primary);
+}
+
+.add-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+}
+
+.form-sections-container {
+    min-height: 400px;
+    padding: 1rem;
+}
+
+.empty-canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    border: 2px dashed var(--rz-border-color);
+    border-radius: 8px;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-content {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 100px;
+    border: 1px dashed transparent;
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+
+.empty-section {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80px;
+    border: 1px dashed var(--rz-border-color);
+    border-radius: 6px;
+}
+
+.form-field-container {
+    position: relative;
+}
+
+.field-wrapper {
+    position: relative;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    background: var(--rz-base-300);
+    transition: all 0.2s ease;
+}
+
+.field-wrapper:hover {
+    border-color: var(--rz-primary);
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-controls {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: var(--rz-base-100);
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-wrapper:hover .field-controls {
+    opacity: 1;
+}
+
+.entities-grid .rz-datatable-data tr:hover {
+    background-color: var(--rz-primary-lighter);
+    cursor: pointer;
+}
+
+.property-editor {
+    padding: 1rem 0;
+}
+
+.no-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+}
+
+@@media (max-width: 1200px) {
+    .designer-layout {
+        grid-template-columns: 250px 1fr 250px;
+    }
+}
+
+@@media (max-width: 768px) {
+    .designer-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+    }
+
+    .fields-panel, .properties-panel {
+        height: auto;
+    }
+}
+
+/* Mejoras específicas para modo noche */
+@@media (prefers-color-scheme: dark) {
+    .field-item.system-field {
+        background: rgba(var(--rz-info-rgb), 0.1);
+    }
+
+    .field-item.custom-field {
+        background: rgba(var(--rz-warning-rgb), 0.1);
+    }
+
+    .field-wrapper {
+        border-color: var(--rz-border-color-dark);
+    }
+
+    .empty-canvas, .empty-section {
+        border-color: var(--rz-border-color-dark);
+    }
+}
+
+/* Asegurar compatibilidad con variables de tema Radzen */
+.form-designer-container {
+    color: var(--rz-text-color);
+    background-color: var(--rz-body-background-color);
+}
+</style>

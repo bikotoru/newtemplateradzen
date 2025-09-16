@@ -63,6 +63,8 @@ La herramienta convierte automáticamente nombres de tablas a nombres de entidad
 | `SoloCrear` | Campo solo modificable durante creación | `categoria:Nombre:SoloCrear` |
 | `AutoIncremental` | Campo con numeración automática incremental | `producto:Codigo:AutoIncremental` |
 | `NoSelect` | Campo que se devuelve como null en consultas (para datos sensibles) | `system_users:Password:NoSelect` |
+| `FieldPermission` ⭐ | Campo protegido por permisos granulares CREATE/UPDATE/VIEW (Interactivo) | `empleado:SueldoBase:FieldPermission` |
+| `Auditar` 🆕 | Campo que será auditado automáticamente - cambios se registran en system_auditoria | `empleado:SueldoBase:Auditar` |
 
 > **Nota**: La herramienta soporta múltiples atributos y está preparada para agregar más en el futuro.
 
@@ -118,6 +120,9 @@ python customvalidator.py categoria:Nombre:SoloCrear
 # Marcar campo Password como no seleccionable (seguridad)
 python customvalidator.py system_users:Password:NoSelect
 
+# Proteger campo con permisos granulares (nuevo sistema)
+python customvalidator.py empleado:SueldoBase:FieldPermission
+
 # Marcar múltiples campos de una entidad
 python customvalidator.py categoria:Nombre:SoloCrear categoria:Descripcion:SoloCrear categoria:OrganizationId:SoloCrear
 
@@ -146,3 +151,94 @@ python customvalidator.py --list
 - [ ] Más atributos: `Required`, `MaxLength`, `Range`, etc.
 - [ ] Validación de tipos de datos para atributos específicos
 - [ ] Modo interactivo para seleccionar campos y atributos
+
+---
+
+## 🔒 Sistema de Permisos a Nivel de Campo
+
+### **Nuevo: FieldPermission (Configuración Interactiva)** ⭐
+
+El atributo `FieldPermission` ahora cuenta con configuración **completamente interactiva**:
+
+```bash
+# Iniciar configuración interactiva de FieldPermission
+python customvalidator.py empleado:SueldoBase:FieldPermission
+```
+
+**🎯 Proceso Interactivo:**
+1. **Selección de permisos**: Elige qué tipos aplicar (CREATE, UPDATE, VIEW o todos)
+2. **Verificación automática**: Verifica si los permisos existen en la base de datos
+3. **Creación automática**: Opcionalmente crea permisos faltantes en `system_permissions`
+4. **Generación de código**: Crea automáticamente el atributo completo con los permisos configurados
+
+**Ejemplo de sesión interactiva:**
+```
+🔐 CONFIGURACIÓN FIELDPERMISSION
+   🏗️  Entidad: Empleado
+   📝 Campo: SueldoBase
+--------------------------------------------------
+🎯 Selecciona qué permisos aplicar:
+   1. CREATE - Controla creación de registros con este campo
+   2. UPDATE - Controla modificación del campo en registros existentes
+   3. VIEW   - Controla si el campo es visible en consultas
+   4. Todos los anteriores
+   0. Cancelar
+
+🔹 Tu elección (1,2,3,4 o 0): 4
+
+📋 Permisos seleccionados:
+   CREATE: EMPLEADO.SUELDOBASE.CREATE
+   UPDATE: EMPLEADO.SUELDOBASE.EDIT
+   VIEW: EMPLEADO.SUELDOBASE.VIEW
+
+🔍 Verificando permisos en base de datos...
+   ❌ EMPLEADO.SUELDOBASE.CREATE NO existe
+   ❌ EMPLEADO.SUELDOBASE.EDIT NO existe  
+   ❌ EMPLEADO.SUELDOBASE.VIEW NO existe
+
+🔨 Se encontraron 3 permisos faltantes.
+¿Deseas crearlos automáticamente? (s/N): s
+   🔨 Creando EMPLEADO.SUELDOBASE.CREATE...
+   ✅ EMPLEADO.SUELDOBASE.CREATE creado exitosamente
+   🔨 Creando EMPLEADO.SUELDOBASE.EDIT...
+   ✅ EMPLEADO.SUELDOBASE.EDIT creado exitosamente
+   🔨 Creando EMPLEADO.SUELDOBASE.VIEW...
+   ✅ EMPLEADO.SUELDOBASE.VIEW creado exitosamente
+
+✅ Atributo generado:
+   [FieldPermission(CREATE="EMPLEADO.SUELDOBASE.CREATE", UPDATE="EMPLEADO.SUELDOBASE.EDIT", VIEW="EMPLEADO.SUELDOBASE.VIEW")]
+```
+
+**Resultado Final en Empleado.Metadata.cs:**
+```csharp
+[FieldPermission(CREATE="EMPLEADO.SUELDOBASE.CREATE", UPDATE="EMPLEADO.SUELDOBASE.EDIT", VIEW="EMPLEADO.SUELDOBASE.VIEW")]
+public string SueldoBase;
+```
+
+**🚀 Ventajas del Sistema Interactivo:**
+- ✅ **Todo en uno**: Metadata + Base de datos en una sola operación
+- ✅ **Inteligente**: Detecta permisos existentes y evita duplicados
+- ✅ **Flexible**: Puedes elegir solo los permisos que necesitas
+- ✅ **Automático**: Genera nombres siguiendo convenciones estándar
+- ✅ **Verificado**: Los permisos se crean realmente en la base de datos
+
+## 📋 Sistema de Auditoría
+
+### **Nuevo: Auditar** 🆕
+
+Marca campos para auditoría automática en `system_auditoria`:
+
+```bash
+# Marcar campo para auditoría automática
+python customvalidator.py empleado:SueldoBase:Auditar
+```
+
+**Funciona automáticamente:**
+- 📝 **CREATE**: Registra valores iniciales al crear registros
+- 📝 **UPDATE**: Registra valores anteriores y nuevos al modificar
+- 📝 **Force Integration**: Incluye comentarios cuando se usa `ForceSaveChangesAsync("razón")`
+- 📝 **JSON Storage**: Almacena cambios en formato JSON para fácil análisis
+
+**📖 Documentación completa**: `/docs/10.SistemaAuditoria.md`
+
+**🚀 El sistema funciona automáticamente** - sin código adicional en controladores.
