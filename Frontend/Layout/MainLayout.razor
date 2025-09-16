@@ -42,7 +42,9 @@
     </RadzenHeader>
     
     <RadzenSidebar @bind-Expanded="@sidebar1Expanded">
-        <MenuUnificado />
+        <div style="height: 100; overflow: auto">
+            <MenuUnificado />
+        </div>
     </RadzenSidebar>
     
     <RadzenBody Style="padding: 0px !important">

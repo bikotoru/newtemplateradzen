@@ -8,7 +8,7 @@
         <RadzenIcon Icon="expand_more" Style="@GetArrowStyle()" />
     </div>
     
-    <div style="overflow: hidden; transition: max-height 0.15s ease-out; max-height: @(IsExpanded ? "500px" : "0");">
+    <div style="overflow: hidden; transition: max-height 0.15s ease-out; max-height: @(IsExpanded ? "100%" : "0");">
         <div style="padding: @(IsExpanded ? "8px 0" : "0"); transition: padding 0.15s ease-out;">
             @ChildContent
         </div>

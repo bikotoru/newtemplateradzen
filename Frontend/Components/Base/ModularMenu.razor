@@ -26,23 +26,7 @@
                 <RadzenPanelMenu>
                     @foreach (var item in GetFilteredMenuItems(module))
                     {
-                        @if (item.SubItems.Any())
-                        {
-                            <RadzenPanelMenuItem Text="@item.Text" Icon="@item.Icon">
-                                @foreach (var subItem in item.SubItems.Where(si => HasPermission(si.Permissions)))
-                                {
-                                    <RadzenPanelMenuItem Text="@subItem.Text" 
-                                                       Icon="@subItem.Icon" 
-                                                       Path="@subItem.Path" />
-                                }
-                            </RadzenPanelMenuItem>
-                        }
-                        else
-                        {
-                            <RadzenPanelMenuItem Text="@item.Text" 
-                                               Icon="@item.Icon" 
-                                               Path="@item.Path" />
-                        }
+                        @RenderMenuItem(item)
                     }
                 </RadzenPanelMenu>
             </ModuleExpander>
@@ -56,7 +40,11 @@
         </div>
     }
 </div>
-
+<style>
+    .rz-state-expanded{
+        margin-left: 10px
+    }
+</style>
 @code {
     [Parameter] public List<MenuModule> Modules { get; set; } = new();
     [Parameter] public List<string> UserPermissions { get; set; } = new();
@@ -167,4 +155,29 @@
         expandedModules[moduleText] = expanded;
         StateHasChanged();
     }
+
+    private RenderFragment RenderMenuItem(MenuItem item) => __builder =>
+    {
+        if (!HasPermission(item.Permissions)) return;
+
+        if (item.SubItems.Any(si => HasPermission(si.Permissions)))
+        {
+            <RadzenPanelMenuItem Text="@item.Text" Icon="@item.Icon">
+                @foreach (var subItem in item.SubItems.Where(si => HasPermission(si.Permissions)))
+                {
+                    @RenderMenuItem(subItem)
+                }
+            </RadzenPanelMenuItem>
+        }
+        else if (!string.IsNullOrEmpty(item.Path))
+        {
+            <RadzenPanelMenuItem Text="@item.Text" 
+                               Icon="@item.Icon" 
+                               Path="@item.Path" />
+        }
+        else
+        {
+            <RadzenPanelMenuItem Text="@item.Text" Icon="@item.Icon" />
+        }
+    };
 }

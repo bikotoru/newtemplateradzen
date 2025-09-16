@@ -28,3 +28,31 @@
         max-width: none;
     }
 }
+
+/* Estilos para menú anidado - Indentación de elementos hijos */
+.rz-expander-content .rz-navigation-item-link {
+    padding-left: 30px !important;
+}
+
+/* Indentación adicional para elementos más profundamente anidados */
+.rz-expander-content .rz-expander-content .rz-navigation-item-link {
+    padding-left: 50px !important;
+}
+
+.rz-expander-content .rz-expander-content .rz-expander-content .rz-navigation-item-link {
+    padding-left: 70px !important;
+}
+
+/* Estilo visual para diferenciar mejor los niveles */
+.rz-expander-content .rz-navigation-item-link {
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
+    margin-left: 10px;
+}
+
+.rz-expander-content .rz-expander-content .rz-navigation-item-link {
+    border-left-color: rgba(0, 0, 0, 0.15);
+}
+
+.rz-expander-content .rz-expander-content .rz-expander-content .rz-navigation-item-link {
+    border-left-color: rgba(0, 0, 0, 0.2);
+}
