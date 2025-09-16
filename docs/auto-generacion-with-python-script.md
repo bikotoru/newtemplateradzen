@@ -40,7 +40,11 @@ tools/forms/entity-generator.py
 python3 tools/forms/entity-generator.py \
     --entity "NombreEntidad" \
     --module "Modulo.Submodulo" \
-    --target [db|interfaz|todo]
+    --target [db|interfaz|todo] \
+    --auto-register \               # ✨ NUEVO: Auto-registro en FormDesigner
+    --system-entity \               # ✨ NUEVO: Entidad global del sistema
+    --icon "material_icon" \        # ✨ NUEVO: Icono Material Design
+    --category "Categoria"          # ✨ NUEVO: Categoría de organización
 ```
 
 **Relación NN (Muchos-a-Muchos):**
@@ -70,6 +74,14 @@ python3 tools/forms/entity-generator.py \
 
 - `--plural`: Plural de la entidad (por defecto: `{entidad}s`) - *solo para entidades normales*
 - `--alias`: Nombre especial para la relación NN (ej: `promocion`) - *solo para relaciones NN*
+
+### ✨ Nuevos Parámetros de FormDesigner
+
+- `--auto-register`: Auto-registra la entidad en `system_form_entities` para FormDesigner
+- `--system-entity`: Marca la entidad como global del sistema (OrganizationId=NULL)
+- `--icon`: Icono Material Design para la entidad (ej: `person`, `business`, `inventory`)
+- `--category`: Categoría de organización (ej: `RRHH`, `Core`, `Bancario`, `Previsional`)
+- `--allow-custom-fields`: Permitir campos personalizados (default: true)
 
 ## 📊 Targets Disponibles
 

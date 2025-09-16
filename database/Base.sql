@@ -406,6 +406,93 @@ BEGIN
 END
 
 -- ========================================
+-- 📋 TABLA: system_auditoria (Header)
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_auditoria' AND xtype='U')
+BEGIN
+    CREATE TABLE system_auditoria (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- Campos específicos de auditoría header
+        Tabla NVARCHAR(255) NOT NULL,
+        RegistroId UNIQUEIDENTIFIER NOT NULL,
+        Action NVARCHAR(50) NOT NULL,
+        Comentario NVARCHAR(1000) NULL,
+        
+        -- Foreign Keys
+        CONSTRAINT FK_system_auditoria_OrganizationId 
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_auditoria_CreadorId 
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_auditoria_ModificadorId 
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+    );
+    
+    -- Índices para system_auditoria
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_Tabla ON system_auditoria(Tabla);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_RegistroId ON system_auditoria(RegistroId);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_Action ON system_auditoria(Action);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_OrganizationId ON system_auditoria(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_FechaCreacion ON system_auditoria(FechaCreacion);
+    
+    PRINT '✅ Tabla system_auditoria creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_auditoria ya existe';
+END
+
+-- ========================================
+-- 📋 TABLA: system_auditoria_detalle (Details)
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_auditoria_detalle' AND xtype='U')
+BEGIN
+    CREATE TABLE system_auditoria_detalle (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+        
+        -- Campos específicos de auditoría detalle
+        AuditoriaId UNIQUEIDENTIFIER NOT NULL,
+        Campo NVARCHAR(255) NOT NULL,
+        ValorAnterior NVARCHAR(MAX) NULL,
+        NuevoValor NVARCHAR(MAX) NULL,
+        
+        -- Foreign Keys
+        CONSTRAINT FK_system_auditoria_detalle_OrganizationId 
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_auditoria_detalle_CreadorId 
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_auditoria_detalle_ModificadorId 
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_auditoria_detalle_AuditoriaId 
+            FOREIGN KEY (AuditoriaId) REFERENCES system_auditoria(Id) ON DELETE CASCADE
+    );
+    
+    -- Índices para system_auditoria_detalle
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_detalle_AuditoriaId ON system_auditoria_detalle(AuditoriaId);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_detalle_Campo ON system_auditoria_detalle(Campo);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_detalle_OrganizationId ON system_auditoria_detalle(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_auditoria_detalle_FechaCreacion ON system_auditoria_detalle(FechaCreacion);
+    
+    PRINT '✅ Tabla system_auditoria_detalle creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_auditoria_detalle ya existe';
+END
+
+-- ========================================
 -- 📊 DATOS INICIALES
 -- ========================================
 
@@ -603,12 +690,502 @@ PRINT '   • system_roles_permissions';
 PRINT '   • system_config';
 PRINT '   • system_config_values';
 PRINT '   • z_token';
+PRINT '   • system_auditoria';
+PRINT '   • system_auditoria_detalle';
+PRINT '   • system_tablas_auditables';
+PRINT '   • system_campos_auditables';
+PRINT '   • system_form_entities (FormDesigner)';
 PRINT '';
 PRINT '🎯 Listo para usar con el generador de modelos Python!';
 PRINT '========================================';
 
+-- ========================================
+-- 📊 SISTEMA DE AUDITORÍA DINÁMICO
+-- ========================================
+
+-- 1. TABLA DE CONFIGURACIÓN DE TABLAS AUDITABLES
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_tablas_auditables' AND xtype='U')
+BEGIN
+    CREATE TABLE system_tablas_auditables (
+        id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        organizacion_id UNIQUEIDENTIFIER NULL, -- NULL = aplica a todas las organizaciones
+        tabla NVARCHAR(100) NOT NULL,
+        activo BIT DEFAULT 1,
+        trigger_creado BIT DEFAULT 0, -- Control de si ya se creó el trigger
+        fecha_creacion DATETIME2 DEFAULT GETUTCDATE(),
+        fecha_modificacion DATETIME2 DEFAULT GETUTCDATE(),
+        creado_por UNIQUEIDENTIFIER NULL,
+        UNIQUE(organizacion_id, tabla)
+    );
+
+    -- Índices optimizados para queries frecuentes
+    CREATE INDEX IX_system_tablas_auditables_tabla_activo ON system_tablas_auditables(tabla, activo) INCLUDE(organizacion_id, trigger_creado);
+    CREATE INDEX IX_system_tablas_auditables_activo ON system_tablas_auditables(activo) WHERE activo = 1;
+
+    PRINT '✅ Tabla system_tablas_auditables creada con índices optimizados';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_tablas_auditables ya existe';
+END
+
+-- 2. TABLA DE CONFIGURACIÓN DE CAMPOS AUDITABLES (OPTIMIZADA)
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_campos_auditables' AND xtype='U')
+BEGIN
+    CREATE TABLE system_campos_auditables (
+        id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        organizacion_id UNIQUEIDENTIFIER NULL, -- NULL = aplica a todas las organizaciones
+        tabla NVARCHAR(100) NOT NULL,
+        campo NVARCHAR(200) NOT NULL, -- Para soportar Custom.Atributo
+        activo BIT DEFAULT 1,
+        is_custom BIT DEFAULT 0, -- 1 = campo Custom JSON, 0 = campo directo
+        fecha_creacion DATETIME2 DEFAULT GETUTCDATE(),
+        creado_por UNIQUEIDENTIFIER NULL,
+        UNIQUE(organizacion_id, tabla, campo)
+    );
+
+    -- Índices optimizados con INCLUDE para evitar key lookups
+    CREATE INDEX IX_system_campos_auditables_tabla_activo ON system_campos_auditables(tabla, activo)
+        INCLUDE(organizacion_id, campo, is_custom) WHERE activo = 1;
+
+    PRINT '✅ Tabla system_campos_auditables creada con índices optimizados';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_campos_auditables ya existe';
+END
+
+-- 3. STORED PROCEDURE PARA CONFIGURAR CAMPO AUDITABLE
+CREATE OR ALTER PROCEDURE sp_configurar_campo_auditable
+    @tabla NVARCHAR(100),
+    @campo NVARCHAR(200),
+    @organizacion_id UNIQUEIDENTIFIER = NULL,
+    @is_custom BIT = 0,
+    @activo BIT = 1,
+    @creado_por UNIQUEIDENTIFIER = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Insertar o actualizar configuración
+    IF EXISTS (SELECT 1 FROM system_campos_auditables
+               WHERE tabla = @tabla AND campo = @campo AND
+                     (organizacion_id = @organizacion_id OR (organizacion_id IS NULL AND @organizacion_id IS NULL)))
+    BEGIN
+        UPDATE system_campos_auditables
+        SET activo = @activo,
+            is_custom = @is_custom,
+            creado_por = @creado_por
+        WHERE tabla = @tabla AND campo = @campo AND
+              (organizacion_id = @organizacion_id OR (organizacion_id IS NULL AND @organizacion_id IS NULL));
+
+        PRINT 'Campo auditable actualizado: ' + @tabla + '.' + @campo;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO system_campos_auditables (organizacion_id, tabla, campo, activo, is_custom, creado_por)
+        VALUES (@organizacion_id, @tabla, @campo, @activo, @is_custom, @creado_por);
+
+        PRINT 'Campo auditable agregado: ' + @tabla + '.' + @campo;
+    END
+
+    -- Si se activó, asegurar que existe el trigger para la tabla
+    IF @activo = 1
+    BEGIN
+        EXEC sp_activar_auditoria_tabla @tabla = @tabla, @organizacion_id = @organizacion_id;
+    END
+END
+GO
+
+-- 4. STORED PROCEDURE PARA ACTIVAR AUDITORÍA EN UNA TABLA
+CREATE OR ALTER PROCEDURE sp_activar_auditoria_tabla
+    @tabla NVARCHAR(100),
+    @organizacion_id UNIQUEIDENTIFIER = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @trigger_name NVARCHAR(200);
+    DECLARE @sql NVARCHAR(MAX);
+
+    -- Nombre del trigger
+    IF @organizacion_id IS NOT NULL
+        SET @trigger_name = 'trg_audit_' + @tabla + '_' + LEFT(REPLACE(CAST(@organizacion_id AS NVARCHAR(36)), '-', ''), 20);
+    ELSE
+        SET @trigger_name = 'trg_audit_' + @tabla + '_global';
+
+    -- Eliminar trigger existente si existe
+    IF EXISTS (SELECT * FROM sys.triggers WHERE name = @trigger_name)
+    BEGIN
+        SET @sql = 'DROP TRIGGER ' + @trigger_name;
+        EXEC sp_executesql @sql;
+    END
+
+    -- Crear el trigger dinámico
+    SET @sql = '
+    CREATE TRIGGER ' + @trigger_name + '
+    ON [' + @tabla + ']
+    FOR UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        -- Verificar si hay registros en inserted
+        IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+        -- Verificar si hay campos auditables activos para esta tabla
+        IF NOT EXISTS (
+            SELECT 1 FROM system_campos_auditables
+            WHERE tabla = ''' + @tabla + ''' AND activo = 1
+        ) RETURN;
+
+        -- Procesar cada registro modificado
+        DECLARE @registro_id UNIQUEIDENTIFIER;
+        DECLARE @org_id UNIQUEIDENTIFIER;
+        DECLARE @modificador_id UNIQUEIDENTIFIER;
+
+        DECLARE cursor_registros CURSOR FOR
+        SELECT i.Id, i.OrganizationId, i.ModificadorId
+        FROM inserted i
+        INNER JOIN deleted d ON i.Id = d.Id;
+
+        OPEN cursor_registros;
+        FETCH NEXT FROM cursor_registros INTO @registro_id, @org_id, @modificador_id;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            -- Crear registro principal de auditoría
+            DECLARE @auditoria_id UNIQUEIDENTIFIER = NEWID();
+
+            INSERT INTO system_auditoria (
+                Id, OrganizationId, Tabla, RegistroId, Action,
+                FechaCreacion, FechaModificacion, CreadorId, ModificadorId, Active
+            )
+            VALUES (
+                @auditoria_id, @org_id, ''' + @tabla + ''', @registro_id, ''UPDATE'',
+                GETUTCDATE(), GETUTCDATE(), @modificador_id, @modificador_id, 1
+            );
+
+            -- Procesar cada campo auditable
+            DECLARE @campo NVARCHAR(200);
+            DECLARE @is_custom BIT;
+
+            DECLARE campos_cursor CURSOR FOR
+            SELECT campo, is_custom
+            FROM system_campos_auditables
+            WHERE tabla = ''' + @tabla + ''' AND activo = 1
+              AND (organizacion_id IS NULL OR organizacion_id = @org_id);
+
+            OPEN campos_cursor;
+            FETCH NEXT FROM campos_cursor INTO @campo, @is_custom;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                IF @is_custom = 0
+                BEGIN
+                    -- Procesar campo directo
+                    DECLARE @sql_campo NVARCHAR(MAX);
+                    DECLARE @valor_anterior NVARCHAR(MAX);
+                    DECLARE @valor_nuevo NVARCHAR(MAX);
+
+                    SET @sql_campo = ''
+                    SELECT TOP 1
+                        @valor_anterior_out = CAST(d.['' + @campo + ''] AS NVARCHAR(MAX)),
+                        @valor_nuevo_out = CAST(i.['' + @campo + ''] AS NVARCHAR(MAX))
+                    FROM inserted i
+                    INNER JOIN deleted d ON i.Id = d.Id
+                    WHERE i.Id = '''''' + CAST(@registro_id AS NVARCHAR(36)) + ''''''
+                      AND (
+                          (d.['' + @campo + ''] IS NULL AND i.['' + @campo + ''] IS NOT NULL) OR
+                          (d.['' + @campo + ''] IS NOT NULL AND i.['' + @campo + ''] IS NULL) OR
+                          (CAST(d.['' + @campo + ''] AS NVARCHAR(MAX)) != CAST(i.['' + @campo + ''] AS NVARCHAR(MAX)))
+                      )'';
+
+                    EXEC sp_executesql @sql_campo,
+                         N''@valor_anterior_out NVARCHAR(MAX) OUTPUT, @valor_nuevo_out NVARCHAR(MAX) OUTPUT'',
+                         @valor_anterior_out = @valor_anterior OUTPUT,
+                         @valor_nuevo_out = @valor_nuevo OUTPUT;
+
+                    IF @valor_anterior IS NOT NULL OR @valor_nuevo IS NOT NULL
+                    BEGIN
+                        INSERT INTO system_auditoria_detalle (
+                            Id, OrganizationId, AuditoriaId, Campo, ValorAnterior, NuevoValor,
+                            FechaCreacion, FechaModificacion, CreadorId, ModificadorId, Active
+                        )
+                        VALUES (
+                            NEWID(), @org_id, @auditoria_id, @campo, @valor_anterior, @valor_nuevo,
+                            GETUTCDATE(), GETUTCDATE(), @modificador_id, @modificador_id, 1
+                        );
+                    END
+                END
+                ELSE
+                BEGIN
+                    -- Procesar campo Custom JSON
+                    DECLARE @json_path NVARCHAR(200);
+                    SET @json_path = ''$.'' + SUBSTRING(@campo, CHARINDEX(''.'', @campo) + 1, LEN(@campo));
+                    SET @valor_anterior = NULL;
+                    SET @valor_nuevo = NULL;
+
+                    DECLARE @sql_json NVARCHAR(MAX);
+                    SET @sql_json = ''
+                    SELECT TOP 1
+                        @valor_anterior_out = JSON_VALUE(d.Custom, '''''' + @json_path + ''''''),
+                        @valor_nuevo_out = JSON_VALUE(i.Custom, '''''' + @json_path + '''''')
+                    FROM inserted i
+                    INNER JOIN deleted d ON i.Id = d.Id
+                    WHERE i.Id = '''''' + CAST(@registro_id AS NVARCHAR(36)) + ''''''
+                      AND (
+                          ISNULL(JSON_VALUE(d.Custom, '''''' + @json_path + ''''''), '''''''') !=
+                          ISNULL(JSON_VALUE(i.Custom, '''''' + @json_path + ''''''), '''''''')
+                      )'';
+
+                    EXEC sp_executesql @sql_json,
+                         N''@valor_anterior_out NVARCHAR(MAX) OUTPUT, @valor_nuevo_out NVARCHAR(MAX) OUTPUT'',
+                         @valor_anterior_out = @valor_anterior OUTPUT,
+                         @valor_nuevo_out = @valor_nuevo OUTPUT;
+
+                    IF @valor_anterior IS NOT NULL OR @valor_nuevo IS NOT NULL
+                    BEGIN
+                        INSERT INTO system_auditoria_detalle (
+                            Id, OrganizationId, AuditoriaId, Campo, ValorAnterior, NuevoValor,
+                            FechaCreacion, FechaModificacion, CreadorId, ModificadorId, Active
+                        )
+                        VALUES (
+                            NEWID(), @org_id, @auditoria_id, @campo, @valor_anterior, @valor_nuevo,
+                            GETUTCDATE(), GETUTCDATE(), @modificador_id, @modificador_id, 1
+                        );
+                    END
+                END
+
+                FETCH NEXT FROM campos_cursor INTO @campo, @is_custom;
+            END
+
+            CLOSE campos_cursor;
+            DEALLOCATE campos_cursor;
+
+            FETCH NEXT FROM cursor_registros INTO @registro_id, @org_id, @modificador_id;
+        END
+
+        CLOSE cursor_registros;
+        DEALLOCATE cursor_registros;
+    END';
+
+    -- Ejecutar la creación del trigger
+    EXEC sp_executesql @sql;
+
+    -- Actualizar configuración
+    MERGE system_tablas_auditables AS target
+    USING (SELECT @tabla AS tabla, @organizacion_id AS organizacion_id) AS source
+    ON target.tabla = source.tabla AND
+       (target.organizacion_id = source.organizacion_id OR (target.organizacion_id IS NULL AND source.organizacion_id IS NULL))
+    WHEN MATCHED THEN
+        UPDATE SET activo = 1, trigger_creado = 1, fecha_modificacion = GETUTCDATE()
+    WHEN NOT MATCHED THEN
+        INSERT (organizacion_id, tabla, activo, trigger_creado)
+        VALUES (source.organizacion_id, source.tabla, 1, 1);
+
+    PRINT 'Trigger de auditoría creado: ' + @trigger_name;
+END
+GO
+
+-- 5. STORED PROCEDURE PARA DESACTIVAR AUDITORÍA
+CREATE OR ALTER PROCEDURE sp_desactivar_auditoria_tabla
+    @tabla NVARCHAR(100),
+    @organizacion_id UNIQUEIDENTIFIER = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @trigger_name NVARCHAR(200);
+    DECLARE @sql NVARCHAR(MAX);
+
+    -- Nombre del trigger
+    IF @organizacion_id IS NOT NULL
+        SET @trigger_name = 'trg_audit_' + @tabla + '_' + LEFT(REPLACE(CAST(@organizacion_id AS NVARCHAR(36)), '-', ''), 20);
+    ELSE
+        SET @trigger_name = 'trg_audit_' + @tabla + '_global';
+
+    -- Eliminar el trigger si existe
+    IF EXISTS (SELECT * FROM sys.triggers WHERE name = @trigger_name)
+    BEGIN
+        SET @sql = 'DROP TRIGGER ' + @trigger_name;
+        EXEC sp_executesql @sql;
+        PRINT 'Trigger eliminado: ' + @trigger_name;
+    END
+
+    -- Actualizar configuración
+    UPDATE system_tablas_auditables
+    SET activo = 0, trigger_creado = 0, fecha_modificacion = GETUTCDATE()
+    WHERE tabla = @tabla
+      AND (organizacion_id = @organizacion_id OR (organizacion_id IS NULL AND @organizacion_id IS NULL));
+
+    PRINT 'Auditoría desactivada para tabla: ' + @tabla;
+END
+GO
+
+-- 6. FUNCIÓN PARA VERIFICAR SI UNA TABLA ESTÁ SIENDO AUDITADA
+CREATE OR ALTER FUNCTION fn_tabla_es_auditable
+(
+    @tabla NVARCHAR(100),
+    @organizacion_id UNIQUEIDENTIFIER = NULL
+)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @es_auditable BIT = 0;
+
+    SELECT @es_auditable = 1
+    FROM system_tablas_auditables
+    WHERE tabla = @tabla
+      AND activo = 1
+      AND trigger_creado = 1
+      AND (organizacion_id IS NULL OR organizacion_id = @organizacion_id);
+
+    RETURN ISNULL(@es_auditable, 0);
+END
+GO
+
+-- 7. VISTA PARA CONSULTAR AUDITORÍAS
+CREATE OR ALTER VIEW vw_auditoria_completa
+AS
+SELECT
+    a.Id AS AuditoriaId,
+    a.OrganizationId,
+    a.Tabla,
+    a.RegistroId,
+    a.Action,
+    a.FechaCreacion AS FechaAuditoria,
+    a.CreadorId AS UsuarioModificacion,
+    d.Campo,
+    d.ValorAnterior,
+    d.NuevoValor,
+    d.FechaCreacion AS FechaDetalle
+FROM system_auditoria a
+INNER JOIN system_auditoria_detalle d ON a.Id = d.AuditoriaId
+WHERE a.Active = 1 AND d.Active = 1;
+GO
+
+PRINT '✅ Sistema de auditoría dinámico implementado exitosamente';
+PRINT '';
+PRINT '📋 Ejemplos de uso:';
+PRINT '   -- Configurar auditoría para una tabla:';
+PRINT '   EXEC sp_configurar_campo_auditable @tabla = ''empleado'', @campo = ''sueldo_base'', @activo = 1;';
+PRINT '   ';
+PRINT '   -- Configurar campo Custom JSON:';
+PRINT '   EXEC sp_configurar_campo_auditable @tabla = ''empleado'', @campo = ''Custom.Bonificacion'', @is_custom = 1, @activo = 1;';
+PRINT '   ';
+PRINT '   -- Desactivar auditoría:';
+PRINT '   EXEC sp_desactivar_auditoria_tabla @tabla = ''empleado'';';
+PRINT '   ';
+PRINT '   -- Consultar auditorías:';
+PRINT '   SELECT * FROM vw_auditoria_completa WHERE Tabla = ''empleado'';';
+PRINT '';
+
+-- ========================================
+-- 🎨 TABLA: system_form_entities (FormDesigner)
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_form_entities' AND xtype='U')
+BEGIN
+    CREATE TABLE system_form_entities (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+        OrganizationId UNIQUEIDENTIFIER NULL,           -- NULL = Global, GUID = Específica
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+
+        -- Campos específicos de FormDesigner
+        EntityName NVARCHAR(100) NOT NULL,              -- Nombre técnico (ej: "Empleado")
+        DisplayName NVARCHAR(200) NOT NULL,             -- Nombre amigable (ej: "Empleados")
+        Description NVARCHAR(500) NULL,                 -- Descripción de la entidad
+        TableName NVARCHAR(100) NOT NULL,               -- Nombre de tabla (ej: "empleados")
+        IconName NVARCHAR(50) NULL,                     -- Icono Material Design
+        Category NVARCHAR(100) NULL,                    -- Categoría (ej: "RRHH", "Core")
+        AllowCustomFields BIT DEFAULT 1 NOT NULL,       -- Permite campos personalizados
+        SortOrder INT DEFAULT 100 NOT NULL,             -- Orden de presentación
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_form_entities_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_form_entities_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_form_entities_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id)
+    );
+
+    -- Índices para system_form_entities
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_OrganizationId ON system_form_entities(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_Active ON system_form_entities(Active);
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_EntityName ON system_form_entities(EntityName);
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_TableName ON system_form_entities(TableName);
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_Category ON system_form_entities(Category);
+    CREATE NONCLUSTERED INDEX IX_system_form_entities_SortOrder ON system_form_entities(SortOrder);
+
+    PRINT '✅ Tabla system_form_entities creada con índices y FK';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_form_entities ya existe';
+END
+
+-- Insertar entidades base del sistema para FormDesigner
+PRINT '📊 Insertando entidades base para FormDesigner...';
+
+-- Verificar si ya existen entidades
+IF NOT EXISTS (SELECT 1 FROM system_form_entities WHERE EntityName = 'Empleado')
+BEGIN
+    INSERT INTO system_form_entities (
+        Id, OrganizationId, FechaCreacion, FechaModificacion,
+        CreadorId, ModificadorId, Active,
+        EntityName, DisplayName, Description, TableName,
+        IconName, Category, AllowCustomFields, SortOrder
+    ) VALUES
+    -- Entidades RRHH
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Empleado', 'Empleados', 'Gestión de empleados del sistema', 'empleados',
+     'person', 'RRHH', 1, 10),
+
+    -- Entidades Core
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Empresa', 'Empresas', 'Gestión de empresas y organizaciones', 'empresas',
+     'business', 'Core', 1, 20),
+
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Region', 'Regiones', 'Gestión de regiones geográficas', 'regiones',
+     'map', 'Localidades', 1, 30),
+
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Comuna', 'Comunas', 'Gestión de comunas por región', 'comunas',
+     'location_city', 'Localidades', 1, 40),
+
+    -- Entidades Bancarias
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Banco', 'Bancos', 'Gestión de entidades bancarias', 'bancos',
+     'account_balance', 'Bancario', 1, 50),
+
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'TipoCuenta', 'Tipos de Cuenta', 'Tipos de cuentas bancarias', 'tipos_cuenta',
+     'savings', 'Bancario', 1, 60),
+
+    -- Entidades Previsionales
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'AFP', 'AFP', 'Administradoras de Fondos de Pensiones', 'afp',
+     'security', 'Previsional', 1, 70),
+
+    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
+     'Salud', 'Sistemas de Salud', 'Sistemas previsionales de salud', 'salud',
+     'health_and_safety', 'Previsional', 1, 80);
+
+    PRINT '✅ Entidades base de FormDesigner insertadas (8 entidades)';
+END
+ELSE
+BEGIN
+    PRINT '📄 Entidades base de FormDesigner ya existen';
+END
+
 -- Mostrar información de conexión
-SELECT 
+SELECT
     'admin@admin.cl' as Usuario,
     'U29wb3J0ZS4yMDE5UiZEbVNZdUwzQSM3NXR3NGlCa0BOcVJVI2pXISNabTM4TkJ6YTRKa3dlcHRZN2ZWaDRFVkBaRzdMTnhtOEs2VGY0dUhyUyR6UWNYQ1h2VHJAOE1kJDR4IyYkOSZaSmt0Qk4mYzk4VF5WNHE3UnpXNktVV3Ikc1Z5' as Password,
     'Organización Base' as Organizacion,
