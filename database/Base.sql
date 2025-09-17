@@ -1,21 +1,4 @@
--- ========================================
--- 🗄️  BASE DATABASE SCHEMA
--- Sistema de Usuarios, Roles y Permisos
--- ========================================
 
--- Verificar si la base de datos existe, si no, crearla
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'NewPOC')
-BEGIN
-    CREATE DATABASE NewPOC;
-    PRINT '✅ Base de datos NewPOC creada exitosamente';
-END
-ELSE
-BEGIN
-    PRINT '📄 Base de datos NewPOC ya existe';
-END
-
--- Usar la base de datos
-USE NewPOC;
 
 -- ========================================
 -- 🏢 TABLA: system_organization
@@ -756,6 +739,7 @@ BEGIN
 END
 
 -- 3. STORED PROCEDURE PARA CONFIGURAR CAMPO AUDITABLE
+GO
 CREATE OR ALTER PROCEDURE sp_configurar_campo_auditable
     @tabla NVARCHAR(100),
     @campo NVARCHAR(200),
@@ -798,6 +782,7 @@ END
 GO
 
 -- 4. STORED PROCEDURE PARA ACTIVAR AUDITORÍA EN UNA TABLA
+GO
 CREATE OR ALTER PROCEDURE sp_activar_auditoria_tabla
     @tabla NVARCHAR(100),
     @organizacion_id UNIQUEIDENTIFIER = NULL
@@ -989,6 +974,7 @@ END
 GO
 
 -- 5. STORED PROCEDURE PARA DESACTIVAR AUDITORÍA
+GO
 CREATE OR ALTER PROCEDURE sp_desactivar_auditoria_tabla
     @tabla NVARCHAR(100),
     @organizacion_id UNIQUEIDENTIFIER = NULL
@@ -1024,6 +1010,7 @@ END
 GO
 
 -- 6. FUNCIÓN PARA VERIFICAR SI UNA TABLA ESTÁ SIENDO AUDITADA
+GO
 CREATE OR ALTER FUNCTION fn_tabla_es_auditable
 (
     @tabla NVARCHAR(100),
@@ -1046,6 +1033,7 @@ END
 GO
 
 -- 7. VISTA PARA CONSULTAR AUDITORÍAS
+GO
 CREATE OR ALTER VIEW vw_auditoria_completa
 AS
 SELECT
@@ -1132,57 +1120,13 @@ END
 -- Insertar entidades base del sistema para FormDesigner
 PRINT '📊 Insertando entidades base para FormDesigner...';
 
--- Verificar si ya existen entidades
-IF NOT EXISTS (SELECT 1 FROM system_form_entities WHERE EntityName = 'Empleado')
-BEGIN
-    INSERT INTO system_form_entities (
-        Id, OrganizationId, FechaCreacion, FechaModificacion,
-        CreadorId, ModificadorId, Active,
-        EntityName, DisplayName, Description, TableName,
-        IconName, Category, AllowCustomFields, SortOrder
-    ) VALUES
-    -- Entidades RRHH
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Empleado', 'Empleados', 'Gestión de empleados del sistema', 'empleados',
-     'person', 'RRHH', 1, 10),
+-- Variables para IDs (redeclaradas después de GO)
+DECLARE @OrgId_FormEntities UNIQUEIDENTIFIER;
+DECLARE @AdminUserId_FormEntities UNIQUEIDENTIFIER;
 
-    -- Entidades Core
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Empresa', 'Empresas', 'Gestión de empresas y organizaciones', 'empresas',
-     'business', 'Core', 1, 20),
-
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Region', 'Regiones', 'Gestión de regiones geográficas', 'regiones',
-     'map', 'Localidades', 1, 30),
-
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Comuna', 'Comunas', 'Gestión de comunas por región', 'comunas',
-     'location_city', 'Localidades', 1, 40),
-
-    -- Entidades Bancarias
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Banco', 'Bancos', 'Gestión de entidades bancarias', 'bancos',
-     'account_balance', 'Bancario', 1, 50),
-
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'TipoCuenta', 'Tipos de Cuenta', 'Tipos de cuentas bancarias', 'tipos_cuenta',
-     'savings', 'Bancario', 1, 60),
-
-    -- Entidades Previsionales
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'AFP', 'AFP', 'Administradoras de Fondos de Pensiones', 'afp',
-     'security', 'Previsional', 1, 70),
-
-    (NEWID(), NULL, GETUTCDATE(), GETUTCDATE(), @AdminUserId, @AdminUserId, 1,
-     'Salud', 'Sistemas de Salud', 'Sistemas previsionales de salud', 'salud',
-     'health_and_safety', 'Previsional', 1, 80);
-
-    PRINT '✅ Entidades base de FormDesigner insertadas (8 entidades)';
-END
-ELSE
-BEGIN
-    PRINT '📄 Entidades base de FormDesigner ya existen';
-END
+-- Obtener IDs existentes
+SELECT @OrgId_FormEntities = Id FROM system_organization WHERE Nombre = 'Organización Base';
+SELECT @AdminUserId_FormEntities = Id FROM system_users WHERE Email = 'admin@admin.cl';
 
 -- ========================================
 -- 🔐 PERMISOS ADICIONALES DE GESTIÓN
@@ -1190,13 +1134,23 @@ END
 
 PRINT '🔐 Agregando permisos de gestión avanzada...';
 
+-- Variables para IDs (redeclaradas después de GO)
+DECLARE @OrgId_Permisos UNIQUEIDENTIFIER;
+DECLARE @AdminUserId_Permisos UNIQUEIDENTIFIER;
+DECLARE @AdminRoleId_Permisos UNIQUEIDENTIFIER;
+
+-- Obtener IDs existentes
+SELECT @OrgId_Permisos = Id FROM system_organization WHERE Nombre = 'Organización Base';
+SELECT @AdminUserId_Permisos = Id FROM system_users WHERE Email = 'admin@admin.cl';
+SELECT @AdminRoleId_Permisos = Id FROM system_roles WHERE Nombre = 'Administrador';
+
 -- 2.4. Insertar Permiso SYSTEMROLE.MANAGEUSERS
 PRINT '📊 Insertando permiso SYSTEMROLE.MANAGEUSERS...';
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.MANAGEUSERS')
 BEGIN
     INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
-    VALUES 
-    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
+    VALUES
+    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId_Permisos, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
     PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS creado';
 END
 ELSE
@@ -1208,10 +1162,10 @@ END
 DECLARE @NewManageUsersPermissionId UNIQUEIDENTIFIER;
 SELECT @NewManageUsersPermissionId = Id FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.MANAGEUSERS';
 
-IF NOT EXISTS (SELECT 1 FROM system_roles_permissions WHERE system_roles_id = @AdminRoleId AND system_permissions_id = @NewManageUsersPermissionId)
+IF NOT EXISTS (SELECT 1 FROM system_roles_permissions WHERE system_roles_id = @AdminRoleId_Permisos AND system_permissions_id = @NewManageUsersPermissionId)
 BEGIN
     INSERT INTO system_roles_permissions (system_roles_id, system_permissions_id, OrganizationId, CreadorId, Active)
-    VALUES (@AdminRoleId, @NewManageUsersPermissionId, @OrgId, @AdminUserId, 1);
+    VALUES (@AdminRoleId_Permisos, @NewManageUsersPermissionId, @OrgId_Permisos, @AdminUserId_Permisos, 1);
     PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS asignado al rol Administrador';
 END
 
@@ -1431,6 +1385,7 @@ END
 PRINT '🔧 Creando funciones de utilidad...';
 
 -- Función para validar JSON de configuración
+GO
 CREATE OR ALTER FUNCTION fn_ValidateCustomFieldConfig(
     @FieldType NVARCHAR(50),
     @ValidationConfig NVARCHAR(MAX),
