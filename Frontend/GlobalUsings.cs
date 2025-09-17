@@ -37,3 +37,4 @@ global using Radzen;
 global using Microsoft.Extensions.Logging;
 global using Frontend.Componentes.CustomRadzen.Dialog;
 
+global using Shared.Models.Entities.Views;
