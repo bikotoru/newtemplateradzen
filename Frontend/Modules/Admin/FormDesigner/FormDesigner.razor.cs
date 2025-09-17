@@ -8,11 +8,13 @@ using Forms.Models.DTOs;
 using Forms.Models.Enums;
 using Frontend.Services;
 using Frontend.Modules.Admin.CustomFields;
+using Shared.Models.Entities.SystemEntities;
 using System.Text.Json;
+using Frontend.Components.Auth;
 
 namespace Frontend.Modules.Admin.FormDesigner;
 
-public partial class FormDesigner : ComponentBase
+public partial class FormDesigner : AuthorizedPageBase
 {
     [Inject] public API Api { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
@@ -21,8 +23,6 @@ public partial class FormDesigner : ComponentBase
 
     [Parameter] public string? EntityName { get; set; }
 
-    private RadzenDataGrid<FormEntityDto>? entitiesGrid;
-    private List<FormEntityDto> availableEntities = new();
     private GetAvailableFieldsResponse availableFields = new();
 
     private string currentEntityName = "";
@@ -55,24 +55,49 @@ public partial class FormDesigner : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAvailableEntities();
-
         if (!string.IsNullOrEmpty(EntityName))
         {
             await SelectEntityByName(EntityName);
+        }
+        else
+        {
+            // Redirigir a la lista si no se proporciona EntityName
+            Navigation.NavigateTo("/admin/form-designer");
         }
     }
 
     #region Carga de datos
 
-    private async Task LoadAvailableEntities()
+    private async Task SelectEntityByName(string entityName)
     {
         try
         {
-            var response = await Api.GetDirectAsync<EntityApiResponse>("api/customfields/entities", BackendType.FormBackend);
-            if (response?.Success == true && response.Data != null)
+            // Buscar la entidad específica en system_form_entities
+            var response = await Api.GetAsync<SystemFormEntity>($"api/formdesigner/system-entity/{entityName}", BackendType.FormBackend);
+
+            if (response.Success && response.Data != null)
             {
-                availableEntities = response.Data;
+                currentEntityName = response.Data.EntityName;
+                currentEntityDisplayName = response.Data.DisplayName;
+
+                await LoadAvailableFields();
+                await LoadFormLayout();
+
+                selectedField = null;
+                selectedSection = null;
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Entidad no encontrada",
+                    Detail = $"No se encontró la entidad '{entityName}' o no tienes permisos para acceder a ella.",
+                    Duration = 4000
+                });
+
+                // Redirigir a la lista
+                Navigation.NavigateTo("/admin/form-designer");
             }
         }
         catch (Exception ex)
@@ -81,30 +106,12 @@ public partial class FormDesigner : ComponentBase
             {
                 Severity = NotificationSeverity.Error,
                 Summary = "Error",
-                Detail = $"Error cargando entidades: {ex.Message}",
+                Detail = $"Error cargando entidad: {ex.Message}",
                 Duration = 4000
             });
-        }
-    }
 
-    private async Task SelectEntity(FormEntityDto entity)
-    {
-        currentEntityName = entity.EntityName;
-        currentEntityDisplayName = entity.DisplayName;
-
-        await LoadAvailableFields();
-        await LoadFormLayout();
-
-        selectedField = null;
-        selectedSection = null;
-    }
-
-    private async Task SelectEntityByName(string entityName)
-    {
-        var entity = availableEntities.FirstOrDefault(e => e.EntityName == entityName);
-        if (entity != null)
-        {
-            await SelectEntity(entity);
+            // Redirigir a la lista en caso de error
+            Navigation.NavigateTo("/admin/form-designer");
         }
     }
 
@@ -699,6 +706,11 @@ public partial class FormDesigner : ComponentBase
                 Duration = 5000
             });
         }
+    }
+
+    private void GoBackToList()
+    {
+        Navigation.NavigateTo("/admin/form-designer");
     }
 
     #endregion

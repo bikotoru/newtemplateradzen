@@ -1,7 +1,8 @@
-@page "/admin/form-designer"
 @page "/admin/form-designer/{EntityName}"
 @using Forms.Models.DTOs
 @using Forms.Models.Enums
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("FORMDESIGNER.UPDATE")]
 
 <PageTitle>Diseñador de Formularios</PageTitle>
 
@@ -12,9 +13,9 @@
             <div>
                 <RadzenText TextStyle="TextStyle.H4" class="rz-mb-2">
                     <RadzenIcon Icon="extension" class="rz-mr-2" />
-                    Campos Adicionales
+                    Diseñador de Formularios
                 </RadzenText>
-                @if (!string.IsNullOrEmpty(currentEntityName))
+                @if (!string.IsNullOrEmpty(currentEntityDisplayName))
                 {
                     <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-color-secondary">
                         Editando: @currentEntityDisplayName
@@ -22,6 +23,9 @@
                 }
             </div>
             <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Icon="arrow_back" Text="Volver a Lista"
+                            Variant="Variant.Text"
+                            Click="@GoBackToList" />
                 @if (!string.IsNullOrEmpty(currentEntityName))
                 {
                     <RadzenButton Icon="preview" Text="Vista Previa"
@@ -35,54 +39,20 @@
                                 Click="@SaveLayout"
                                 IsBusy="@isSaving" />
                 }
-                <RadzenButton Icon="settings" Text="Configurar Entidades"
-                            Variant="Variant.Text"
-                            Click="@ConfigureEntities" />
             </RadzenStack>
         </RadzenStack>
     </RadzenCard>
 
     @if (string.IsNullOrEmpty(currentEntityName))
     {
-        <!-- Selector de Entidad -->
+        <!-- Mensaje de carga o error -->
         <RadzenCard>
-            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">
-                <RadzenIcon Icon="view_list" class="rz-mr-2" />
-                Selecciona una Entidad para Diseñar
-            </RadzenText>
-
-            <RadzenDataGrid @ref="entitiesGrid" Data="@availableEntities" TItem="FormEntityDto"
-                          AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                          AllowSorting="true" class="entities-grid">
-                <Columns>
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="IconName" Title="" Width="60px">
-                        <Template Context="entity">
-                            <RadzenIcon Icon="@(entity.IconName ?? "table_view")" Style="font-size: 1.5rem; color: var(--rz-primary);" />
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="DisplayName" Title="Entidad" />
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Category" Title="Categoría" Width="150px" />
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Description" Title="Descripción" />
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="AllowCustomFields" Title="Campos Personalizados" Width="120px">
-                        <Template Context="entity">
-                            <RadzenBadge Variant="@(entity.AllowCustomFields ? Variant.Filled : Variant.Outlined)"
-                                       IsPill="true"
-                                       BadgeStyle="@(entity.AllowCustomFields ? BadgeStyle.Success : BadgeStyle.Secondary)">
-                                @(entity.AllowCustomFields ? "Sí" : "No")
-                            </RadzenBadge>
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="FormEntityDto" Property="Id" Title="Acciones" Width="120px" Sortable="false" Filterable="false">
-                        <Template Context="entity">
-                            <RadzenButton Icon="design_services"
-                                        Variant="Variant.Filled"
-                                        Size="ButtonSize.Small"
-                                        Text="Diseñar"
-                                        Click="@(() => SelectEntity(entity))" />
-                        </Template>
-                    </RadzenDataGridColumn>
-                </Columns>
-            </RadzenDataGrid>
+            <div class="empty-designer">
+                <RadzenIcon Icon="hourglass_empty" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+                <RadzenText TextStyle="TextStyle.H6" class="rz-color-disabled rz-mt-2">
+                    Cargando información de la entidad...
+                </RadzenText>
+            </div>
         </RadzenCard>
     }
     else
@@ -451,6 +421,14 @@
     height: 300px;
     border: 2px dashed var(--rz-border-color);
     border-radius: 8px;
+}
+
+.empty-designer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
 }
 
 .form-section {

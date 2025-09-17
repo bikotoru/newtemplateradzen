@@ -503,8 +503,8 @@ END
 -- 2. Insertar Permiso Super Admin
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE Nombre = 'SuperAdmin')
 BEGIN
-    INSERT INTO system_permissions (Id, Nombre, Descripcion, OrganizationId, Active)
-    VALUES (@SuperAdminPermissionId, 'SuperAdmin', 'Acceso completo al sistema', @OrgId, 1);
+    INSERT INTO system_permissions (Id, Nombre, Descripcion, OrganizationId, Active, CreadorId, ModificadorId)
+    VALUES (@SuperAdminPermissionId, 'SuperAdmin', 'Acceso completo al sistema', NULL, 1, NULL, NULL);
     PRINT '✅ Permiso SuperAdmin creado';
 END
 ELSE
@@ -517,14 +517,14 @@ END
 PRINT '📊 Insertando permisos SYSTEMPERMISSION...';
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMPERMISSION.CREATE')
 BEGIN
-    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
-    VALUES 
-    ('SYSTEMPERMISSION.CREATE', 'Crear permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.CREATE', 'SYSTEMPERMISSION', 'SystemPermission'),
-    ('SYSTEMPERMISSION.DELETE', 'Eliminar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.DELETE', 'SYSTEMPERMISSION', 'SystemPermission'),
-    ('SYSTEMPERMISSION.RESTORE', 'Restaurar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.RESTORE', 'SYSTEMPERMISSION', 'SystemPermission'),
-    ('SYSTEMPERMISSION.UPDATE', 'Actualizar permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.UPDATE', 'SYSTEMPERMISSION', 'SystemPermission'),
-    ('SYSTEMPERMISSION.VIEW', 'Ver permisos del sistema', @OrgId, 1, 'SYSTEMPERMISSION.VIEW', 'SYSTEMPERMISSION', 'SystemPermission'),
-    ('SYSTEMPERMISSION.VIEWMENU', 'Ver menú de permisos', @OrgId, 1, 'SYSTEMPERMISSION.VIEWMENU', 'SYSTEMPERMISSION', 'SystemPermission');
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre, CreadorId, ModificadorId)
+    VALUES
+    ('SYSTEMPERMISSION.CREATE', 'Crear permisos del sistema', NULL, 1, 'SYSTEMPERMISSION.CREATE', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL),
+    ('SYSTEMPERMISSION.DELETE', 'Eliminar permisos del sistema', NULL, 1, 'SYSTEMPERMISSION.DELETE', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL),
+    ('SYSTEMPERMISSION.RESTORE', 'Restaurar permisos del sistema', NULL, 1, 'SYSTEMPERMISSION.RESTORE', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL),
+    ('SYSTEMPERMISSION.UPDATE', 'Actualizar permisos del sistema', NULL, 1, 'SYSTEMPERMISSION.UPDATE', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL),
+    ('SYSTEMPERMISSION.VIEW', 'Ver permisos del sistema', NULL, 1, 'SYSTEMPERMISSION.VIEW', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL),
+    ('SYSTEMPERMISSION.VIEWMENU', 'Ver menú de permisos', NULL, 1, 'SYSTEMPERMISSION.VIEWMENU', 'SYSTEMPERMISSION', 'SystemPermission', NULL, NULL);
     PRINT '✅ Permisos SYSTEMPERMISSION creados (6)';
 END
 ELSE
@@ -536,20 +536,20 @@ END
 PRINT '📊 Insertando permisos SYSTEMUSER...';
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMUSER.CREATE')
 BEGIN
-    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
-    VALUES 
-    ('SYSTEMUSER.CREATE', 'Crear usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.CREATE', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.DELETE', 'Eliminar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.DELETE', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.RESTORE', 'Restaurar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.RESTORE', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.UPDATE', 'Actualizar usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.UPDATE', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.VIEW', 'Ver usuarios del sistema', @OrgId, 1, 'SYSTEMUSER.VIEW', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.VIEWMENU', 'Ver menú de usuarios', @OrgId, 1, 'SYSTEMUSER.VIEWMENU', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.MANAGEROLES', 'Gestionar roles de usuarios', @OrgId, 1, 'SYSTEMUSER.MANAGEROLES', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.ADDROLES', 'Agregar roles a usuarios', @OrgId, 1, 'SYSTEMUSER.ADDROLES', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.REMOVEROLES', 'Remover roles de usuarios', @OrgId, 1, 'SYSTEMUSER.REMOVEROLES', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.MANAGEPERMISSIONS', 'Gestionar permisos directos de usuarios', @OrgId, 1, 'SYSTEMUSER.MANAGEPERMISSIONS', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.ADDPERMISSIONS', 'Agregar permisos directos a usuarios', @OrgId, 1, 'SYSTEMUSER.ADDPERMISSIONS', 'SYSTEMUSER', 'SystemUser'),
-    ('SYSTEMUSER.REMOVEPERMISSIONS', 'Remover permisos directos de usuarios', @OrgId, 1, 'SYSTEMUSER.REMOVEPERMISSIONS', 'SYSTEMUSER', 'SystemUser');
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre, CreadorId, ModificadorId)
+    VALUES
+    ('SYSTEMUSER.CREATE', 'Crear usuarios del sistema', NULL, 1, 'SYSTEMUSER.CREATE', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.DELETE', 'Eliminar usuarios del sistema', NULL, 1, 'SYSTEMUSER.DELETE', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.RESTORE', 'Restaurar usuarios del sistema', NULL, 1, 'SYSTEMUSER.RESTORE', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.UPDATE', 'Actualizar usuarios del sistema', NULL, 1, 'SYSTEMUSER.UPDATE', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.VIEW', 'Ver usuarios del sistema', NULL, 1, 'SYSTEMUSER.VIEW', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.VIEWMENU', 'Ver menú de usuarios', NULL, 1, 'SYSTEMUSER.VIEWMENU', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.MANAGEROLES', 'Gestionar roles de usuarios', NULL, 1, 'SYSTEMUSER.MANAGEROLES', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.ADDROLES', 'Agregar roles a usuarios', NULL, 1, 'SYSTEMUSER.ADDROLES', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.REMOVEROLES', 'Remover roles de usuarios', NULL, 1, 'SYSTEMUSER.REMOVEROLES', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.MANAGEPERMISSIONS', 'Gestionar permisos directos de usuarios', NULL, 1, 'SYSTEMUSER.MANAGEPERMISSIONS', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.ADDPERMISSIONS', 'Agregar permisos directos a usuarios', NULL, 1, 'SYSTEMUSER.ADDPERMISSIONS', 'SYSTEMUSER', 'SystemUser', NULL, NULL),
+    ('SYSTEMUSER.REMOVEPERMISSIONS', 'Remover permisos directos de usuarios', NULL, 1, 'SYSTEMUSER.REMOVEPERMISSIONS', 'SYSTEMUSER', 'SystemUser', NULL, NULL);
     PRINT '✅ Permisos SYSTEMUSER creados (12)';
 END
 ELSE
@@ -561,23 +561,41 @@ END
 PRINT '📊 Insertando permisos SYSTEMROLE...';
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.CREATE')
 BEGIN
-    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
-    VALUES 
-    ('SYSTEMROLE.CREATE', 'Crear roles del sistema', @OrgId, 1, 'SYSTEMROLE.CREATE', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.DELETE', 'Eliminar roles del sistema', @OrgId, 1, 'SYSTEMROLE.DELETE', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.RESTORE', 'Restaurar roles del sistema', @OrgId, 1, 'SYSTEMROLE.RESTORE', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.UPDATE', 'Actualizar roles del sistema', @OrgId, 1, 'SYSTEMROLE.UPDATE', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.VIEW', 'Ver roles del sistema', @OrgId, 1, 'SYSTEMROLE.VIEW', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', @OrgId, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.MANAGEPERMISSIONS', 'Gestionar permisos de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.ADDPERMISSIONS', 'Agregar permisos a roles', @OrgId, 1, 'SYSTEMROLE.ADDPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.REMOVEPERMISSIONS', 'Remover permisos de roles', @OrgId, 1, 'SYSTEMROLE.REMOVEPERMISSIONS', 'SYSTEMROLE', 'SystemRole'),
-    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre, CreadorId, ModificadorId)
+    VALUES
+    ('SYSTEMROLE.CREATE', 'Crear roles del sistema', NULL, 1, 'SYSTEMROLE.CREATE', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.DELETE', 'Eliminar roles del sistema', NULL, 1, 'SYSTEMROLE.DELETE', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.RESTORE', 'Restaurar roles del sistema', NULL, 1, 'SYSTEMROLE.RESTORE', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.UPDATE', 'Actualizar roles del sistema', NULL, 1, 'SYSTEMROLE.UPDATE', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.VIEW', 'Ver roles del sistema', NULL, 1, 'SYSTEMROLE.VIEW', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.VIEWMENU', 'Ver menú de roles', NULL, 1, 'SYSTEMROLE.VIEWMENU', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.MANAGEPERMISSIONS', 'Gestionar permisos de roles', NULL, 1, 'SYSTEMROLE.MANAGEPERMISSIONS', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.ADDPERMISSIONS', 'Agregar permisos a roles', NULL, 1, 'SYSTEMROLE.ADDPERMISSIONS', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.REMOVEPERMISSIONS', 'Remover permisos de roles', NULL, 1, 'SYSTEMROLE.REMOVEPERMISSIONS', 'SYSTEMROLE', 'SystemRole', NULL, NULL),
+    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', NULL, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole', NULL, NULL);
     PRINT '✅ Permisos SYSTEMROLE creados (10)';
 END
 ELSE
 BEGIN
     PRINT '📄 Permisos SYSTEMROLE ya existen';
+END
+
+-- 2.4. Insertar Permisos del Sistema - FORMDESIGNER
+PRINT '📊 Insertando permisos FORMDESIGNER...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'FORMDESIGNER.CREATE')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre, CreadorId, ModificadorId)
+    VALUES
+    ('FORMDESIGNER.CREATE', 'Crear diseños de formularios', NULL, 1, 'FORMDESIGNER.CREATE', 'FORMDESIGNER', 'Diseñador de Formularios', NULL, NULL),
+    ('FORMDESIGNER.DELETE', 'Eliminar diseños de formularios', NULL, 1, 'FORMDESIGNER.DELETE', 'FORMDESIGNER', 'Diseñador de Formularios', NULL, NULL),
+    ('FORMDESIGNER.UPDATE', 'Editar diseños de formularios', NULL, 1, 'FORMDESIGNER.UPDATE', 'FORMDESIGNER', 'Diseñador de Formularios', NULL, NULL),
+    ('FORMDESIGNER.VIEW', 'Ver diseñador de formularios', NULL, 1, 'FORMDESIGNER.VIEW', 'FORMDESIGNER', 'Diseñador de Formularios', NULL, NULL),
+    ('FORMDESIGNER.VIEWMENU', 'Ver menú de diseñador de formularios', NULL, 1, 'FORMDESIGNER.VIEWMENU', 'FORMDESIGNER', 'Diseñador de Formularios', NULL, NULL);
+    PRINT '✅ Permisos FORMDESIGNER creados';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permisos FORMDESIGNER ya existen';
 END
 
 -- 3. Insertar Rol Admin
@@ -1144,19 +1162,7 @@ SELECT @OrgId_Permisos = Id FROM system_organization WHERE Nombre = 'Organizaci�
 SELECT @AdminUserId_Permisos = Id FROM system_users WHERE Email = 'admin@admin.cl';
 SELECT @AdminRoleId_Permisos = Id FROM system_roles WHERE Nombre = 'Administrador';
 
--- 2.4. Insertar Permiso SYSTEMROLE.MANAGEUSERS
-PRINT '📊 Insertando permiso SYSTEMROLE.MANAGEUSERS...';
-IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.MANAGEUSERS')
-BEGIN
-    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre)
-    VALUES
-    ('SYSTEMROLE.MANAGEUSERS', 'Gestionar usuarios de roles', @OrgId_Permisos, 1, 'SYSTEMROLE.MANAGEUSERS', 'SYSTEMROLE', 'SystemRole');
-    PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS creado';
-END
-ELSE
-BEGIN
-    PRINT '📄 Permiso SYSTEMROLE.MANAGEUSERS ya existe';
-END
+-- SYSTEMROLE.MANAGEUSERS ya está incluido en la sección de permisos SYSTEMROLE arriba
 
 -- Asignar nuevo permiso al rol Administrador
 DECLARE @NewManageUsersPermissionId UNIQUEIDENTIFIER;

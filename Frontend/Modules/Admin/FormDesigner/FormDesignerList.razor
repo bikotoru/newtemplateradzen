@@ -1,0 +1,44 @@
+@page "/admin/form-designer"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities.SystemEntities
+@using Radzen
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("FORMDESIGNER.VIEW")]
+
+<PageTitle>Diseñador de Formularios - Entidades</PageTitle>
+
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/"
+                        Title="Diseñador de Formularios"
+                        Subtitle="Selecciona una entidad para personalizar su formulario">
+
+        <RadzenCard>
+            <EntityTable T="Shared.Models.Entities.SystemEntities.SystemFormEntity"
+                         ApiService="@SystemFormEntityService"
+                         @ref="entityTable"
+                         @key="@GetGridKey()"
+                         ShowSearchBar="true"
+                         ShowExcelExport="true"
+                         ShowRefreshButton="true"
+                         ShowAutoRefresh="true"
+                         ShowColumnConfig="true"
+                         ShowActions="true"
+                         SearchPlaceholder="Buscar entidades..."
+                         BaseQuery="@(currentView?.QueryBuilder)"
+                         ColumnConfigs="@(currentView?.ColumnConfigs)"
+                         ForceOrderByIndex="true"
+                         EnableSelectOptimization="true"
+                         SelectOnlyVisibleColumns="true"
+                         ViewConfigurations="@ViewConfigurationsTyped"
+                         CurrentView="@currentView"
+                         OnViewChanged="@OnViewChanged"
+                         ViewDisplayNameProperty="DisplayName"
+                         OnEdit="@HandleEdit"
+                         ShowDelete="false">
+            </EntityTable>
+        </RadzenCard>
+
+    </PageWithCommandBar>
+}
