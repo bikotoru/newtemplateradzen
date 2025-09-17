@@ -282,11 +282,79 @@ class EntityGenerator:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
             print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
+    def read_connection_string(self):
+        """Lee la connection string desde Backend/Properties/launchSettings.json"""
+        import json
+
+        launch_settings_path = self.root_path / "Backend" / "Properties" / "launchSettings.json"
+
+        if not launch_settings_path.exists():
+            print(f"❌ ERROR: No se encontró launchSettings.json en {launch_settings_path}")
+            return None
+
+        try:
+            with open(launch_settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+
+            # Buscar en los profiles la variable SQL
+            for profile_name, profile_data in settings.get("profiles", {}).items():
+                env_vars = profile_data.get("environmentVariables", {})
+                sql_connection = env_vars.get("SQL")
+
+                if sql_connection:
+                    print(f"✅ Connection string encontrado en profile: {profile_name}")
+                    return sql_connection
+
+            print(f"❌ ERROR: No se encontró variable 'SQL' en environmentVariables")
+            return None
+
+        except json.JSONDecodeError as e:
+            print(f"❌ ERROR: El archivo launchSettings.json no es válido: {e}")
+            return None
+        except Exception as e:
+            print(f"❌ ERROR leyendo launchSettings.json: {e}")
+            return None
+
+    def extract_database_name(self, connection_string):
+        """Extrae el nombre de la base de datos del connection string"""
+        import re
+
+        # Buscar patterns comunes: Database=nombre; o Initial Catalog=nombre;
+        patterns = [
+            r'Database=([^;]+)',
+            r'Initial Catalog=([^;]+)',
+            r'database=([^;]+)',
+            r'initial catalog=([^;]+)'
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, connection_string, re.IGNORECASE)
+            if match:
+                db_name = match.group(1).strip()
+                print(f"🗄️ Base de datos detectada: {db_name}")
+                return db_name
+
+        print(f"⚠️ No se pudo extraer el nombre de la base de datos del connection string")
+        print(f"   Connection string: {connection_string}")
+        return None
+
     def register_in_system_form_entity(self, config):
         """Registrar entidad en SystemFormEntity para FormDesigner"""
         import subprocess
 
         try:
+            # Leer connection string dinámico
+            connection_string = self.read_connection_string()
+            if not connection_string:
+                print("❌ No se pudo obtener connection string para auto-registro")
+                return False
+
+            # Extraer nombre de base de datos
+            database_name = self.extract_database_name(connection_string)
+            if not database_name:
+                print("❌ No se pudo extraer nombre de base de datos para auto-registro")
+                return False
+
             # Obtener valores de configuración con defaults
             entity_name = config.entity_name
             entity_plural = getattr(config, 'entity_plural', entity_name + 's')
@@ -302,8 +370,17 @@ class EntityGenerator:
             # Preparar descripción
             description = f"Gestión de {entity_plural.lower()}"
 
-            # Construir SQL de inserción
+            # Construir SQL de inserción con usuario válido
             sql_command = f"""
+            DECLARE @ValidUserId UNIQUEIDENTIFIER;
+            SELECT TOP 1 @ValidUserId = Id FROM system_users WHERE Active = 1;
+
+            IF @ValidUserId IS NULL
+            BEGIN
+                PRINT 'ERROR: No se encontró usuario activo válido';
+                RETURN;
+            END
+
             IF NOT EXISTS (SELECT 1 FROM system_form_entities WHERE EntityName = '{entity_name}')
             BEGIN
                 INSERT INTO system_form_entities (
@@ -313,7 +390,7 @@ class EntityGenerator:
                     IconName, Category, AllowCustomFields, SortOrder
                 ) VALUES (
                     NEWID(), {org_id}, GETUTCDATE(), GETUTCDATE(),
-                    '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 1,
+                    @ValidUserId, @ValidUserId, 1,
                     '{entity_name}', '{entity_plural}', '{description}', '{table_name}',
                     '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999
                 );
@@ -325,10 +402,10 @@ class EntityGenerator:
             END
             """
 
-            # Ejecutar SQL usando sqlcmd
+            # Ejecutar SQL usando sqlcmd con base de datos dinámica
             cmd = [
                 'sqlcmd', '-S', 'localhost,1333', '-U', 'sa', '-P', 'Soporte.2019',
-                '-d', 'AgendaGes', '-C', '-Q', sql_command
+                '-d', database_name, '-C', '-Q', sql_command
             ]
 
             result = subprocess.run(cmd, capture_output=True, text=True)
