@@ -27,7 +27,7 @@
                                     <RadzenProfileMenuItem Path="/admin/systemuser/list" Icon="group" Text="Usuarios" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMUSER.VIEW", "SYSTEMUSER.VIEWMENU" })) />
                                     <RadzenProfileMenuItem Path="/admin/systemrole/list" Icon="admin_panel_settings" Text="Roles" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMROLE.VIEW", "SYSTEMROLE.VIEWMENU" })) />
                                     <RadzenProfileMenuItem Path="/admin/systempermission/list" Icon="verified_user" Text="Permisos" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.VIEWMENU" })) />
-                                    <RadzenProfileMenuItem Path="/admin/form-designer" Icon="design_services" Text="Diseñador Formularios" Visible=@(AuthService.HasAnyPermission(new[] { "SYSTEMPERMISSION.VIEW", "SYSTEMPERMISSION.VIEWMENU" })) />
+                                    <RadzenProfileMenuItem Path="/admin/form-designer" Icon="design_services" Text="Diseñador Formularios" Visible=@(AuthService.HasAnyPermission(new[] { "FORMDESIGNER.VIEW", "FORMDESIGNER.VIEWMENU" })) />
                                 }
                                 
                                 <RadzenProfileMenuItem Text="Cerrar Sesión" Value="Logout" Icon="power_settings_new" />
