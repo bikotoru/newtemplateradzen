@@ -17,7 +17,7 @@
       "applicationUrl": "https://localhost:7124;http://localhost:5260",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "SQL": "Server=localhost,1333;Database=AgendaGes;User Id=sa;Password=Soporte.2019;TrustServerCertificate=true;",
+        "SQL": "Server=localhost,1333;Database=AgendaGesV3;User Id=sa;Password=Soporte.2019;TrustServerCertificate=true;",
         "SECRETKEY": "R&DmSYuL3A#75tw4iBk@NqRU#jW!#Zm38NBza4JkweptY7fVh4EV@ZG7LNxm8K6Tf4uHrS$zQcXCXvTr@8Md$4x#&$9&ZJktBN&c98T^V4q7RzW6KUWr$sVy",
         "SECONDKEY": "5sS&puCh7mRb6QweXHyx^KTW5T2$N46&KyCcZVyHsN783e2MuiN36b@d6&wZ&E5$oEaU!GHV#uYw^4R2dwU$Yb5pyY@!8ba$gbTHps8LesfJT$nxrEqu3Zmp"
       }

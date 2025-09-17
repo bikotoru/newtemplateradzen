@@ -32,4 +32,10 @@ public partial class SystemCustomFieldTemplates
     public Guid? ModificadorId { get; set; }
 
     public bool Active { get; set; }
+
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
 }

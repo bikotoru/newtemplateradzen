@@ -53,5 +53,11 @@ public partial class SystemCustomFieldDefinitions
 
     public bool Active { get; set; }
 
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
+
     public virtual ICollection<SystemCustomFieldAuditLog> SystemCustomFieldAuditLog { get; set; } = new List<SystemCustomFieldAuditLog>();
 }

@@ -19,13 +19,13 @@ public partial class SystemAuditoriaDetalle
 
     public bool Active { get; set; }
 
-    public string? ValorAnterior { get; set; }
-
-    public string? NuevoValor { get; set; }
-
     public Guid AuditoriaId { get; set; }
 
     public string Campo { get; set; } = null!;
+
+    public string? ValorAnterior { get; set; }
+
+    public string? NuevoValor { get; set; }
 
     public virtual SystemAuditoria Auditoria { get; set; } = null!;
 

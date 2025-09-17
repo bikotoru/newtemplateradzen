@@ -246,6 +246,57 @@ class DatabaseModelGenerator:
         
         print(f"   🎯 Entidades del sistema organizadas en: {system_path}")
         return True
+
+    def organize_views(self):
+        """Organiza las vistas (Vw*) en carpeta separada con namespace correcto"""
+        print("\n📊 ORGANIZANDO VISTAS")
+        print("-" * 40)
+
+        # Crear carpeta Views si no existe
+        views_path = self.entities_path / "Views"
+        views_path.mkdir(exist_ok=True)
+
+        # Buscar archivos que empiecen con "Vw"
+        view_files = []
+        for entity_file in self.entities_path.glob("Vw*.cs"):
+            # Solo mover archivos que empiecen con "Vw" y no estén en subdirectorios
+            if entity_file.parent == self.entities_path:
+                view_files.append(entity_file)
+
+        if not view_files:
+            print("   ℹ️  No se encontraron vistas Vw* para organizar")
+            return True
+
+        print(f"   📂 Moviendo {len(view_files)} vistas Vw* a carpeta Views/")
+
+        # Mover cada archivo Vw* y actualizar namespace
+        for view_file in view_files:
+            try:
+                # Leer contenido original
+                with open(view_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # Actualizar namespace - usar punto y coma exacto para evitar matches parciales
+                old_namespace = "namespace Shared.Models.Entities;"
+                new_namespace = "namespace Shared.Models.Entities.Views;"
+                updated_content = content.replace(old_namespace, new_namespace)
+
+                # Escribir en nueva ubicación
+                new_path = views_path / view_file.name
+                with open(new_path, 'w', encoding='utf-8') as f:
+                    f.write(updated_content)
+
+                # Eliminar archivo original
+                view_file.unlink()
+
+                print(f"   ✅ {view_file.name} → Views/{view_file.name}")
+
+            except Exception as e:
+                print(f"   ⚠️  Error moviendo {view_file.name}: {e}")
+                return False
+
+        print(f"   🎯 Vistas organizadas en: {views_path}")
+        return True
     
     def compile_solution(self):
         """Compila la solución para verificar que todo funciona"""
@@ -300,7 +351,17 @@ class DatabaseModelGenerator:
                 print(f"   📂 {system_path}")
                 for file in system_files:
                     print(f"   ✅ {file.name}")
-        
+
+        # Listar vistas
+        views_path = self.entities_path / "Views"
+        if views_path.exists():
+            view_files = list(views_path.glob("*.cs"))
+            if view_files:
+                print(f"\n📊 Vistas ({len(view_files)}):")
+                print(f"   📂 {views_path}")
+                for file in view_files:
+                    print(f"   ✅ {file.name}")
+
         # Listar DbContext
         context_files = list(self.data_path.glob("*.cs"))
         if context_files:
@@ -342,8 +403,12 @@ class DatabaseModelGenerator:
         # 5. Organizar entidades System* en carpeta separada
         if not self.organize_system_entities():
             return False
-            
-        # 6. Compilar para verificar
+
+        # 6. Organizar vistas Vw* en carpeta separada
+        if not self.organize_views():
+            return False
+
+        # 7. Compilar para verificar
         self.compile_solution()
         
         # 5. Mostrar resumen

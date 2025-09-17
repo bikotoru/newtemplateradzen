@@ -37,13 +37,27 @@ public partial class SystemUsers
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual ICollection<SystemConfig> SystemConfigCreador { get; set; } = new List<SystemConfig>();
+    public virtual ICollection<SystemAuditoria> SystemAuditoriaCreador { get; set; } = new List<SystemAuditoria>();
 
-    public virtual ICollection<SystemConfig> SystemConfigModificador { get; set; } = new List<SystemConfig>();
+    public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalleCreador { get; set; } = new List<SystemAuditoriaDetalle>();
 
-    public virtual ICollection<SystemConfigValues> SystemConfigValuesCreador { get; set; } = new List<SystemConfigValues>();
+    public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalleModificador { get; set; } = new List<SystemAuditoriaDetalle>();
 
-    public virtual ICollection<SystemConfigValues> SystemConfigValuesModificador { get; set; } = new List<SystemConfigValues>();
+    public virtual ICollection<SystemAuditoria> SystemAuditoriaModificador { get; set; } = new List<SystemAuditoria>();
+
+    public virtual ICollection<SystemCustomFieldAuditLog> SystemCustomFieldAuditLog { get; set; } = new List<SystemCustomFieldAuditLog>();
+
+    public virtual ICollection<SystemCustomFieldDefinitions> SystemCustomFieldDefinitionsCreador { get; set; } = new List<SystemCustomFieldDefinitions>();
+
+    public virtual ICollection<SystemCustomFieldDefinitions> SystemCustomFieldDefinitionsModificador { get; set; } = new List<SystemCustomFieldDefinitions>();
+
+    public virtual ICollection<SystemCustomFieldTemplates> SystemCustomFieldTemplatesCreador { get; set; } = new List<SystemCustomFieldTemplates>();
+
+    public virtual ICollection<SystemCustomFieldTemplates> SystemCustomFieldTemplatesModificador { get; set; } = new List<SystemCustomFieldTemplates>();
+
+    public virtual ICollection<SystemFormEntities> SystemFormEntitiesCreador { get; set; } = new List<SystemFormEntities>();
+
+    public virtual ICollection<SystemFormEntities> SystemFormEntitiesModificador { get; set; } = new List<SystemFormEntities>();
 
     public virtual ICollection<SystemPermissions> SystemPermissionsCreador { get; set; } = new List<SystemPermissions>();
 

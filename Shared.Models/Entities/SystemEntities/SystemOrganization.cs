@@ -19,9 +19,17 @@ public partial class SystemOrganization
 
     public bool Active { get; set; }
 
-    public virtual ICollection<SystemConfig> SystemConfig { get; set; } = new List<SystemConfig>();
+    public virtual ICollection<SystemAuditoria> SystemAuditoria { get; set; } = new List<SystemAuditoria>();
 
-    public virtual ICollection<SystemConfigValues> SystemConfigValues { get; set; } = new List<SystemConfigValues>();
+    public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; } = new List<SystemAuditoriaDetalle>();
+
+    public virtual ICollection<SystemCustomFieldAuditLog> SystemCustomFieldAuditLog { get; set; } = new List<SystemCustomFieldAuditLog>();
+
+    public virtual ICollection<SystemCustomFieldDefinitions> SystemCustomFieldDefinitions { get; set; } = new List<SystemCustomFieldDefinitions>();
+
+    public virtual ICollection<SystemCustomFieldTemplates> SystemCustomFieldTemplates { get; set; } = new List<SystemCustomFieldTemplates>();
+
+    public virtual ICollection<SystemFormEntities> SystemFormEntities { get; set; } = new List<SystemFormEntities>();
 
     public virtual ICollection<SystemPermissions> SystemPermissions { get; set; } = new List<SystemPermissions>();
 
@@ -35,8 +43,5 @@ public partial class SystemOrganization
 
     public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
 
-    public virtual ICollection<SystemAuditoria> SystemAuditoria { get; set; } = new List<SystemAuditoria>();
-
-    public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; } = new List<SystemAuditoriaDetalle>();
     public virtual ICollection<ZToken> ZToken { get; set; } = new List<ZToken>();
 }

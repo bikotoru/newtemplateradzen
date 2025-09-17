@@ -13,9 +13,9 @@ public partial class SystemFormEntities
 
     public DateTime FechaModificacion { get; set; }
 
-    public Guid CreadorId { get; set; }
+    public Guid? CreadorId { get; set; }
 
-    public Guid ModificadorId { get; set; }
+    public Guid? ModificadorId { get; set; }
 
     public bool Active { get; set; }
 
@@ -34,4 +34,10 @@ public partial class SystemFormEntities
     public bool AllowCustomFields { get; set; }
 
     public int SortOrder { get; set; }
+
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
 }

@@ -31,5 +31,9 @@ public partial class SystemCustomFieldAuditLog
 
     public Guid? CreadorId { get; set; }
 
+    public virtual SystemUsers? Creador { get; set; }
+
     public virtual SystemCustomFieldDefinitions CustomFieldDefinition { get; set; } = null!;
+
+    public virtual SystemOrganization? Organization { get; set; }
 }
