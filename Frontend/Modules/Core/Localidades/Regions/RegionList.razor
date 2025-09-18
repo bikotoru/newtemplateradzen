@@ -1,22 +1,22 @@
-@page "/admin/form-designer/list"
+@page "/core/localidades/region/list"
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base.Tables
-@using Shared.Models.Entities.SystemEntities
+@using Shared.Models.Entities
 @using Radzen
 @inherits AuthorizedPageBase
-@attribute [AuthorizePermission("FORMDESIGNER.VIEW")]
+@attribute [AuthorizePermission("REGION.VIEW")]
 
-<PageTitle>Diseñador de Formularios - Entidades</PageTitle>
+<PageTitle>Regions</PageTitle>
 
 @if (HasRequiredPermissions && !IsCheckingPermissions)
 {
     <PageWithCommandBar BackPath="/"
+                        ShowNew
+                        NewPath="/core/localidades/region/formulario"
                         >
 
         <RadzenCard>
-            <EntityTable T="Shared.Models.Entities.SystemEntities.SystemFormEntities"
-                         ApiService="@SystemFormEntitiesService"
-                         BackendType="BackendType.FormBackend"
+            <EntityTable T="Region" 
                          @ref="entityTable"
                          @key="@GetGridKey()"
                          ShowSearchBar="true"
@@ -25,7 +25,7 @@
                          ShowAutoRefresh="true"
                          ShowColumnConfig="true"
                          ShowActions="true"
-                         SearchPlaceholder="Buscar entidades..."
+                         SearchPlaceholder="Buscar regions..."
                          BaseQuery="@(currentView?.QueryBuilder)"
                          ColumnConfigs="@(currentView?.ColumnConfigs)"
                          ForceOrderByIndex="true"
@@ -36,7 +36,7 @@
                          OnViewChanged="@OnViewChanged"
                          ViewDisplayNameProperty="DisplayName"
                          OnEdit="@HandleEdit"
-                         ShowDeleteButton="false">
+                         OnDelete="@HandleDelete">
             </EntityTable>
         </RadzenCard>
 

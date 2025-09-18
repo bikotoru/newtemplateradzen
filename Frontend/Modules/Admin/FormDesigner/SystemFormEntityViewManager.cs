@@ -5,12 +5,12 @@ using Shared.Models.Entities.SystemEntities;
 
 namespace Frontend.Modules.Admin.FormDesigner
 {
-    public class SystemFormEntityViewManager
+    public class SystemFormEntitiesViewManager
     {
-        public List<ViewConfiguration<SystemFormEntity>> ViewConfigurations { get; private set; } = new();
+        public List<ViewConfiguration<SystemFormEntities>> ViewConfigurations { get; private set; } = new();
         private readonly QueryService? _queryService;
 
-        public SystemFormEntityViewManager(QueryService? queryService = null)
+        public SystemFormEntitiesViewManager(QueryService? queryService = null)
         {
             _queryService = queryService;
             InitializeDefaultViews();
@@ -18,15 +18,15 @@ namespace Frontend.Modules.Admin.FormDesigner
 
         private void InitializeDefaultViews()
         {
-            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntity>
+            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntities>
             {
                 DisplayName = "Vista Completa",
-                QueryBuilder = _queryService?.For<SystemFormEntity>()?
+                QueryBuilder = _queryService?.For<SystemFormEntities>()?
                     .Where(x => x.Active == true)
                     .OrderBy(x => x.DisplayName),
-                ColumnConfigs = new List<ColumnConfig<SystemFormEntity>>
+                ColumnConfigs = new List<ColumnConfig<SystemFormEntities>>
                 {
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "DisplayName",
                         Title = "Entidad",
@@ -37,7 +37,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                         Visible = true,
                         Order = 1
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "EntityName",
                         Title = "Nombre Técnico",
@@ -48,7 +48,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                         Visible = true,
                         Order = 2
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "Category",
                         Title = "Categoría",
@@ -67,7 +67,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "Description",
                         Title = "Descripción",
@@ -79,7 +79,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                         Order = 4,
                         FormatExpression = e => string.IsNullOrEmpty(e.Description) ? "Sin descripción" : e.Description
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "AllowCustomFields",
                         Title = "Campos Personalizados",
@@ -98,7 +98,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "OrganizationId",
                         Title = "Ámbito",
@@ -117,7 +117,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "IconName",
                         Title = "Icono",
@@ -136,7 +136,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "FechaCreacion",
                         Title = "Fecha Creación",
@@ -152,15 +152,15 @@ namespace Frontend.Modules.Admin.FormDesigner
             });
 
             // Vista compacta para pantallas pequeñas
-            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntity>
+            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntities>
             {
                 DisplayName = "Vista Compacta",
-                QueryBuilder = _queryService?.For<SystemFormEntity>()?
+                QueryBuilder = _queryService?.For<SystemFormEntities>()?
                     .Where(x => x.Active == true)
                     .OrderBy(x => x.DisplayName),
-                ColumnConfigs = new List<ColumnConfig<SystemFormEntity>>
+                ColumnConfigs = new List<ColumnConfig<SystemFormEntities>>
                 {
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "IconName",
                         Title = "",
@@ -179,7 +179,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "DisplayName",
                         Title = "Entidad",
@@ -190,7 +190,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                         Visible = true,
                         Order = 2
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "Category",
                         Title = "Categoría",
@@ -209,7 +209,7 @@ namespace Frontend.Modules.Admin.FormDesigner
                             builder.CloseElement();
                         }
                     },
-                    new ColumnConfig<SystemFormEntity>
+                    new ColumnConfig<SystemFormEntities>
                     {
                         Property = "AllowCustomFields",
                         Title = "Personalizable",
@@ -232,10 +232,10 @@ namespace Frontend.Modules.Admin.FormDesigner
             });
 
             // Vista solo de sistema (entidades globales)
-            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntity>
+            ViewConfigurations.Add(new ViewConfiguration<SystemFormEntities>
             {
                 DisplayName = "Solo Sistema",
-                QueryBuilder = _queryService?.For<SystemFormEntity>()?
+                QueryBuilder = _queryService?.For<SystemFormEntities>()?
                     .Where(x => x.Active == true && x.OrganizationId == null)
                     .OrderBy(x => x.Category),
                 ColumnConfigs = ViewConfigurations.First().ColumnConfigs // Reutilizar columnas de vista completa
@@ -257,11 +257,11 @@ namespace Frontend.Modules.Admin.FormDesigner
             };
         }
 
-        public ViewConfiguration<SystemFormEntity>? GetViewByName(string displayName) =>
+        public ViewConfiguration<SystemFormEntities>? GetViewByName(string displayName) =>
             ViewConfigurations.FirstOrDefault(v => v.DisplayName == displayName);
 
-        public ViewConfiguration<SystemFormEntity> GetDefaultView() =>
+        public ViewConfiguration<SystemFormEntities> GetDefaultView() =>
             ViewConfigurations.FirstOrDefault() ??
-            new ViewConfiguration<SystemFormEntity>("Default", _queryService?.For<SystemFormEntity>() ?? null!);
+            new ViewConfiguration<SystemFormEntities>("Default", _queryService?.For<SystemFormEntities>() ?? null!);
     }
 }

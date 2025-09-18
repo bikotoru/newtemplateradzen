@@ -79,7 +79,7 @@ public partial class EntityTable<T>
                         queryRequest.Filter = string.Join(" and ", allFilters);
                     }
                     
-                    var response = await API.PostAsync<Shared.Models.Responses.PagedResponse<T>>(ApiEndpoint, queryRequest);
+                    var response = await API.PostAsync<Shared.Models.Responses.PagedResponse<T>>(ApiEndpoint, queryRequest, BackendType);
                     
                     if (response.Success && response.Data != null)
                     {
@@ -95,9 +95,9 @@ public partial class EntityTable<T>
                 else if (hasFilters && !hasSearch)
                 {
                     
-                    var response = queryWithFilters != null 
-                        ? await apiService.LoadDataAsync(args, queryWithFilters)
-                        : await apiService.LoadDataAsync(args);
+                    var response = queryWithFilters != null
+                        ? await apiService.LoadDataAsync(args, queryWithFilters, BackendType)
+                        : await apiService.LoadDataAsync(args, BackendType);
                     
                     if (response.Success && response.Data != null)
                     {
@@ -139,9 +139,9 @@ public partial class EntityTable<T>
                 else
                 {
                     
-                    var response = queryWithFilters != null 
-                        ? await apiService.LoadDataAsync(args, queryWithFilters)
-                        : await apiService.LoadDataAsync(args);
+                    var response = queryWithFilters != null
+                        ? await apiService.LoadDataAsync(args, queryWithFilters, BackendType)
+                        : await apiService.LoadDataAsync(args, BackendType);
                     
                     if (response.Success && response.Data != null)
                     {
@@ -208,9 +208,9 @@ public partial class EntityTable<T>
         }
         catch (Exception)
         {
-            var response = BaseQuery != null 
-                ? await apiService!.LoadDataAsync(args, BaseQuery)
-                : await apiService!.LoadDataAsync(args);
+            var response = BaseQuery != null
+                ? await apiService!.LoadDataAsync(args, BaseQuery, BackendType)
+                : await apiService!.LoadDataAsync(args, BackendType);
             
             if (response.Success && response.Data != null)
             {
@@ -254,9 +254,9 @@ public partial class EntityTable<T>
         }
         catch (Exception)
         {
-            var response = BaseQuery != null 
-                ? await apiService!.LoadDataAsync(args, BaseQuery)
-                : await apiService!.LoadDataAsync(args);
+            var response = BaseQuery != null
+                ? await apiService!.LoadDataAsync(args, BaseQuery, BackendType)
+                : await apiService!.LoadDataAsync(args, BackendType);
             
             if (response.Success && response.Data != null)
             {

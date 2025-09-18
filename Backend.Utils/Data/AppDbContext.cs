@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Shared.Models.Entities;
-using Shared.Models.Entities.Views;
 
 namespace Backend.Utils.Data;
 
@@ -12,6 +11,8 @@ public partial class AppDbContext : DbContext
         : base(options)
     {
     }
+
+    public virtual DbSet<Region> Region { get; set; }
 
     public virtual DbSet<SystemAuditoria> SystemAuditoria { get; set; }
 
@@ -53,6 +54,33 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Region>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__region__3214EC0768C38155");
+
+            entity.ToTable("region", tb => tb.HasComment("Core.Localidades"));
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(255)
+                .HasColumnName("nombre");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.RegionCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_region_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.RegionModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_region_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.Region)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_region_OrganizationId");
+        });
+
         modelBuilder.Entity<SystemAuditoria>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__system_a__3214EC073D80A7F7");

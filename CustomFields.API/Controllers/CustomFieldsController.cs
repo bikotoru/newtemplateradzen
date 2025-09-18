@@ -5,20 +5,26 @@ using Shared.Models.Entities.SystemEntities;
 using Microsoft.EntityFrameworkCore;
 using Forms.Models.Configurations;
 using System.Text.Json;
+using Backend.Utils.Security;
+using Shared.Models.DTOs.Auth;
 
 namespace CustomFields.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/customfielddefinitions")]
 public class CustomFieldsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<CustomFieldsController> _logger;
+    private readonly PermissionService _permissionService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public CustomFieldsController(AppDbContext context, ILogger<CustomFieldsController> logger)
+    public CustomFieldsController(AppDbContext context, ILogger<CustomFieldsController> logger, PermissionService permissionService, IServiceProvider serviceProvider)
     {
         _context = context;
         _logger = logger;
+        _permissionService = permissionService;
+        _serviceProvider = serviceProvider;
     }
 
     #region Entidades
@@ -195,10 +201,16 @@ public class CustomFieldsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetCustomFields()
     {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
         try
         {
-            // Por ahora obtener organizationId desde claims o usar uno temporal
-            var organizationId = Guid.NewGuid(); // Temporal
+            _logger.LogInformation($"Getting all custom fields for user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
 
             var customFieldsRaw = await _context.SystemCustomFieldDefinitions
                 .Where(cf => cf.OrganizationId == organizationId && cf.IsEnabled)
@@ -240,10 +252,16 @@ public class CustomFieldsController : ControllerBase
     [HttpGet("entity/{entityName}")]
     public async Task<IActionResult> GetCustomFieldsByEntity(string entityName)
     {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
         try
         {
-            // Por ahora obtener organizationId desde claims o usar uno temporal
-            var organizationId = Guid.NewGuid(); // Temporal
+            _logger.LogInformation($"Getting custom fields for entity {entityName} by user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
 
             var customFieldsRaw = await _context.SystemCustomFieldDefinitions
                 .Where(cf => cf.EntityName == entityName && cf.OrganizationId == organizationId && cf.IsEnabled)
@@ -284,10 +302,16 @@ public class CustomFieldsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateCustomField([FromBody] CreateCustomFieldRequest request)
     {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("create");
+        if (errorResult != null) return errorResult;
+
         try
         {
-            // Por ahora obtener organizationId desde claims o usar uno temporal
-            var organizationId = Guid.NewGuid(); // Temporal
+            _logger.LogInformation($"Creating custom field for user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
 
             // Validar que no exista un campo con el mismo nombre en la entidad
             var existingField = await _context.SystemCustomFieldDefinitions
@@ -358,10 +382,16 @@ public class CustomFieldsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCustomField(Guid id, [FromBody] UpdateCustomFieldRequest request)
     {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("update");
+        if (errorResult != null) return errorResult;
+
         try
         {
-            // Por ahora obtener organizationId desde claims o usar uno temporal
-            var organizationId = Guid.NewGuid(); // Temporal
+            _logger.LogInformation($"Updating custom field {id} by user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
 
             var customField = await _context.SystemCustomFieldDefinitions
                 .FirstOrDefaultAsync(cf => cf.Id == id && cf.OrganizationId == organizationId);
@@ -433,10 +463,16 @@ public class CustomFieldsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCustomField(Guid id)
     {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("delete");
+        if (errorResult != null) return errorResult;
+
         try
         {
-            // Por ahora obtener organizationId desde claims o usar uno temporal
-            var organizationId = Guid.NewGuid(); // Temporal
+            _logger.LogInformation($"Deleting custom field {id} by user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
 
             var customField = await _context.SystemCustomFieldDefinitions
                 .FirstOrDefaultAsync(cf => cf.Id == id && cf.OrganizationId == organizationId);
@@ -529,6 +565,80 @@ public class CustomFieldsController : ControllerBase
         }
         catch
         {
+            return null;
+        }
+    }
+
+    #endregion
+
+    #region Authentication and Authorization
+
+    /// <summary>
+    /// Valida permisos para custom fields
+    /// </summary>
+    private async Task<(SessionDataDto? user, bool hasPermission, IActionResult? errorResult)> ValidatePermissionAsync(string action)
+    {
+        try
+        {
+            var (user, hasPermission) = await CheckPermissionAsync(action);
+
+            if (user == null)
+                return (null, false, Unauthorized(new { success = false, message = "Usuario no autenticado" }));
+
+            if (!hasPermission)
+                return (user, false, StatusCode(403, new { success = false, message = "No tienes permisos para realizar esta acción" }));
+
+            return (user, true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating permission for action: {Action}", action);
+            return (null, false, StatusCode(500, new { success = false, message = "Error interno del servidor" }));
+        }
+    }
+
+    /// <summary>
+    /// Verifica permisos específicos para custom fields
+    /// </summary>
+    private async Task<(SessionDataDto? user, bool hasPermission)> CheckPermissionAsync(string action)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+                return (null, false);
+
+            // Usar permisos específicos de custom fields
+            var permissionKey = $"FORMDESIGNER.{action.ToUpperInvariant()}";
+            var hasPermission = user.Permisos.Contains(permissionKey);
+
+            _logger.LogDebug("Permission check - User: {UserId}, Permission: {Permission}, HasAccess: {HasAccess}",
+                user.Id, permissionKey, hasPermission);
+
+            if (!hasPermission)
+                _logger.LogWarning("Usuario {UserId} no tiene permiso {Permission}", user.Id, permissionKey);
+
+            return (user, hasPermission);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking permission for action: {Action}", action);
+            return (null, false);
+        }
+    }
+
+    /// <summary>
+    /// Valida el usuario actual desde el contexto HTTP
+    /// </summary>
+    private async Task<SessionDataDto?> ValidarUsuario()
+    {
+        try
+        {
+            return await _permissionService.ValidateUserFromHeadersAsync(Request.Headers);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating user");
             return null;
         }
     }

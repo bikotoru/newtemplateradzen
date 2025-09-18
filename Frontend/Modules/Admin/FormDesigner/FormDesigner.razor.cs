@@ -9,6 +9,7 @@ using Forms.Models.Enums;
 using Frontend.Services;
 using Frontend.Modules.Admin.CustomFields;
 using Shared.Models.Entities.SystemEntities;
+using Shared.Models.Responses;
 using System.Text.Json;
 using Frontend.Components.Auth;
 
@@ -62,7 +63,7 @@ public partial class FormDesigner : AuthorizedPageBase
         else
         {
             // Redirigir a la lista si no se proporciona EntityName
-            Navigation.NavigateTo("/admin/form-designer");
+            Navigation.NavigateTo("/admin/form-designer/list");
         }
     }
 
@@ -72,13 +73,20 @@ public partial class FormDesigner : AuthorizedPageBase
     {
         try
         {
+            Console.WriteLine($"[FormDesigner] SelectEntityByName iniciado para: {entityName}");
+
             // Buscar la entidad específica en system_form_entities
-            var response = await Api.GetAsync<SystemFormEntity>($"api/formdesigner/system-entity/{entityName}", BackendType.FormBackend);
+            var response = await Api.GetAsync<SystemFormEntities>($"api/form-designer/entities/by-name/{entityName}", BackendType.FormBackend);
+
+            Console.WriteLine($"[FormDesigner] Entity API response.Success: {response.Success}");
 
             if (response.Success && response.Data != null)
             {
                 currentEntityName = response.Data.EntityName;
                 currentEntityDisplayName = response.Data.DisplayName;
+
+                Console.WriteLine($"[FormDesigner] currentEntityName set to: {currentEntityName}");
+                Console.WriteLine($"[FormDesigner] currentEntityDisplayName set to: {currentEntityDisplayName}");
 
                 await LoadAvailableFields();
                 await LoadFormLayout();
@@ -97,7 +105,7 @@ public partial class FormDesigner : AuthorizedPageBase
                 });
 
                 // Redirigir a la lista
-                Navigation.NavigateTo("/admin/form-designer");
+                Navigation.NavigateTo("/admin/form-designer/list");
             }
         }
         catch (Exception ex)
@@ -111,7 +119,7 @@ public partial class FormDesigner : AuthorizedPageBase
             });
 
             // Redirigir a la lista en caso de error
-            Navigation.NavigateTo("/admin/form-designer");
+            Navigation.NavigateTo("/admin/form-designer/list");
         }
     }
 
@@ -119,19 +127,53 @@ public partial class FormDesigner : AuthorizedPageBase
     {
         try
         {
+            Console.WriteLine($"[FormDesigner] LoadAvailableFields iniciado para entidad: {currentEntityName}");
+
             var request = new GetAvailableFieldsRequest
             {
                 EntityName = currentEntityName
             };
 
-            var response = await Api.PostAsync<CustomFieldApiResponse<GetAvailableFieldsResponse>>("api/formdesigner/available-fields", request, BackendType.FormBackend);
+            Console.WriteLine($"[FormDesigner] Enviando request: {System.Text.Json.JsonSerializer.Serialize(request)}");
+
+            var response = await Api.PostAsync<GetAvailableFieldsResponse>("api/form-designer/formulario/available-fields", request, BackendType.FormBackend);
+
+            Console.WriteLine($"[FormDesigner] Response.Success: {response.Success}");
+            Console.WriteLine($"[FormDesigner] Response.Data != null: {response.Data != null}");
+
             if (response.Success && response.Data != null)
             {
-                availableFields = response.Data.Data;
+                availableFields = response.Data;
+                Console.WriteLine($"[FormDesigner] SystemFields count: {availableFields.SystemFields?.Count ?? 0}");
+                Console.WriteLine($"[FormDesigner] CustomFields count: {availableFields.CustomFields?.Count ?? 0}");
+                Console.WriteLine($"[FormDesigner] RelatedFields count: {availableFields.RelatedFields?.Count ?? 0}");
+
+                if (availableFields.CustomFields?.Any() == true)
+                {
+                    Console.WriteLine("[FormDesigner] Custom fields encontrados:");
+                    foreach (var field in availableFields.CustomFields)
+                    {
+                        Console.WriteLine($"[FormDesigner]   - {field.DisplayName} ({field.FieldName}) - Type: {field.FieldType}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[FormDesigner] No se encontraron custom fields");
+                }
+
+                StateHasChanged();
+                Console.WriteLine("[FormDesigner] StateHasChanged() ejecutado");
+            }
+            else
+            {
+                Console.WriteLine($"[FormDesigner] Response fallida - Success: {response.Success}, Message: {response.Message}");
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[FormDesigner] Exception en LoadAvailableFields: {ex.Message}");
+            Console.WriteLine($"[FormDesigner] StackTrace: {ex.StackTrace}");
+
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Error,
@@ -146,7 +188,7 @@ public partial class FormDesigner : AuthorizedPageBase
     {
         try
         {
-            var response = await Api.GetAsync<FormLayoutDto>($"api/formdesigner/layout/{currentEntityName}", BackendType.FormBackend);
+            var response = await Api.GetAsync<FormLayoutDto>($"api/form-designer/formulario/layout/{currentEntityName}", BackendType.FormBackend);
             if (response.Success && response.Data != null)
             {
                 currentLayout = response.Data;
@@ -536,7 +578,7 @@ public partial class FormDesigner : AuthorizedPageBase
                 Sections = currentLayout.Sections
             };
 
-            var response = await Api.PostAsync<FormLayoutDto>("api/formdesigner/save-layout", request, BackendType.FormBackend);
+            var response = await Api.PostAsync<FormLayoutDto>("api/form-designer/formulario/save-layout", request, BackendType.FormBackend);
 
             if (response.Success)
             {
@@ -710,7 +752,7 @@ public partial class FormDesigner : AuthorizedPageBase
 
     private void GoBackToList()
     {
-        Navigation.NavigateTo("/admin/form-designer");
+        Navigation.NavigateTo("/admin/form-designer/list");
     }
 
     #endregion

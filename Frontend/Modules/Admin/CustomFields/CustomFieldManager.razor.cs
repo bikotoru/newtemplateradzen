@@ -61,7 +61,7 @@ public partial class CustomFieldManager : ComponentBase
             // Cargar campos de todas las entidades
             foreach (var entity in availableEntities)
             {
-                var response = await Api.GetAsync<List<CustomFieldDefinitionDto>>($"customfielddefinitions/{entity}");
+                var response = await Api.GetAsync<List<CustomFieldDefinitionDto>>($"api/customfielddefinitions/{entity}", BackendType.FormBackend);
                 if (response.Success && response.Data != null)
                 {
                     allFields.AddRange(response.Data);
@@ -244,9 +244,9 @@ public partial class CustomFieldManager : ComponentBase
                 IsEnabled = !field.IsEnabled
             };
 
-            var response = await Api.PutAsync<object>($"customfielddefinitions/{field.Id}", request);
+            var response = await Api.PutAsync<CustomFieldApiResponse<CustomFieldDefinitionDto>>($"api/customfielddefinitions/{field.Id}", request, BackendType.FormBackend);
 
-            if (response.Success)
+            if (response.Success && response.Data?.Success == true)
             {
                 field.IsEnabled = !field.IsEnabled;
                 NotificationService.Notify(new NotificationMessage
@@ -422,6 +422,13 @@ public partial class CustomFieldManager : ComponentBase
         public string Action { get; set; } = "";
         public string Permission { get; set; } = "";
         public string Icon { get; set; } = "";
+    }
+
+    public class CustomFieldApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public T Data { get; set; } = default!;
+        public string? Message { get; set; }
     }
 
     #endregion

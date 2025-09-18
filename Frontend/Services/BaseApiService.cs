@@ -131,12 +131,20 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> QueryPagedAsync(QueryRequest queryRequest)
+        public virtual async Task<ApiResponse<PagedResult<T>>> QueryPagedAsync(QueryRequest queryRequest, BackendType? backendType = null)
         {
             try
             {
                 _logger.LogInformation($"Executing paged query for {typeof(T).Name}");
-                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/paged", queryRequest);
+
+                if (backendType.HasValue)
+                {
+                    return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/paged", queryRequest, backendType.Value);
+                }
+                else
+                {
+                    return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/paged", queryRequest);
+                }
             }
             catch (Exception ex)
             {
@@ -268,24 +276,34 @@ namespace Frontend.Services
             return _queryService.For<T>(_baseUrl);
         }
 
+        public virtual QueryBuilder<T> Query(BackendType backendType)
+        {
+            return _queryService.For<T>(_baseUrl, backendType);
+        }
+
         public virtual QueryBuilder<T> QueryAsync()
         {
             return Query();
+        }
+
+        public virtual QueryBuilder<T> QueryAsync(BackendType backendType)
+        {
+            return Query(backendType);
         }
 
         #endregion
 
         #region Radzen Integration (LoadDataArgs)
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(LoadDataArgs args)
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(LoadDataArgs args, BackendType? backendType = null)
         {
             try
             {
                 _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
-                
+
                 var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, null);
                 _logger.LogInformation($"Using QueryPagedAsync with Filter: '{queryRequest.Filter ?? "null"}'");
-                return await QueryPagedAsync(queryRequest);
+                return await QueryPagedAsync(queryRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -296,11 +314,12 @@ namespace Frontend.Services
 
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, null, searchFields, null, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -313,11 +332,12 @@ namespace Frontend.Services
 
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, null, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, null, null, searchFields, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -331,6 +351,7 @@ namespace Frontend.Services
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
             QueryBuilder<T>? baseQuery = null,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
@@ -341,11 +362,11 @@ namespace Frontend.Services
                 {
                     _logger.LogInformation($"Using QueryRequest approach for column filters in {typeof(T).Name}");
                     var queryRequest = ConvertLoadDataArgsToQueryRequest(args, baseQuery, searchFields?.Select(sf => GetPropertyName(sf)).ToList());
-                    return await QueryPagedAsync(queryRequest);
+                    return await QueryPagedAsync(queryRequest, backendType);
                 }
-                
+
                 // Para otros casos sin filtros de columna, usar el QueryBuilder original
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields, null, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -359,11 +380,12 @@ namespace Frontend.Services
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
             QueryBuilder<T>? baseQuery,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -378,11 +400,12 @@ namespace Frontend.Services
             LoadDataArgs args,
             Expression<Func<T, TResult>> selector,
             QueryBuilder<T>? baseQuery = null,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields, null, backendType);
                 var result = await query.Select(selector).ToPagedResultAsync();
                 return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
             }
@@ -397,11 +420,12 @@ namespace Frontend.Services
             LoadDataArgs args,
             Expression<Func<T, TResult>> selector,
             QueryBuilder<T>? baseQuery,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields, backendType);
                 var result = await query.Select(selector).ToPagedResultAsync();
                 return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
             }
@@ -449,13 +473,15 @@ namespace Frontend.Services
         #region Private Helper Methods for LoadData
 
         private QueryBuilder<T> ConvertLoadDataArgsToQuery(
-            LoadDataArgs args, 
+            LoadDataArgs args,
             QueryBuilder<T>? baseQuery = null,
             Expression<Func<T, object>>[]? typedSearchFields = null,
-            List<string>? stringSearchFields = null)
+            List<string>? stringSearchFields = null,
+            BackendType? backendType = null)
         {
-            var query = baseQuery ?? Query();
+            var query = baseQuery ?? (backendType.HasValue ? Query(backendType.Value) : Query());
             query._baseUrl = _baseUrl;
+            query._backendType = backendType is null ? BackendType.GlobalBackend : backendType;
             if (args.Filters != null && args.Filters.Any())
             {
                 foreach (var filter in args.Filters)

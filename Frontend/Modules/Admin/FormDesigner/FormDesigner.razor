@@ -1,4 +1,4 @@
-@page "/admin/form-designer/{EntityName}"
+@page "/admin/form-designer/formulario/{EntityName}"
 @using Forms.Models.DTOs
 @using Forms.Models.Enums
 @inherits AuthorizedPageBase
@@ -72,7 +72,16 @@
                         <span>Crear Nuevo Campo</span>
                     </div>
                     <div class="field-items-container">
-                        @foreach (var field in availableFields.CustomFields)
+                        @{
+                            var customFieldsCount = availableFields?.CustomFields?.Count ?? 0;
+                            Console.WriteLine($"[FormDesigner Render] CustomFields count: {customFieldsCount}");
+                            Console.WriteLine($"[FormDesigner Render] availableFields != null: {availableFields != null}");
+                            Console.WriteLine($"[FormDesigner Render] availableFields?.CustomFields != null: {availableFields?.CustomFields != null}");
+                        }
+                        @if (availableFields?.CustomFields != null)
+                        {
+                            Console.WriteLine($"[FormDesigner Render] Entrando al foreach, count: {availableFields.CustomFields.Count}");
+                            @foreach (var field in availableFields.CustomFields)
                         {
                             <div class="field-item custom-field"
                                  @onclick="@(() => AddFieldToForm(field))">
@@ -86,6 +95,7 @@
                                             class="edit-field-btn"
                                             Click="@(() => EditCustomField(field))" />
                             </div>
+                            }
                         }
                     </div>
                 </RadzenCard>

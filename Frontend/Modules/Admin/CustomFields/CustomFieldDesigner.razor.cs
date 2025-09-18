@@ -324,7 +324,7 @@ public partial class CustomFieldDesigner : ComponentBase
             };
 
             // Llamar a la API
-            var response = await Api.PostAsync<CustomFieldDefinitionDto>("customfielddefinitions", request);
+            var response = await Api.PostAsync<CustomFieldDefinitionDto>("api/customfielddefinitions", request, BackendType.FormBackend);
 
             if (response.Success)
             {

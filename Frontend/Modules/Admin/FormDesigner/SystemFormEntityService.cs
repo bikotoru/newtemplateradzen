@@ -3,29 +3,30 @@ using Shared.Models.Entities.SystemEntities;
 using Shared.Models.Requests;
 using Shared.Models.Responses;
 using Shared.Models.QueryModels;
+using System.Linq.Expressions;
 
 namespace Frontend.Modules.Admin.FormDesigner
 {
-    public class SystemFormEntityService : BaseApiService<SystemFormEntity>
+    public class SystemFormEntitiesService : BaseApiService<SystemFormEntities>
     {
-        public SystemFormEntityService(API api, ILogger<SystemFormEntityService> logger)
-            : base(api, logger, "api/systemformentity")
+        public SystemFormEntitiesService(API api, ILogger<SystemFormEntitiesService> logger)
+            : base(api, logger, "api/form-designer/entities")
         {
         }
 
         // ✅ Hereda automáticamente todos los métodos base:
 
         // 📋 CRUD Individual:
-        // - CreateAsync(CreateRequest<SystemFormEntity>)
-        // - UpdateAsync(UpdateRequest<SystemFormEntity>)
+        // - CreateAsync(CreateRequest<SystemFormEntities>)
+        // - UpdateAsync(UpdateRequest<SystemFormEntities>)
         // - GetAllPagedAsync(page, pageSize)
         // - GetAllUnpagedAsync()
         // - GetByIdAsync(id)
         // - DeleteAsync(id)
 
         // 📦 CRUD por Lotes:
-        // - CreateBatchAsync(CreateBatchRequest<SystemFormEntity>)
-        // - UpdateBatchAsync(UpdateBatchRequest<SystemFormEntity>)
+        // - CreateBatchAsync(CreateBatchRequest<SystemFormEntities>)
+        // - UpdateBatchAsync(UpdateBatchRequest<SystemFormEntities>)
 
         // 🚀 Strongly Typed Query Builder:
         // - Query().Where(e => e.Active).Search("term").InFields(e => e.EntityName, e => e.DisplayName).ToListAsync()
@@ -36,7 +37,7 @@ namespace Frontend.Modules.Admin.FormDesigner
 
         // ✅ Solo métodos custom permitidos aquí
 
-        #region Métodos Específicos para SystemFormEntity
+        #region Métodos Específicos para SystemFormEntities
 
         /// <summary>
         /// Obtener entidades disponibles filtradas por organización del usuario
@@ -75,17 +76,17 @@ namespace Frontend.Modules.Admin.FormDesigner
         /// <summary>
         /// Obtener una entidad específica por nombre, verificando permisos de acceso
         /// </summary>
-        public async Task<ApiResponse<SystemFormEntity>> GetByEntityNameAsync(string entityName)
+        public async Task<ApiResponse<SystemFormEntities>> GetByEntityNameAsync(string entityName)
         {
             try
             {
                 var endpoint = $"{_baseUrl}/by-name/{entityName}";
-                return await _api.GetAsync<SystemFormEntity>(endpoint, backendType: BackendType.FormBackend);
+                return await _api.GetAsync<SystemFormEntities>(endpoint, backendType: BackendType.FormBackend);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener entidad por nombre: {EntityName}", entityName);
-                return ApiResponse<SystemFormEntity>.ErrorResponse($"Error al obtener entidad '{entityName}': {ex.Message}");
+                return ApiResponse<SystemFormEntities>.ErrorResponse($"Error al obtener entidad '{entityName}': {ex.Message}");
             }
         }
 
@@ -109,34 +110,115 @@ namespace Frontend.Modules.Admin.FormDesigner
         /// <summary>
         /// Ejecutar query segura con filtros automáticos por organización
         /// </summary>
-        public async Task<ApiResponse<List<SystemFormEntity>>> QuerySecureAsync(QueryRequest queryRequest)
+        public async Task<ApiResponse<List<SystemFormEntities>>> QuerySecureAsync(QueryRequest queryRequest)
         {
             try
             {
                 var endpoint = $"{_baseUrl}/query";
-                return await _api.PostAsync<List<SystemFormEntity>>(endpoint, queryRequest, BackendType.FormBackend);
+                return await _api.PostAsync<List<SystemFormEntities>>(endpoint, queryRequest, BackendType.FormBackend);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al ejecutar query segura");
-                return ApiResponse<List<SystemFormEntity>>.ErrorResponse($"Error al ejecutar query segura: {ex.Message}");
+                return ApiResponse<List<SystemFormEntities>>.ErrorResponse($"Error al ejecutar query segura: {ex.Message}");
             }
         }
 
         /// <summary>
         /// Ejecutar query segura paginada con filtros automáticos por organización
         /// </summary>
-        public async Task<ApiResponse<PagedResult<SystemFormEntity>>> QuerySecurePagedAsync(QueryRequest queryRequest)
+        public async Task<ApiResponse<PagedResult<SystemFormEntities>>> QuerySecurePagedAsync(QueryRequest queryRequest)
         {
             try
             {
                 var endpoint = $"{_baseUrl}/paged";
-                return await _api.PostAsync<PagedResult<SystemFormEntity>>(endpoint, queryRequest, BackendType.FormBackend);
+                return await _api.PostAsync<PagedResult<SystemFormEntities>>(endpoint, queryRequest, BackendType.FormBackend);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al ejecutar query segura paginada");
-                return ApiResponse<PagedResult<SystemFormEntity>>.ErrorResponse($"Error al ejecutar query segura paginada: {ex.Message}");
+                return ApiResponse<PagedResult<SystemFormEntities>>.ErrorResponse($"Error al ejecutar query segura paginada: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Override de Métodos Base para usar FormBackend
+
+        /// <summary>
+        /// Override para usar FormBackend en lugar de GlobalBackend
+        /// </summary>
+        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> QueryPagedAsync(QueryRequest queryRequest, BackendType? backendType = null)
+        {
+            try
+            {
+                _logger.LogInformation($"Executing paged query for SystemFormEntities using FormBackend");
+                return await _api.PostAsync<PagedResult<SystemFormEntities>>($"{_baseUrl}/paged", queryRequest, BackendType.FormBackend);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al ejecutar query paginada");
+                return ApiResponse<PagedResult<SystemFormEntities>>.ErrorResponse($"Error al ejecutar query paginada: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Override LoadDataAsync básico para usar FormBackend
+        /// </summary>
+        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> LoadDataAsync(LoadDataArgs args, BackendType? backendType = null)
+        {
+            try
+            {
+                _logger.LogInformation($"LoadDataAsync basic for SystemFormEntities using FormBackend - Skip: {args.Skip}, Top: {args.Top}");
+
+                // Llamar al método base que hace toda la lógica, pero nuestro QueryPagedAsync override usa FormBackend
+                return await base.LoadDataAsync(args, BackendType.FormBackend);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync for SystemFormEntities");
+                return ApiResponse<PagedResult<SystemFormEntities>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Override LoadDataAsync con typed search fields para usar FormBackend
+        /// </summary>
+        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> LoadDataAsync(
+            LoadDataArgs args,
+            BackendType? backendType = null,
+            params Expression<Func<SystemFormEntities, object>>[] searchFields)
+        {
+            try
+            {
+                // Llamar al método base que hace toda la lógica, pero nuestro QueryPagedAsync override usa FormBackend
+                return await base.LoadDataAsync(args, BackendType.FormBackend, searchFields);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with typed search fields for SystemFormEntities");
+                return ApiResponse<PagedResult<SystemFormEntities>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Override LoadDataAsync con base query para usar FormBackend
+        /// </summary>
+        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> LoadDataAsync(
+            LoadDataArgs args,
+            QueryBuilder<SystemFormEntities>? baseQuery = null,
+            BackendType? backendType = null,
+            params Expression<Func<SystemFormEntities, object>>[] searchFields)
+        {
+            try
+            {
+                // Llamar al método base que hace toda la lógica, pero nuestro QueryPagedAsync override usa FormBackend
+                return await base.LoadDataAsync(args, baseQuery, BackendType.FormBackend, searchFields);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception in LoadDataAsync with base query and typed search fields for SystemFormEntities");
+                return ApiResponse<PagedResult<SystemFormEntities>>.ErrorResponse($"Exception in LoadData: {ex.Message}");
             }
         }
 
@@ -147,7 +229,7 @@ namespace Frontend.Modules.Admin.FormDesigner
         /// <summary>
         /// Buscar entidades por término con filtros específicos
         /// </summary>
-        public async Task<List<SystemFormEntity>> SearchEntitiesAsync(
+        public async Task<List<SystemFormEntities>> SearchEntitiesAsync(
             string searchTerm,
             string? category = null,
             bool? allowCustomFields = null,
@@ -180,14 +262,14 @@ namespace Frontend.Modules.Admin.FormDesigner
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error en búsqueda de entidades con término: {SearchTerm}", searchTerm);
-                return new List<SystemFormEntity>();
+                return new List<SystemFormEntities>();
             }
         }
 
         /// <summary>
         /// Obtener entidades por categoría
         /// </summary>
-        public async Task<List<SystemFormEntity>> GetEntitiesByCategoryAsync(string category)
+        public async Task<List<SystemFormEntities>> GetEntitiesByCategoryAsync(string category)
         {
             try
             {
@@ -201,14 +283,14 @@ namespace Frontend.Modules.Admin.FormDesigner
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener entidades por categoría: {Category}", category);
-                return new List<SystemFormEntity>();
+                return new List<SystemFormEntities>();
             }
         }
 
         /// <summary>
         /// Obtener solo entidades del sistema (OrganizationId = null)
         /// </summary>
-        public async Task<List<SystemFormEntity>> GetSystemEntitiesAsync()
+        public async Task<List<SystemFormEntities>> GetSystemEntitiesAsync()
         {
             try
             {
@@ -222,7 +304,7 @@ namespace Frontend.Modules.Admin.FormDesigner
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener entidades del sistema");
-                return new List<SystemFormEntity>();
+                return new List<SystemFormEntities>();
             }
         }
 

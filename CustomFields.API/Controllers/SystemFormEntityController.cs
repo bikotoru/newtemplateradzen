@@ -4,23 +4,27 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Utils.Services;
 using Backend.Utils.Data;
 using Shared.Models.Entities.SystemEntities;
+using CustomFields.API.Services;
 
 namespace CustomFields.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class SystemFormEntityController : Backend.Controllers.BaseQueryController<SystemFormEntity>
+    [Route("api/form-designer/entities")]
+    public class SystemFormEntityController : Backend.Controllers.BaseQueryController<SystemFormEntities>
     {
         private readonly AppDbContext _context;
+        private readonly SystemFormEntityService _systemFormEntityService;
 
         public SystemFormEntityController(
-            BaseQueryService<SystemFormEntity> baseService,
+            BaseQueryService<SystemFormEntities> baseService,
+            SystemFormEntityService systemFormEntityService,
             ILogger<SystemFormEntityController> logger,
             IServiceProvider serviceProvider,
             AppDbContext context)
             : base(baseService, logger, serviceProvider)
         {
             _context = context;
+            _systemFormEntityService = systemFormEntityService;
         }
 
         /// <summary>
@@ -41,49 +45,33 @@ namespace CustomFields.API.Controllers
 
             try
             {
-                _logger.LogInformation($"Getting available SystemFormEntity for user {user!.Id}");
+                _logger.LogInformation($"Getting available SystemFormEntities for user {user!.Id}");
 
-                // Construir query base con filtros de seguridad
-                var query = _context.Set<SystemFormEntity>()
-                    .Where(x => x.Active == true &&
-                               (x.OrganizationId == null || x.OrganizationId == user.OrganizationId))
-                    .OrderBy(x => x.Category)
-                    .ThenBy(x => x.DisplayName);
+                // Usar el servicio especializado que maneja correctamente los filtros
+                var entities = await _systemFormEntityService.GetAvailableEntitiesAsync(
+                    user,
+                    search,
+                    category,
+                    allowCustomFields,
+                    (page - 1) * pageSize,
+                    pageSize);
 
-                // Aplicar filtros adicionales
-                if (!string.IsNullOrEmpty(search))
-                {
-                    var searchTerm = search.ToLower();
-                    query = (IOrderedQueryable<SystemFormEntity>)query.Where(x =>
-                        x.EntityName.ToLower().Contains(searchTerm) ||
-                        x.DisplayName.ToLower().Contains(searchTerm) ||
-                        (x.Description != null && x.Description.ToLower().Contains(searchTerm)));
-                }
-
-                if (!string.IsNullOrEmpty(category))
-                {
-                    query = (IOrderedQueryable<SystemFormEntity>)query.Where(x => x.Category == category);
-                }
-
-                if (allowCustomFields.HasValue)
-                {
-                    query = (IOrderedQueryable<SystemFormEntity>)query.Where(x => x.AllowCustomFields == allowCustomFields.Value);
-                }
-
-                // Aplicar paginación
-                var totalCount = query.Count();
-                var entities = query
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
+                // Para el total count, hacer query separada sin paginación
+                var totalCount = await _systemFormEntityService.GetAvailableEntitiesAsync(
+                    user,
+                    search,
+                    category,
+                    allowCustomFields,
+                    0,
+                    int.MaxValue);
 
                 var response = new
                 {
                     Entities = entities,
-                    TotalCount = totalCount,
+                    TotalCount = totalCount.Count,
                     Page = page,
                     PageSize = pageSize,
-                    TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                    TotalPages = (int)Math.Ceiling((double)totalCount.Count / pageSize)
                 };
 
                 return Ok(Shared.Models.Responses.ApiResponse<object>.SuccessResponse(
@@ -92,7 +80,7 @@ namespace CustomFields.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting available SystemFormEntity");
+                _logger.LogError(ex, "Error getting available SystemFormEntities");
                 return StatusCode(500, Shared.Models.Responses.ApiResponse<object>.ErrorResponse(
                     $"Error getting available entities: {ex.Message}"));
             }
@@ -110,28 +98,25 @@ namespace CustomFields.API.Controllers
 
             try
             {
-                _logger.LogInformation($"Getting SystemFormEntity by name: {entityName} for user {user!.Id}");
+                _logger.LogInformation($"Getting SystemFormEntities by name: {entityName} for user {user!.Id}");
 
-                var entity = _context.Set<SystemFormEntity>()
-                    .Where(x => x.Active == true &&
-                               x.EntityName == entityName &&
-                               (x.OrganizationId == null || x.OrganizationId == user.OrganizationId))
-                    .FirstOrDefault();
+                // Usar el servicio especializado que maneja correctamente los filtros
+                var entity = await _systemFormEntityService.GetByEntityNameAsync(entityName, user);
 
                 if (entity == null)
                 {
-                    return NotFound(Shared.Models.Responses.ApiResponse<SystemFormEntity>.ErrorResponse(
+                    return NotFound(Shared.Models.Responses.ApiResponse<SystemFormEntities>.ErrorResponse(
                         $"Entity '{entityName}' not found or access denied"));
                 }
 
-                return Ok(Shared.Models.Responses.ApiResponse<SystemFormEntity>.SuccessResponse(
+                return Ok(Shared.Models.Responses.ApiResponse<SystemFormEntities>.SuccessResponse(
                     entity,
                     "Entity retrieved successfully"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting SystemFormEntity by name: {entityName}");
-                return StatusCode(500, Shared.Models.Responses.ApiResponse<SystemFormEntity>.ErrorResponse(
+                _logger.LogError(ex, $"Error getting SystemFormEntities by name: {entityName}");
+                return StatusCode(500, Shared.Models.Responses.ApiResponse<SystemFormEntities>.ErrorResponse(
                     $"Error getting entity: {ex.Message}"));
             }
         }
@@ -148,19 +133,10 @@ namespace CustomFields.API.Controllers
 
             try
             {
-                _logger.LogInformation($"Getting SystemFormEntity categories for user {user!.Id}");
+                _logger.LogInformation($"Getting SystemFormEntities categories for user {user!.Id}");
 
-                var categories = _context.Set<SystemFormEntity>()
-                    .Where(x => x.Active == true &&
-                               (x.OrganizationId == null || x.OrganizationId == user.OrganizationId))
-                    .Select(x => x.Category)
-                    .Where(x => x != null)
-                    .Distinct()
-                    .OrderBy(x => x)
-                    .ToList()
-                    .Where(x => x != null)
-                    .Cast<string>()
-                    .ToList();
+                // Usar el servicio especializado que maneja correctamente los filtros
+                var categories = await _systemFormEntityService.GetCategoriesAsync(user);
 
                 return Ok(Shared.Models.Responses.ApiResponse<List<string>>.SuccessResponse(
                     categories,
@@ -168,14 +144,14 @@ namespace CustomFields.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting SystemFormEntity categories");
+                _logger.LogError(ex, "Error getting SystemFormEntities categories");
                 return StatusCode(500, Shared.Models.Responses.ApiResponse<List<string>>.ErrorResponse(
                     $"Error getting categories: {ex.Message}"));
             }
         }
 
         /// <summary>
-        /// Override del query base para aplicar siempre filtros de seguridad por organización
+        /// Override del query base para usar el servicio especializado que maneja filtros correctamente
         /// </summary>
         public override async Task<IActionResult> Query([FromBody] Shared.Models.QueryModels.QueryRequest queryRequest)
         {
@@ -185,37 +161,24 @@ namespace CustomFields.API.Controllers
 
             try
             {
-                _logger.LogInformation($"Executing secure query for SystemFormEntity for user {user!.Id}");
+                _logger.LogInformation($"Executing secure query for SystemFormEntities for user {user!.Id}");
 
-                // Agregar filtros de seguridad automáticamente
-                var securityFilter = $"(OrganizationId == null || OrganizationId == \"{user.OrganizationId}\") && Active == true";
-
-                // Combinar con filtros existentes
-                if (!string.IsNullOrEmpty(queryRequest.Filter))
-                {
-                    queryRequest.Filter = $"({queryRequest.Filter}) && ({securityFilter})";
-                }
-                else
-                {
-                    queryRequest.Filter = securityFilter;
-                }
-
-                // Ejecutar query base con filtros de seguridad aplicados
-                var result = await _baseService.QueryAsync(queryRequest, user);
-                return Ok(Shared.Models.Responses.ApiResponse<List<SystemFormEntity>>.SuccessResponse(
+                // Usar el servicio especializado que automáticamente aplica los filtros correctos
+                var result = await _systemFormEntityService.QueryAsync(queryRequest, user);
+                return Ok(Shared.Models.Responses.ApiResponse<List<SystemFormEntities>>.SuccessResponse(
                     result,
                     "Secure query executed successfully"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing secure query for SystemFormEntity");
-                return StatusCode(500, Shared.Models.Responses.ApiResponse<List<SystemFormEntity>>.ErrorResponse(
+                _logger.LogError(ex, "Error executing secure query for SystemFormEntities");
+                return StatusCode(500, Shared.Models.Responses.ApiResponse<List<SystemFormEntities>>.ErrorResponse(
                     $"Error executing secure query: {ex.Message}"));
             }
         }
 
         /// <summary>
-        /// Override del query paginado para aplicar siempre filtros de seguridad por organización
+        /// Override del query paginado para usar el servicio especializado que maneja filtros correctamente
         /// </summary>
         public override async Task<IActionResult> QueryPaged([FromBody] Shared.Models.QueryModels.QueryRequest queryRequest)
         {
@@ -225,33 +188,47 @@ namespace CustomFields.API.Controllers
 
             try
             {
-                _logger.LogInformation($"Executing secure paged query for SystemFormEntity for user {user!.Id}");
+                _logger.LogInformation($"Executing secure paged query for SystemFormEntities for user {user!.Id}");
 
-                // Agregar filtros de seguridad automáticamente
-                var securityFilter = $"(OrganizationId == null || OrganizationId == \"{user.OrganizationId}\") && Active == true";
-
-                // Combinar con filtros existentes
-                if (!string.IsNullOrEmpty(queryRequest.Filter))
-                {
-                    queryRequest.Filter = $"({queryRequest.Filter}) && ({securityFilter})";
-                }
-                else
-                {
-                    queryRequest.Filter = securityFilter;
-                }
-
-                // Ejecutar query base con filtros de seguridad aplicados
-                var result = await _baseService.QueryPagedAsync(queryRequest, user);
-                return Ok(Shared.Models.Responses.ApiResponse<Shared.Models.QueryModels.PagedResult<SystemFormEntity>>.SuccessResponse(
+                // Usar el servicio especializado que automáticamente aplica los filtros correctos
+                var result = await _systemFormEntityService.QueryPagedAsync(queryRequest, user);
+                return Ok(Shared.Models.Responses.ApiResponse<Shared.Models.QueryModels.PagedResult<SystemFormEntities>>.SuccessResponse(
                     result,
                     "Secure paged query executed successfully"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing secure paged query for SystemFormEntity");
-                return StatusCode(500, Shared.Models.Responses.ApiResponse<Shared.Models.QueryModels.PagedResult<SystemFormEntity>>.ErrorResponse(
+                _logger.LogError(ex, "Error executing secure paged query for SystemFormEntities");
+                return StatusCode(500, Shared.Models.Responses.ApiResponse<Shared.Models.QueryModels.PagedResult<SystemFormEntities>>.ErrorResponse(
                     $"Error executing secure paged query: {ex.Message}"));
             }
         }
+
+        #region Override de métodos de permisos para usar FORMDESIGNER
+
+        /// <summary>
+        /// Override para validar permisos usando FORMDESIGNER en lugar de SYSTEMFORMENTITY
+        /// </summary>
+        protected new async Task<(Shared.Models.DTOs.Auth.SessionDataDto? user, bool hasPermission, IActionResult? errorResult)> ValidatePermissionAsync(string action)
+        {
+            var user = await ValidarUsuario();
+
+            if (user == null)
+                return (null, false, Unauthorized());
+
+            // Usar FORMDESIGNER en lugar del nombre de la entidad
+            var permissionKey = $"FORMDESIGNER.{action.ToUpperInvariant()}";
+            var hasPermission = user.Permisos.Contains(permissionKey);
+
+            if (!hasPermission)
+            {
+                _logger.LogWarning("Usuario {UserId} no tiene permiso {Permission}", user.Id, permissionKey);
+                return (user, false, Forbidden($"Requiere permiso: {permissionKey}"));
+            }
+
+            return (user, true, null); // null = continuar con la ejecución
+        }
+
+        #endregion
     }
 }

@@ -2,6 +2,7 @@
 @using Forms.Models.Enums
 @using Forms.Models.Configurations
 @using ConditionEvaluationResult = Forms.Models.Configurations.ConditionEvaluationResult
+@using Frontend.Services
 @inject API Api
 @inject NotificationService NotificationService
 
@@ -57,7 +58,7 @@
             if (UserId.HasValue)
             {
                 // Cargar solo campos visibles para el usuario específico
-                endpoint = $"customfielddefinitions/{EntityName}/user/{UserId}";
+                endpoint = $"api/customfielddefinitions/{EntityName}/user/{UserId}";
                 if (OrganizationId.HasValue)
                 {
                     endpoint += $"?organizationId={OrganizationId}";
@@ -66,14 +67,14 @@
             else
             {
                 // Cargar todos los campos
-                endpoint = $"customfielddefinitions/{EntityName}";
+                endpoint = $"api/customfielddefinitions/{EntityName}";
                 if (OrganizationId.HasValue)
                 {
                     endpoint += $"?organizationId={OrganizationId}";
                 }
             }
 
-            var response = await Api.GetAsync<List<CustomFieldDefinitionDto>>(endpoint);
+            var response = await Api.GetAsync<List<CustomFieldDefinitionDto>>(endpoint, BackendType.FormBackend);
             if (response.Success && response.Data != null)
             {
                 customFields = response.Data;
@@ -108,7 +109,7 @@
                     FieldValues = FieldValues
                 };
 
-                var response = await Api.PostAsync<Dictionary<string, ConditionEvaluationResult>>("customfielddefinitions/evaluate-conditions", request);
+                var response = await Api.PostAsync<Dictionary<string, ConditionEvaluationResult>>("api/customfielddefinitions/evaluate-conditions", request, BackendType.FormBackend);
                 if (response.Success && response.Data != null)
                 {
                     conditionResults = response.Data;

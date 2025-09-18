@@ -2,6 +2,7 @@ using Backend.Modules.Auth.Login;
 using Backend.Modules.Admin.SystemPermissions;
 using Backend.Modules.Admin.SystemRoles;
 using Backend.Modules.Admin.SystemUsers;
+using Backend.Modules.Core.Localidades.Regions;
 using Backend.Utils.Security;
 
 namespace Backend.Services;
@@ -14,6 +15,7 @@ public static class ServiceRegistry
         services.AddScoped<LoginService>();
         
         // Module Services
+        services.AddScoped<RegionService>();
         services.AddScoped<SystemUserService>();
         services.AddScoped<SystemRoleService>();
         services.AddScoped<SystemPermissionService>();

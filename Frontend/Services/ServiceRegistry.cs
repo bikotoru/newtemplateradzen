@@ -1,4 +1,5 @@
 using Frontend.Services;
+using Frontend.Modules.Core.Localidades.Regions;
 using Frontend.Modules.Admin.SystemUsers;
 using Frontend.Modules.Admin.SystemRoles;
 using Frontend.Modules.Admin.SystemPermissions;
@@ -21,10 +22,11 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
 
         // Module Services
+        services.AddScoped<RegionService>();
         services.AddScoped<SystemUserService>();
         services.AddScoped<SystemRoleService>();
         services.AddScoped<SystemPermissionService>();
-        services.AddScoped<SystemFormEntityService>();
+        services.AddScoped<SystemFormEntitiesService>();
 
         return services;
     }

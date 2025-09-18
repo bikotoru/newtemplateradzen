@@ -1,0 +1,7 @@
+[
+  {
+    "entidad": "Region",
+    "modulo": "Core.Localidades",
+    "urllista": "/core/localidades/region/list"
+  }
+]

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Shared.Models.Entities.SystemEntities;
+namespace Shared.Models.Entities;
 
-public partial class SystemFormEntities
+/// <summary>
+/// Core.Localidades
+/// </summary>
+public partial class Region
 {
     public Guid Id { get; set; }
 
@@ -19,21 +22,7 @@ public partial class SystemFormEntities
 
     public bool Active { get; set; }
 
-    public string EntityName { get; set; } = null!;
-
-    public string DisplayName { get; set; } = null!;
-
-    public string? Description { get; set; }
-
-    public string TableName { get; set; } = null!;
-
-    public string? IconName { get; set; }
-
-    public string? Category { get; set; }
-
-    public bool AllowCustomFields { get; set; }
-
-    public int SortOrder { get; set; }
+    public string? Nombre { get; set; }
 
     public virtual SystemUsers? Creador { get; set; }
 

@@ -334,6 +334,35 @@ public class API
     }
 
     /// <summary>
+    /// PUT request que retorna ApiResponse&lt;T&gt; con BackendType específico
+    /// </summary>
+    public async Task<ApiResponse<T>> PutAsync<T>(string endpoint, object? data, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data, backendType);
+            var response = await _httpClient.SendAsync(request);
+            var jsonString = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonString, JsonOptions);
+                return result ?? ApiResponse<T>.ErrorResponse("Respuesta vacía del servidor");
+            }
+            else
+            {
+                var errorResponse = TryDeserializeError<T>(jsonString);
+                return errorResponse ?? ApiResponse<T>.ErrorResponse($"Error HTTP {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<T>.ErrorResponse($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// PUT request que retorna ApiResponse&lt;T&gt; sin autenticación
     /// </summary>
     public async Task<ApiResponse<T>> PutNoAuthAsync<T>(string endpoint, object? data = null)
