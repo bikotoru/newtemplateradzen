@@ -189,7 +189,8 @@ WHERE TABLE_NAME = '{table_name}' AND TABLE_TYPE = 'BASE TABLE'
     FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
     CreadorId UNIQUEIDENTIFIER NULL,
     ModificadorId UNIQUEIDENTIFIER NULL,
-    Active BIT DEFAULT 1 NOT NULL"""
+    Active BIT DEFAULT 1 NOT NULL,
+    CustomFields NVARCHAR(MAX) NULL"""
     
     def generate_custom_fields(self, fields):
         """Genera campos personalizados"""

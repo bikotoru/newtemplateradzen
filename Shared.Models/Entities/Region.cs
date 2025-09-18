@@ -24,6 +24,8 @@ public partial class Region
 
     public string? Nombre { get; set; }
 
+    public string? CustomFields { get; set; }
+
     public virtual SystemUsers? Creador { get; set; }
 
     public virtual SystemUsers? Modificador { get; set; }

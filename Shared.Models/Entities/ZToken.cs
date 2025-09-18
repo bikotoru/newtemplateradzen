@@ -15,5 +15,7 @@ public partial class ZToken
 
     public bool? Logout { get; set; }
 
+    public string? CustomFields { get; set; }
+
     public virtual SystemOrganization? Organization { get; set; }
 }
