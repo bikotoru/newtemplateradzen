@@ -32,6 +32,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemFormEntities> SystemFormEntities { get; set; }
 
+    public virtual DbSet<SystemFormLayouts> SystemFormLayouts { get; set; }
+
     public virtual DbSet<SystemOrganization> SystemOrganization { get; set; }
 
     public virtual DbSet<SystemPermissions> SystemPermissions { get; set; }
@@ -386,6 +388,26 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Organization).WithMany(p => p.SystemFormEntities)
                 .HasForeignKey(d => d.OrganizationId)
                 .HasConstraintName("FK_system_form_entities_OrganizationId");
+        });
+
+        modelBuilder.Entity<SystemFormLayouts>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_f__3214EC075CFFCC67");
+
+            entity.ToTable("system_form_layouts");
+
+            entity.HasIndex(e => e.EntityName, "IX_FormLayouts_Entity");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_FormLayouts_Org");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.EntityName).HasMaxLength(100);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FormName).HasMaxLength(255);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Version).HasDefaultValue(1);
         });
 
         modelBuilder.Entity<SystemOrganization>(entity =>

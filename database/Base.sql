@@ -696,6 +696,7 @@ PRINT '   • system_auditoria_detalle';
 PRINT '   • system_tablas_auditables';
 PRINT '   • system_campos_auditables';
 PRINT '   • system_form_entities (FormDesigner)';
+PRINT '   • system_form_layouts (Form Layouts)';
 PRINT '';
 PRINT '🎯 Listo para usar con el generador de modelos Python!';
 PRINT '========================================';
@@ -1173,6 +1174,82 @@ BEGIN
     INSERT INTO system_roles_permissions (system_roles_id, system_permissions_id, OrganizationId, CreadorId, Active)
     VALUES (@AdminRoleId_Permisos, @NewManageUsersPermissionId, @OrgId_Permisos, @AdminUserId_Permisos, 1);
     PRINT '✅ Permiso SYSTEMROLE.MANAGEUSERS asignado al rol Administrador';
+END
+
+-- ========================================
+-- 📋 TABLA: system_form_layouts (Form Designer)
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_form_layouts' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_form_layouts...';
+
+    CREATE TABLE system_form_layouts (
+        -- Identificador único
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Información básica del layout
+        EntityName NVARCHAR(100) NOT NULL,           -- "Region", "Empleado", etc.
+        FormName NVARCHAR(255) NOT NULL,             -- "Formulario Region"
+        Description NVARCHAR(500) NULL,              -- Descripción del layout
+
+        -- Control de estado y versión
+        IsDefault BIT DEFAULT 0 NOT NULL,            -- Si es el layout por defecto
+        IsActive BIT DEFAULT 1 NOT NULL,             -- Si está activo
+        Version INT DEFAULT 1 NOT NULL,              -- Control de versiones
+
+        -- Configuración completa del layout (JSON)
+        LayoutConfig NVARCHAR(MAX) NOT NULL,         -- JSON con secciones y campos
+
+        -- Auditoría estándar
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_form_layouts_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_form_layouts_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_form_layouts_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id),
+
+        -- Constraints de negocio
+        CONSTRAINT CHK_system_form_layouts_EntityName
+            CHECK (EntityName IS NOT NULL AND LEN(LTRIM(RTRIM(EntityName))) > 0),
+        CONSTRAINT CHK_system_form_layouts_FormName
+            CHECK (FormName IS NOT NULL AND LEN(LTRIM(RTRIM(FormName))) > 0),
+        CONSTRAINT CHK_system_form_layouts_LayoutConfig
+            CHECK (LayoutConfig IS NOT NULL AND LEN(LTRIM(RTRIM(LayoutConfig))) > 0),
+        CONSTRAINT CHK_system_form_layouts_Version
+            CHECK (Version >= 1)
+    );
+
+    -- Índices para performance
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_EntityName ON system_form_layouts(EntityName);
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_OrganizationId ON system_form_layouts(OrganizationId);
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_Active ON system_form_layouts(Active);
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_Default ON system_form_layouts(EntityName, IsDefault)
+        WHERE IsDefault = 1;
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_FechaCreacion ON system_form_layouts(FechaCreacion);
+    CREATE NONCLUSTERED INDEX IX_system_form_layouts_CreadorId ON system_form_layouts(CreadorId);
+
+    -- Índice único para garantizar solo un layout default por entidad/organización
+    CREATE UNIQUE NONCLUSTERED INDEX UX_system_form_layouts_DefaultUnique
+        ON system_form_layouts(EntityName, OrganizationId)
+        WHERE IsDefault = 1 AND IsActive = 1;
+
+    -- Validación de JSON (SQL Server 2016+)
+    ALTER TABLE system_form_layouts
+        ADD CONSTRAINT CHK_system_form_layouts_ValidJSON
+        CHECK (ISJSON(LayoutConfig) = 1);
+
+    PRINT '✅ Tabla system_form_layouts creada con índices, FK y constraints';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_form_layouts ya existe';
 END
 
 -- ========================================

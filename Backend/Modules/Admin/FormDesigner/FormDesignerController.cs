@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Utils.Security;
 using Shared.Models.DTOs.Auth;
 using Shared.Models.Responses;
+using System.Text.Json;
 
 namespace Backend.Modules.Admin.FormDesigner;
 
@@ -131,15 +132,46 @@ public class FormDesignerController : ControllerBase
 
             _logger.LogInformation($"Getting form layout for entity {entityName} by user {user.Id}");
 
-            // Por ahora retornar un layout por defecto basado en la entidad
-            var layout = CreateDefaultLayout(entityName, user.OrganizationId);
+            // Buscar layout guardado en la base de datos
+            var existingLayout = await _context.SystemFormLayouts
+                .Where(l => l.EntityName == entityName &&
+                           l.OrganizationId == user.OrganizationId &&
+                           l.IsDefault &&
+                           l.IsActive)
+                .FirstOrDefaultAsync();
 
-            return Ok(new { success = true, data = layout });
+            FormLayoutDto layout;
+
+            if (existingLayout != null)
+            {
+                // Deserializar las secciones desde JSON
+                var sections = JsonSerializer.Deserialize<List<FormSectionDto>>(existingLayout.LayoutConfig);
+
+                layout = new FormLayoutDto
+                {
+                    Id = existingLayout.Id,
+                    EntityName = existingLayout.EntityName,
+                    FormName = existingLayout.FormName,
+                    Description = existingLayout.Description,
+                    IsDefault = existingLayout.IsDefault,
+                    IsActive = existingLayout.IsActive,
+                    OrganizationId = existingLayout.OrganizationId,
+                    CreatedAt = existingLayout.FechaCreacion,
+                    Sections = sections ?? new List<FormSectionDto>()
+                };
+            }
+            else
+            {
+                // Si no existe, crear layout por defecto
+                layout = CreateDefaultLayout(entityName, user.OrganizationId);
+            }
+
+            return Ok(ApiResponse<FormLayoutDto>.SuccessResponse(layout));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting form layout for entity: {EntityName}", entityName);
-            return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            return StatusCode(500, ApiResponse<object>.ErrorResponse("Error interno del servidor"));
         }
     }
 
@@ -170,9 +202,28 @@ public class FormDesignerController : ControllerBase
 
             _logger.LogInformation($"Saving form layout for entity {request.EntityName} by user {user.Id}");
 
-            // Por ahora simular guardado exitoso
-            // En el futuro aquí se implementaría la lógica real de guardado en BD
-            var savedLayout = new FormLayoutDto
+            // Serializar las secciones a JSON
+            var sectionsJson = JsonSerializer.Serialize(request.Sections ?? new List<FormSectionDto>());
+
+            // Si es default, desactivar otros layouts default para la misma entidad
+            if (request.IsDefault)
+            {
+                var existingDefaults = await _context.SystemFormLayouts
+                    .Where(l => l.EntityName == request.EntityName &&
+                               l.OrganizationId == user.OrganizationId &&
+                               l.IsDefault)
+                    .ToListAsync();
+
+                foreach (var layout in existingDefaults)
+                {
+                    layout.IsDefault = false;
+                    layout.FechaModificacion = DateTime.UtcNow;
+                    layout.ModificadorId = user.Id;
+                }
+            }
+
+            // Crear nuevo layout
+            var newLayout = new SystemFormLayouts
             {
                 Id = Guid.NewGuid(),
                 EntityName = request.EntityName,
@@ -180,8 +231,28 @@ public class FormDesignerController : ControllerBase
                 Description = request.Description,
                 IsDefault = request.IsDefault,
                 IsActive = true,
+                Version = 1,
+                LayoutConfig = sectionsJson,
                 OrganizationId = user.OrganizationId,
-                CreatedAt = DateTime.UtcNow,
+                CreadorId = user.Id,
+                FechaCreacion = DateTime.UtcNow,
+                FechaModificacion = DateTime.UtcNow
+            };
+
+            _context.SystemFormLayouts.Add(newLayout);
+            await _context.SaveChangesAsync();
+
+            // Crear DTO de respuesta
+            var savedLayout = new FormLayoutDto
+            {
+                Id = newLayout.Id,
+                EntityName = newLayout.EntityName,
+                FormName = newLayout.FormName,
+                Description = newLayout.Description,
+                IsDefault = newLayout.IsDefault,
+                IsActive = newLayout.IsActive,
+                OrganizationId = newLayout.OrganizationId,
+                CreatedAt = newLayout.FechaCreacion,
                 Sections = request.Sections ?? new List<FormSectionDto>()
             };
 
