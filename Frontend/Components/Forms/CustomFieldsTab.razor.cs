@@ -109,14 +109,14 @@ public partial class CustomFieldsTab : ComponentBase
 
     private string GetSectionIcon(FormSectionDto section)
     {
-        // Icono basado en el título o tipo de sección
+        // Icono basado en el título o tipo de sección usando Material Design Icons
         return section.Title.ToLowerInvariant() switch
         {
-            var title when title.Contains("adicional") => "plus-circle",
-            var title when title.Contains("personal") => "user",
-            var title when title.Contains("contacto") => "envelope",
-            var title when title.Contains("dirección") || title.Contains("direccion") => "map-marker",
-            var title when title.Contains("financier") => "dollar-sign",
+            var title when title.Contains("adicional") => "extension",
+            var title when title.Contains("personal") => "person",
+            var title when title.Contains("contacto") => "contact_mail",
+            var title when title.Contains("dirección") || title.Contains("direccion") => "location_on",
+            var title when title.Contains("financier") => "attach_money",
             _ => "folder"
         };
     }
@@ -146,99 +146,83 @@ public partial class CustomFieldsTab : ComponentBase
     private RenderFragment RenderCustomField(FormFieldLayoutDto field) => builder =>
     {
         var value = GetFieldValue(field.FieldName);
-        var fieldId = $"custom_{field.FieldName}";
         var isDisabled = IsReadOnly || field.IsReadOnly;
+        var displayName = field.DisplayName + (field.IsRequired ? " *" : "");
 
-        // Label
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "form-group");
-        builder.AddAttribute(2, "style", "margin-bottom: 1rem;");
-
-        builder.OpenElement(10, "label");
-        builder.AddAttribute(11, "for", fieldId);
-        builder.AddAttribute(12, "style", "display: block; margin-bottom: 0.5rem; font-weight: 500;");
-        builder.AddContent(13, field.DisplayName);
-        if (field.IsRequired)
+        // Usar RadzenFormField exactamente como en el formulario original
+        builder.OpenComponent<RadzenFormField>(0);
+        builder.AddAttribute(1, "Text", displayName);
+        builder.AddAttribute(2, "Style", "width: 100%");
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
         {
-            builder.OpenElement(14, "span");
-            builder.AddAttribute(15, "style", "color: red; margin-left: 4px;");
-            builder.AddContent(16, "*");
-            builder.CloseElement();
-        }
-        builder.CloseElement(); // label
+            switch (field.FieldType.ToLowerInvariant())
+            {
+                case "textarea":
+                    fieldBuilder.OpenComponent<RadzenTextArea>(10);
+                    fieldBuilder.AddAttribute(11, "Value", value?.ToString() ?? "");
+                    fieldBuilder.AddAttribute(12, "Placeholder", $"Ingrese {field.DisplayName.ToLower()}");
+                    fieldBuilder.AddAttribute(13, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(14, "Rows", 3);
+                    fieldBuilder.AddAttribute(15, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
+                        await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
+                    fieldBuilder.CloseComponent();
+                    break;
 
-        // Input field
-        switch (field.FieldType.ToLowerInvariant())
-        {
-            case "textarea":
-                builder.OpenElement(20, "textarea");
-                builder.AddAttribute(21, "id", fieldId);
-                builder.AddAttribute(22, "class", "form-control");
-                builder.AddAttribute(23, "placeholder", $"Ingrese {field.DisplayName.ToLower()}");
-                builder.AddAttribute(24, "rows", 3);
-                builder.AddAttribute(25, "disabled", isDisabled);
-                builder.AddAttribute(26, "value", value?.ToString() ?? "");
-                builder.AddAttribute(27, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
-                    await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
-                break;
+                case "number":
+                    fieldBuilder.OpenComponent<RadzenNumeric<decimal?>>(20);
+                    fieldBuilder.AddAttribute(21, "Value", decimal.TryParse(value?.ToString(), out var numValue) ? numValue : (decimal?)null);
+                    fieldBuilder.AddAttribute(22, "Placeholder", $"Ingrese {field.DisplayName.ToLower()}");
+                    fieldBuilder.AddAttribute(23, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(24, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, async newValue =>
+                        await UpdateCustomFieldValue(field.FieldName, newValue)));
+                    fieldBuilder.CloseComponent();
+                    break;
 
-            case "number":
-                builder.OpenElement(30, "input");
-                builder.AddAttribute(31, "type", "number");
-                builder.AddAttribute(32, "id", fieldId);
-                builder.AddAttribute(33, "class", "form-control");
-                builder.AddAttribute(34, "placeholder", $"Ingrese {field.DisplayName.ToLower()}");
-                builder.AddAttribute(35, "disabled", isDisabled);
-                builder.AddAttribute(36, "value", value?.ToString() ?? "");
-                builder.AddAttribute(37, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
-                    await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
-                break;
+                case "date":
+                    fieldBuilder.OpenComponent<RadzenDatePicker<DateTime?>>(30);
+                    fieldBuilder.AddAttribute(31, "Value", DateTime.TryParse(value?.ToString(), out var dateValue) ? dateValue : (DateTime?)null);
+                    fieldBuilder.AddAttribute(32, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(33, "DateFormat", "dd/MM/yyyy");
+                    fieldBuilder.AddAttribute(34, "ValueChanged", EventCallback.Factory.Create<DateTime?>(this, async newValue =>
+                        await UpdateCustomFieldValue(field.FieldName, newValue?.ToString("yyyy-MM-dd"))));
+                    fieldBuilder.CloseComponent();
+                    break;
 
-            case "date":
-                builder.OpenElement(40, "input");
-                builder.AddAttribute(41, "type", "date");
-                builder.AddAttribute(42, "id", fieldId);
-                builder.AddAttribute(43, "class", "form-control");
-                builder.AddAttribute(44, "disabled", isDisabled);
-                var dateValue = DateTime.TryParse(value?.ToString(), out var date) ? date.ToString("yyyy-MM-dd") : "";
-                builder.AddAttribute(45, "value", dateValue);
-                builder.AddAttribute(46, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
-                    await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
-                break;
+                case "boolean":
+                    fieldBuilder.OpenComponent<RadzenSwitch>(40);
+                    fieldBuilder.AddAttribute(41, "Value", bool.TryParse(value?.ToString(), out var boolValue) && boolValue);
+                    fieldBuilder.AddAttribute(42, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(43, "ValueChanged", EventCallback.Factory.Create<bool>(this, async newValue =>
+                        await UpdateCustomFieldValue(field.FieldName, newValue)));
+                    fieldBuilder.CloseComponent();
+                    break;
 
-            case "boolean":
-                builder.OpenElement(50, "div");
-                builder.AddAttribute(51, "class", "form-check");
-                builder.OpenElement(52, "input");
-                builder.AddAttribute(53, "type", "checkbox");
-                builder.AddAttribute(54, "id", fieldId);
-                builder.AddAttribute(55, "class", "form-check-input");
-                builder.AddAttribute(56, "disabled", isDisabled);
-                var boolValue = bool.TryParse(value?.ToString(), out var b) && b;
-                builder.AddAttribute(57, "checked", boolValue);
-                builder.AddAttribute(58, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
-                    await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
-                builder.CloseElement();
-                break;
+                case "select":
+                    // Por ahora usamos opciones hardcodeadas para demo, luego se obtendrán de la configuración
+                    var selectOptions = new List<string> { "Opción 1", "Opción 2", "Opción 3" };
 
-            default: // text
-                builder.OpenElement(60, "input");
-                builder.AddAttribute(61, "type", "text");
-                builder.AddAttribute(62, "id", fieldId);
-                builder.AddAttribute(63, "class", "form-control");
-                builder.AddAttribute(64, "placeholder", $"Ingrese {field.DisplayName.ToLower()}");
-                builder.AddAttribute(65, "disabled", isDisabled);
-                builder.AddAttribute(66, "value", value?.ToString() ?? "");
-                builder.AddAttribute(67, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
-                    await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
-                break;
-        }
+                    fieldBuilder.OpenComponent<RadzenDropDown<string>>(50);
+                    fieldBuilder.AddAttribute(51, "Data", selectOptions);
+                    fieldBuilder.AddAttribute(52, "Value", value?.ToString());
+                    fieldBuilder.AddAttribute(53, "Placeholder", $"Seleccione {field.DisplayName.ToLower()}");
+                    fieldBuilder.AddAttribute(54, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(55, "AllowClear", true);
+                    fieldBuilder.AddAttribute(56, "ValueChanged", EventCallback.Factory.Create<string>(this, async newValue =>
+                        await UpdateCustomFieldValue(field.FieldName, newValue)));
+                    fieldBuilder.CloseComponent();
+                    break;
 
-        builder.CloseElement(); // div form-group
+                default: // text
+                    fieldBuilder.OpenComponent<RadzenTextBox>(60);
+                    fieldBuilder.AddAttribute(61, "Value", value?.ToString() ?? "");
+                    fieldBuilder.AddAttribute(62, "Placeholder", $"Ingrese {field.DisplayName.ToLower()}");
+                    fieldBuilder.AddAttribute(63, "Disabled", isDisabled);
+                    fieldBuilder.AddAttribute(64, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, async e =>
+                        await UpdateCustomFieldValue(field.FieldName, e.Value?.ToString())));
+                    fieldBuilder.CloseComponent();
+                    break;
+            }
+        }));
+        builder.CloseComponent();
     };
 }
