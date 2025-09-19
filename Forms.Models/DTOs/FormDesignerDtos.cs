@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Forms.Models.Configurations;
 
 namespace Forms.Models.DTOs;
 
@@ -54,6 +55,12 @@ public class FormFieldLayoutDto
     public bool IsVisible { get; set; } = true;
     public bool IsSystemField { get; set; }
     public string? Conditions { get; set; } // JSON con condiciones de visibilidad
+    public string? Description { get; set; }
+    public string? DefaultValue { get; set; }
+
+    // Configuraciones avanzadas para campos personalizados
+    public ValidationConfig? ValidationConfig { get; set; }
+    public UIConfig? UIConfig { get; set; }
 }
 
 public class FormLayoutDto

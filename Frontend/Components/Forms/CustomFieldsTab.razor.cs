@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using global::Forms.Models.DTOs;
 using global::Forms.Models.Enums;
 using System.Text.Json;
 using Radzen.Blazor;
+using Radzen;
 
 namespace Frontend.Components.Forms;
 
@@ -149,7 +151,14 @@ public partial class CustomFieldsTab : ComponentBase
         var isDisabled = IsReadOnly || field.IsReadOnly;
         var displayName = field.DisplayName + (field.IsRequired ? " *" : "");
 
-        // Usar RadzenFormField exactamente como en el formulario original
+        // Para campos boolean, no usar RadzenFormField
+        if (field.FieldType.ToLowerInvariant() == "boolean")
+        {
+            RenderBooleanField(builder, field, value, isDisabled, displayName);
+            return;
+        }
+
+        // Para otros tipos, usar RadzenFormField
         builder.OpenComponent<RadzenFormField>(0);
         builder.AddAttribute(1, "Text", displayName);
         builder.AddAttribute(2, "Style", "width: 100%");
@@ -188,28 +197,33 @@ public partial class CustomFieldsTab : ComponentBase
                     fieldBuilder.CloseComponent();
                     break;
 
-                case "boolean":
-                    fieldBuilder.OpenComponent<RadzenSwitch>(40);
-                    fieldBuilder.AddAttribute(41, "Value", bool.TryParse(value?.ToString(), out var boolValue) && boolValue);
-                    fieldBuilder.AddAttribute(42, "Disabled", isDisabled);
-                    fieldBuilder.AddAttribute(43, "ValueChanged", EventCallback.Factory.Create<bool>(this, async newValue =>
-                        await UpdateCustomFieldValue(field.FieldName, newValue)));
-                    fieldBuilder.CloseComponent();
-                    break;
-
                 case "select":
-                    // Por ahora usamos opciones hardcodeadas para demo, luego se obtendrán de la configuración
-                    var selectOptions = new List<string> { "Opción 1", "Opción 2", "Opción 3" };
+                    // Obtener opciones del uiConfig
+                    var selectOptions = field.UIConfig?.Options?.Where(o => !o.Disabled).ToList() ?? new List<global::Forms.Models.Configurations.SelectOption>();
 
-                    fieldBuilder.OpenComponent<RadzenDropDown<string>>(50);
-                    fieldBuilder.AddAttribute(51, "Data", selectOptions);
-                    fieldBuilder.AddAttribute(52, "Value", value?.ToString());
-                    fieldBuilder.AddAttribute(53, "Placeholder", $"Seleccione {field.DisplayName.ToLower()}");
-                    fieldBuilder.AddAttribute(54, "Disabled", isDisabled);
-                    fieldBuilder.AddAttribute(55, "AllowClear", true);
-                    fieldBuilder.AddAttribute(56, "ValueChanged", EventCallback.Factory.Create<string>(this, async newValue =>
-                        await UpdateCustomFieldValue(field.FieldName, newValue)));
-                    fieldBuilder.CloseComponent();
+                    if (selectOptions.Any())
+                    {
+                        fieldBuilder.OpenComponent<RadzenDropDown<string>>(50);
+                        fieldBuilder.AddAttribute(51, "Data", selectOptions);
+                        fieldBuilder.AddAttribute(52, "ValueProperty", "Value");
+                        fieldBuilder.AddAttribute(53, "TextProperty", "Label");
+                        fieldBuilder.AddAttribute(54, "Value", value?.ToString());
+                        fieldBuilder.AddAttribute(55, "Placeholder", $"Seleccione {field.DisplayName.ToLower()}");
+                        fieldBuilder.AddAttribute(56, "Disabled", isDisabled);
+                        fieldBuilder.AddAttribute(57, "AllowClear", true);
+                        fieldBuilder.AddAttribute(58, "ValueChanged", EventCallback.Factory.Create<string>(this, async newValue =>
+                            await UpdateCustomFieldValue(field.FieldName, newValue)));
+                        fieldBuilder.CloseComponent();
+                    }
+                    else
+                    {
+                        // Fallback si no hay opciones configuradas
+                        fieldBuilder.OpenComponent<RadzenTextBox>(59);
+                        fieldBuilder.AddAttribute(591, "Value", value?.ToString() ?? "");
+                        fieldBuilder.AddAttribute(592, "Placeholder", "No hay opciones configuradas");
+                        fieldBuilder.AddAttribute(593, "Disabled", true);
+                        fieldBuilder.CloseComponent();
+                    }
                     break;
 
                 default: // text
@@ -225,4 +239,48 @@ public partial class CustomFieldsTab : ComponentBase
         }));
         builder.CloseComponent();
     };
+
+    private void RenderBooleanField(RenderTreeBuilder builder, FormFieldLayoutDto field, object? value, bool isDisabled, string displayName)
+    {
+        var boolValue = bool.TryParse(value?.ToString(), out var parsedBool) && parsedBool;
+        var trueLabel = field.UIConfig?.TrueLabel ?? "Verdadero";
+        var falseLabel = field.UIConfig?.FalseLabel ?? "Falso";
+        var currentValue = boolValue ? trueLabel : falseLabel;
+
+        // Layout personalizado sin RadzenFormField
+        builder.OpenComponent<RadzenStack>(0);
+        builder.AddAttribute(1, "Orientation", Orientation.Horizontal);
+        builder.AddAttribute(2, "AlignItems", AlignItems.Center);
+        builder.AddAttribute(3, "Gap", "1rem");
+        builder.AddAttribute(4, "Style", "width: 100%; padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6;");
+        builder.AddAttribute(5, "ChildContent", (RenderFragment)(stackBuilder =>
+        {
+            // Label del campo
+            stackBuilder.OpenComponent<RadzenText>(10);
+            stackBuilder.AddAttribute(11, "TextStyle", TextStyle.Body1);
+            stackBuilder.AddAttribute(12, "Style", "font-weight: 500; min-width: 140px; color: #374151;");
+            stackBuilder.AddAttribute(13, "Text", displayName);
+            stackBuilder.CloseComponent();
+
+            // Switch
+            stackBuilder.OpenComponent<RadzenSwitch>(20);
+            stackBuilder.AddAttribute(21, "Value", boolValue);
+            stackBuilder.AddAttribute(22, "Name", field.FieldName);
+            stackBuilder.AddAttribute(23, "Disabled", isDisabled);
+            stackBuilder.AddAttribute(24, "ValueChanged", EventCallback.Factory.Create<bool>(this, async newValue =>
+            {
+                await UpdateCustomFieldValue(field.FieldName, newValue);
+                StateHasChanged(); // Para actualizar el valor mostrado
+            }));
+            stackBuilder.CloseComponent();
+
+            // Valor actual
+            stackBuilder.OpenComponent<RadzenText>(30);
+            stackBuilder.AddAttribute(31, "TextStyle", TextStyle.Body2);
+            stackBuilder.AddAttribute(32, "Style", $"color: {(boolValue ? "#10b981" : "#ef4444")}; font-weight: 500; margin-left: 0.5rem;");
+            stackBuilder.AddAttribute(33, "Text", currentValue);
+            stackBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+    }
 }

@@ -1,6 +1,8 @@
 @page "/admin/form-designer/formulario/{EntityName}"
 @using Forms.Models.DTOs
 @using Forms.Models.Enums
+@using Frontend.Components.Base
+@using Frontend.Components.Forms
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("FORMDESIGNER.UPDATE")]
 
@@ -57,6 +59,7 @@
     }
     else
     {
+
         <!-- Diseñador Principal -->
         <div class="designer-layout">
             <!-- Panel Izquierdo: Campos Disponibles -->
@@ -116,6 +119,78 @@
                                         Click="@AddNewSection" />
                         </RadzenStack>
                     </RadzenStack>
+
+                    <!-- Vista Previa Integrada -->
+                    @if (currentLayout.Sections.Any(s => s.Fields.Any(f => !f.IsSystemField)))
+                    {
+                        <div class="preview-section" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 2px dashed #0078d4;">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-info rz-mb-3">
+                                <RadzenIcon Icon="preview" class="rz-mr-2" />
+                                Vista Previa - Así se verá el formulario
+                            </RadzenText>
+
+                            <RadzenRow Gap="1rem">
+                                @foreach (var formSection in currentLayout.Sections.Where(s => s.Fields.Any(f => !f.IsSystemField)).OrderBy(s => s.SortOrder))
+                                {
+                                    <RadzenColumn Size="@(formSection.GridSize)">
+                                        <EssentialsCard Title="@(formSection.Title)"
+                                                       Icon="folder"
+                                                       IconColor="#0078d4"
+                                                       IsCollapsed="@(!formSection.IsExpanded)"
+                                                       ShowEssentials="false">
+
+                                            <ChildContent>
+                                                @if (!string.IsNullOrEmpty(formSection.Description))
+                                                {
+                                                    <div style="color: #666; margin-bottom: 1rem; font-size: 0.9rem; padding-bottom: 1rem; border-bottom: 1px solid #f3f4f6;">
+                                                        @(formSection.Description)
+                                                    </div>
+                                                }
+
+                                                @{
+                                                    var customFields = formSection.Fields.Where(f => !f.IsSystemField && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                                                    var rows = new List<List<FormFieldLayoutDto>>();
+                                                    var currentRow = new List<FormFieldLayoutDto>();
+                                                    var currentRowSize = 0;
+
+                                                    foreach (var field in customFields)
+                                                    {
+                                                        if (currentRowSize + field.GridSize > 12)
+                                                        {
+                                                            if (currentRow.Any())
+                                                            {
+                                                                rows.Add(currentRow);
+                                                                currentRow = new List<FormFieldLayoutDto>();
+                                                                currentRowSize = 0;
+                                                            }
+                                                        }
+                                                        currentRow.Add(field);
+                                                        currentRowSize += field.GridSize;
+                                                    }
+                                                    if (currentRow.Any())
+                                                    {
+                                                        rows.Add(currentRow);
+                                                    }
+                                                }
+
+                                                @foreach (var row in rows)
+                                                {
+                                                    <RadzenRow Gap="1rem" style="margin-bottom: 1rem;">
+                                                        @foreach (var field in row)
+                                                        {
+                                                            <RadzenColumn Size="@field.GridSize">
+                                                                @RenderSimpleFieldPreview(field)
+                                                            </RadzenColumn>
+                                                        }
+                                                    </RadzenRow>
+                                                }
+                                            </ChildContent>
+                                        </EssentialsCard>
+                                    </RadzenColumn>
+                                }
+                            </RadzenRow>
+                        </div>
+                    }
 
                     <div class="form-sections-container">
 

@@ -785,4 +785,78 @@ public partial class FormDesigner : AuthorizedPageBase
     }
 
     #endregion
+
+    #region Preview Methods
+
+    private RenderFragment RenderSimpleFieldPreview(FormFieldLayoutDto field) => builder =>
+    {
+        var displayName = field.DisplayName + (field.IsRequired ? " *" : "");
+
+        // Para campos boolean, usar diseño horizontal simple
+        if (field.FieldType.ToLowerInvariant() == "boolean")
+        {
+            builder.AddMarkupContent(0, $@"
+                <div style='width: 100%; padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 1rem;'>
+                    <span style='font-weight: 500; min-width: 140px; color: #374151;'>{displayName}</span>
+                    <div style='width: 40px; height: 20px; background: #10b981; border-radius: 10px; position: relative;'>
+                        <div style='width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);'></div>
+                    </div>
+                    <span style='color: #10b981; font-weight: 500;'>Activado</span>
+                </div>");
+            return;
+        }
+
+        // Para otros tipos, usar RadzenFormField simple
+        builder.OpenComponent<RadzenFormField>(0);
+        builder.AddAttribute(1, "Text", displayName);
+        builder.AddAttribute(2, "Style", "width: 100%");
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
+        {
+            switch (field.FieldType.ToLowerInvariant())
+            {
+                case "select":
+                    fieldBuilder.OpenComponent<RadzenTextBox>(10);
+                    fieldBuilder.AddAttribute(11, "Value", "Opción seleccionada");
+                    fieldBuilder.AddAttribute(12, "Disabled", true);
+                    fieldBuilder.AddAttribute(13, "Style", "width: 100%");
+                    fieldBuilder.CloseComponent();
+                    break;
+
+                case "date":
+                    fieldBuilder.OpenComponent<RadzenTextBox>(20);
+                    fieldBuilder.AddAttribute(21, "Value", DateTime.Now.ToString("dd/MM/yyyy"));
+                    fieldBuilder.AddAttribute(22, "Disabled", true);
+                    fieldBuilder.AddAttribute(23, "Style", "width: 100%");
+                    fieldBuilder.CloseComponent();
+                    break;
+
+                case "number":
+                    fieldBuilder.OpenComponent<RadzenTextBox>(30);
+                    fieldBuilder.AddAttribute(31, "Value", "123");
+                    fieldBuilder.AddAttribute(32, "Disabled", true);
+                    fieldBuilder.AddAttribute(33, "Style", "width: 100%");
+                    fieldBuilder.CloseComponent();
+                    break;
+
+                case "textarea":
+                    fieldBuilder.OpenComponent<RadzenTextArea>(40);
+                    fieldBuilder.AddAttribute(41, "Value", "Texto de ejemplo...");
+                    fieldBuilder.AddAttribute(42, "Disabled", true);
+                    fieldBuilder.AddAttribute(43, "Style", "width: 100%; height: 80px;");
+                    fieldBuilder.CloseComponent();
+                    break;
+
+                default: // text, email, etc.
+                    fieldBuilder.OpenComponent<RadzenTextBox>(50);
+                    fieldBuilder.AddAttribute(51, "Value", "Texto de ejemplo");
+                    fieldBuilder.AddAttribute(52, "Disabled", true);
+                    fieldBuilder.AddAttribute(53, "Style", "width: 100%");
+                    fieldBuilder.CloseComponent();
+                    break;
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    #endregion
 }

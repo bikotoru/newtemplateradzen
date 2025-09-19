@@ -1,6 +1,7 @@
 @using global::Forms.Models.DTOs
 @using Shared.Models.Responses
 @using System.Text.Json
+@using Frontend.Components.Base
 
 <div class="custom-fields-container">
     @if (isLoading)
@@ -12,60 +13,66 @@
     }
     else if (formLayout?.Sections.Any() == true)
     {
-        @foreach (var section in formLayout.Sections.Where(s => s.Fields.Any(f => f.IsSystemField == false)).OrderBy(s => s.SortOrder))
-        {
-            <div class="custom-section" style="margin-bottom: 2rem;">
-                <h4 style="color: #0078d4; margin-bottom: 1rem; border-bottom: 1px solid #e1e1e1; padding-bottom: 0.5rem;">
-                    <RadzenIcon Icon="@GetSectionIcon(section)" Style="margin-right: 8px;" />
-                    @(section.Title)
-                </h4>
+        <RadzenRow Gap="1rem">
+            @foreach (var section in formLayout.Sections.Where(s => s.Fields.Any(f => f.IsSystemField == false)).OrderBy(s => s.SortOrder))
+            {
+                <RadzenColumn Size="@(section.GridSize)">
+                    <EssentialsCard Title="@(section.Title)"
+                                   Icon="@GetSectionIcon(section)"
+                                   IconColor="#0078d4"
+                                   IsCollapsed="@(!section.IsExpanded)"
+                                   ShowEssentials="false">
 
-                @if (!string.IsNullOrEmpty(section.Description))
-                {
-                    <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
-                        @(section.Description)
-                    </p>
-                }
-
-                @{
-                    var customFields = section.Fields.Where(f => f.IsSystemField == false && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
-                    var rows = new List<List<FormFieldLayoutDto>>();
-                    var currentRow = new List<FormFieldLayoutDto>();
-                    var currentRowSize = 0;
-
-                    foreach (var field in customFields)
-                    {
-                        if (currentRowSize + field.GridSize > 12)
-                        {
-                            if (currentRow.Any())
+                        <ChildContent>
+                            @if (!string.IsNullOrEmpty(section.Description))
                             {
-                                rows.Add(currentRow);
-                                currentRow = new List<FormFieldLayoutDto>();
-                                currentRowSize = 0;
+                                <div style="color: #666; margin-bottom: 1rem; font-size: 0.9rem; padding-bottom: 1rem; border-bottom: 1px solid #f3f4f6;">
+                                    @(section.Description)
+                                </div>
                             }
-                        }
-                        currentRow.Add(field);
-                        currentRowSize += field.GridSize;
-                    }
-                    if (currentRow.Any())
-                    {
-                        rows.Add(currentRow);
-                    }
-                }
 
-                @foreach (var row in rows)
-                {
-                    <RadzenRow Gap="1rem" style="margin-bottom: 1rem;">
-                        @foreach (var field in row)
-                        {
-                            <RadzenColumn Size="@field.GridSize">
-                                @RenderCustomField(field)
-                            </RadzenColumn>
-                        }
-                    </RadzenRow>
-                }
-            </div>
-        }
+                            @{
+                                var customFields = section.Fields.Where(f => f.IsSystemField == false && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                                var rows = new List<List<FormFieldLayoutDto>>();
+                                var currentRow = new List<FormFieldLayoutDto>();
+                                var currentRowSize = 0;
+
+                                foreach (var field in customFields)
+                                {
+                                    if (currentRowSize + field.GridSize > 12)
+                                    {
+                                        if (currentRow.Any())
+                                        {
+                                            rows.Add(currentRow);
+                                            currentRow = new List<FormFieldLayoutDto>();
+                                            currentRowSize = 0;
+                                        }
+                                    }
+                                    currentRow.Add(field);
+                                    currentRowSize += field.GridSize;
+                                }
+                                if (currentRow.Any())
+                                {
+                                    rows.Add(currentRow);
+                                }
+                            }
+
+                            @foreach (var row in rows)
+                            {
+                                <RadzenRow Gap="1rem" style="margin-bottom: 1rem;">
+                                    @foreach (var field in row)
+                                    {
+                                        <RadzenColumn Size="@field.GridSize">
+                                            @RenderCustomField(field)
+                                        </RadzenColumn>
+                                    }
+                                </RadzenRow>
+                            }
+                        </ChildContent>
+                    </EssentialsCard>
+                </RadzenColumn>
+            }
+        </RadzenRow>
 
         @if (ValidationErrors.Any())
         {

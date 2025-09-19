@@ -7,6 +7,7 @@ using Backend.Utils.Security;
 using Shared.Models.DTOs.Auth;
 using Shared.Models.Responses;
 using System.Text.Json;
+using Forms.Models.Configurations;
 
 namespace Backend.Modules.Admin.FormDesigner;
 
@@ -146,6 +147,12 @@ public class FormDesignerController : ControllerBase
             {
                 // Deserializar las secciones desde JSON
                 var sections = JsonSerializer.Deserialize<List<FormSectionDto>>(existingLayout.LayoutConfig);
+
+                // Enriquecer los campos con información de uiConfig y validationConfig
+                if (sections != null)
+                {
+                    await EnrichFieldsWithCustomFieldData(sections, user.OrganizationId);
+                }
 
                 layout = new FormLayoutDto
                 {
@@ -409,6 +416,106 @@ public class FormDesignerController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validando usuario");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Enriquece los campos de las secciones con información de uiConfig y validationConfig desde SystemCustomFieldDefinitions
+    /// </summary>
+    private async Task EnrichFieldsWithCustomFieldData(List<FormSectionDto> sections, Guid? organizationId)
+    {
+        // Obtener todos los nombres de campos personalizados de las secciones
+        var customFieldNames = sections
+            .SelectMany(s => s.Fields)
+            .Where(f => !f.IsSystemField)
+            .Select(f => f.FieldName)
+            .Distinct()
+            .ToList();
+
+        if (!customFieldNames.Any())
+            return;
+
+        // Obtener la información completa de los campos personalizados
+        var customFieldsData = await _context.SystemCustomFieldDefinitions
+            .Where(cf => customFieldNames.Contains(cf.FieldName) &&
+                        cf.OrganizationId == organizationId &&
+                        cf.IsEnabled)
+            .Select(cf => new
+            {
+                cf.FieldName,
+                cf.ValidationConfig,
+                cf.Uiconfig,
+                cf.Description,
+                cf.DefaultValue
+            })
+            .ToListAsync();
+
+        // Crear un diccionario para búsqueda rápida
+        var fieldDataLookup = customFieldsData.ToDictionary(
+            cf => cf.FieldName,
+            cf => new
+            {
+                ValidationConfig = DeserializeValidationConfig(cf.ValidationConfig),
+                UIConfig = DeserializeUIConfig(cf.Uiconfig),
+                cf.Description,
+                cf.DefaultValue
+            }
+        );
+
+        // Enriquecer los campos en las secciones
+        foreach (var section in sections)
+        {
+            foreach (var field in section.Fields.Where(f => !f.IsSystemField))
+            {
+                if (fieldDataLookup.TryGetValue(field.FieldName, out var fieldData))
+                {
+                    field.ValidationConfig = fieldData.ValidationConfig;
+                    field.UIConfig = fieldData.UIConfig;
+
+                    // Actualizar descripción y valor por defecto si no están establecidos
+                    if (string.IsNullOrEmpty(field.Description))
+                        field.Description = fieldData.Description;
+
+                    if (string.IsNullOrEmpty(field.DefaultValue))
+                        field.DefaultValue = fieldData.DefaultValue;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Deserializa la configuración de validación desde JSON
+    /// </summary>
+    private static ValidationConfig? DeserializeValidationConfig(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<ValidationConfig>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Deserializa la configuración de UI desde JSON
+    /// </summary>
+    private static UIConfig? DeserializeUIConfig(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<UIConfig>(json);
+        }
+        catch
+        {
             return null;
         }
     }
