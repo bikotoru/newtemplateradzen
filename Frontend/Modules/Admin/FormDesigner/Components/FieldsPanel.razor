@@ -18,12 +18,18 @@
             {
                 @foreach (var field in AvailableFields.CustomFields)
                 {
-                    <div class="field-item custom-field" @onclick="@(() => OnAddFieldClick.InvokeAsync(field))">
+                    var isAdded = IsFieldAlreadyAdded(field.FieldName);
+                    <div class="field-item custom-field @(isAdded ? "field-added" : "")"
+                         @onclick="@(() => !isAdded ? OnAddFieldClick.InvokeAsync(field) : Task.CompletedTask)">
                         <RadzenIcon Icon="@GetFieldIcon(field.FieldType)" class="field-icon" />
                         <div class="field-info">
                             <div class="field-name">@field.DisplayName</div>
                             <div class="field-type">@GetFieldTypeDisplay(field.FieldType)</div>
                         </div>
+                        @if (isAdded)
+                        {
+                            <RadzenIcon Icon="check_circle" class="added-indicator" Title="Campo ya agregado al formulario" />
+                        }
                         <RadzenButton Icon="edit" Size="ButtonSize.ExtraSmall"
                                     Variant="Variant.Text"
                                     class="edit-field-btn"
@@ -65,6 +71,32 @@
 .field-item.custom-field {
     background: var(--rz-warning-lighter);
     border-left: 3px solid var(--rz-warning);
+}
+
+.field-item.field-added {
+    background: #f0f8f0;
+    border-left: 3px solid #28a745;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.field-item.field-added .field-name {
+    color: #28a745;
+    font-weight: 700;
+}
+
+.field-item.field-added .field-type {
+    color: #28a745;
+}
+
+.field-item.field-added .field-icon {
+    color: #28a745;
+}
+
+.field-item.field-added:hover {
+    border-color: #28a745;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    transform: none;
 }
 
 .field-icon {
@@ -118,5 +150,35 @@
 .add-icon {
     font-size: 1.5rem;
     margin-right: 0.75rem;
+}
+
+.added-indicator {
+    font-size: 1.2rem;
+    color: #28a745;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Tema oscuro */
+@@media (prefers-color-scheme: dark) {
+    .field-item.field-added {
+        background: #1a3a26;
+        border-left: 3px solid #51c878;
+    }
+
+    .field-item.field-added .field-name,
+    .field-item.field-added .field-type,
+    .field-item.field-added .field-icon {
+        color: #51c878;
+    }
+
+    .field-item.field-added:hover {
+        border-color: #51c878;
+        box-shadow: 0 2px 8px rgba(81, 200, 120, 0.3);
+    }
+
+    .added-indicator {
+        color: #51c878;
+    }
 }
 </style>
