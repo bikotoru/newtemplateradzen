@@ -3,6 +3,7 @@
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
+@using Frontend.Components.Forms
 @using Shared.Models.Entities
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("REGION.VIEW", "REGION.CREATE", "REGION.UPDATE")]
@@ -68,7 +69,37 @@
                         </RadzenRow>
                     </div>
                 </CrmTab>
-                
+
+                @if (hasCustomFields)
+                {
+                    <CrmTab Id="tab2" Title="Campos Adicionales" Icon="extension" IconColor="#6B46C1">
+                        <div class="scrollable-content">
+                            <RadzenRow JustifyContent="JustifyContent.Center">
+                                <RadzenColumn SizeLG="8" SizeMD="10" SizeSM="12">
+
+                                    <EssentialsCard Title="Campos Personalizados"
+                                                   Icon="extension"
+                                                   IconColor="#6B46C1"
+                                                   ShowEssentials="false">
+
+                                        <ChildContent>
+                                            @if (entity != null)
+                                            {
+                                                <CustomFieldsTab EntityName="Region"
+                                                               CustomFieldsValue="@entity.CustomFields"
+                                                               CustomFieldsValueChanged="@OnCustomFieldsChanged"
+                                                               IsReadOnly="@(!CanEdit)"
+                                                               @ref="customFieldsTab" />
+                                            }
+                                        </ChildContent>
+                                    </EssentialsCard>
+
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </div>
+                    </CrmTab>
+                }
+
             </CrmTabs>
         </div>
 

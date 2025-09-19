@@ -5,6 +5,9 @@ using Shared.Models.Builders;
 using Frontend.Services.Validation;
 using Frontend.Components.Validation;
 using Frontend.Components.Auth;
+using Frontend.Components.Forms;
+using global::Forms.Models.DTOs;
+using global::Forms.Models.Enums;
 using RegionEntity = Shared.Models.Entities.Region;
 using Radzen;
 using System.Linq.Expressions;
@@ -17,6 +20,7 @@ public partial class RegionFormulario : AuthorizedPageBase
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     [Inject] private NotificationService NotificationService { get; set; } = null!;
     [Inject] private DialogService DialogService { get; set; } = null!;
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = null!;
     
     [Parameter] public Guid? Id { get; set; }
 
@@ -25,6 +29,8 @@ public partial class RegionFormulario : AuthorizedPageBase
     private bool isEditMode => Id.HasValue;
     private bool isFormValid = false;
     private bool isNewlyCreated = false;
+    private bool hasCustomFields = false;
+    private CustomFieldsTab? customFieldsTab;
 
     // Propiedades de permisos
     private bool CanView => AuthService.HasPermission("REGION.VIEW");
@@ -76,6 +82,7 @@ public partial class RegionFormulario : AuthorizedPageBase
         }
         
         // No lookups to initialize
+        await CheckForCustomFields();
         StateHasChanged();
     }
 
@@ -117,6 +124,7 @@ public partial class RegionFormulario : AuthorizedPageBase
         {
             isLoading = false;
             DialogService.Close();
+            await CheckForCustomFields();
             StateHasChanged();
         }
     }
@@ -178,7 +186,7 @@ public partial class RegionFormulario : AuthorizedPageBase
                 });
                 return;
             }
-            
+
             if (entity.Nombre.Length < 3 || entity.Nombre.Length > 100)
             {
                 NotificationService.Notify(new NotificationMessage
@@ -186,6 +194,19 @@ public partial class RegionFormulario : AuthorizedPageBase
                     Severity = NotificationSeverity.Warning,
                     Summary = "Validación",
                     Detail = "El nombre debe tener entre 3 y 100 caracteres",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            // Validación de campos personalizados
+            if (hasCustomFields && customFieldsTab != null && !customFieldsTab.IsValid())
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Validación",
+                    Detail = "Por favor corrige los errores en los campos personalizados",
                     Duration = 4000
                 });
                 return;
@@ -262,5 +283,34 @@ public partial class RegionFormulario : AuthorizedPageBase
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task CheckForCustomFields()
+    {
+        try
+        {
+            // Inyectar API service para verificar si hay campos personalizados
+            var apiService = ServiceProvider.GetRequiredService<Frontend.Services.API>();
+            var response = await apiService.GetAsync<FormLayoutDto>("api/form-designer/formulario/layout/Region", BackendType.FormBackend);
+
+            if (response.Success && response.Data != null)
+            {
+                hasCustomFields = response.Data.Sections.Any(s => s.Fields.Any(f => !f.IsSystemField));
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[RegionFormulario] Error checking custom fields: {ex.Message}");
+            hasCustomFields = false;
+        }
+    }
+
+    private async Task OnCustomFieldsChanged(string? customFieldsJson)
+    {
+        if (entity != null)
+        {
+            entity.CustomFields = customFieldsJson;
+        }
+        await Task.CompletedTask;
     }
 }

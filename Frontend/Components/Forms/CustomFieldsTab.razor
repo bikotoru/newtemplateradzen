@@ -1,0 +1,75 @@
+@using global::Forms.Models.DTOs
+@using Shared.Models.Responses
+@using System.Text.Json
+
+<div class="custom-fields-container">
+    @if (isLoading)
+    {
+        <div class="loading-container" style="text-align: center; padding: 2rem;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+            <p style="margin-top: 1rem; color: #666;">Cargando campos personalizados...</p>
+        </div>
+    }
+    else if (formLayout?.Sections.Any() == true)
+    {
+        @foreach (var section in formLayout.Sections.Where(s => s.Fields.Any(f => f.IsSystemField == false)).OrderBy(s => s.SortOrder))
+        {
+            <div class="custom-section" style="margin-bottom: 2rem;">
+                <h4 style="color: #0078d4; margin-bottom: 1rem; border-bottom: 1px solid #e1e1e1; padding-bottom: 0.5rem;">
+                    <i class="fa fa-@GetSectionIcon(section)" style="margin-right: 8px;"></i>
+                    @(section.Title)
+                </h4>
+
+                @if (!string.IsNullOrEmpty(section.Description))
+                {
+                    <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">
+                        @(section.Description)
+                    </p>
+                }
+
+                <div class="row">
+                    @foreach (var field in section.Fields.Where(f => f.IsSystemField == false && f.IsVisible).OrderBy(f => f.SortOrder))
+                    {
+                        var columnClass = field.GridSize switch
+                        {
+                            4 => "col-md-4",
+                            6 => "col-md-6",
+                            8 => "col-md-8",
+                            12 => "col-md-12",
+                            _ => "col-md-6"
+                        };
+
+                        <div class="@columnClass">
+                            @RenderCustomField(field)
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (ValidationErrors.Any())
+        {
+            <div style="margin-top: 1rem;">
+                <div class="alert alert-danger">
+                    <strong>Errores de validación:</strong>
+                    <ul style="margin: 0.5rem 0 0 1rem;">
+                        @foreach (var error in ValidationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    }
+    else if (!hasCustomFields)
+    {
+        <div style="text-align: center; padding: 3rem; color: #666;">
+            <i class="fa fa-info-circle" style="font-size: 3rem; margin-bottom: 1rem; color: #ddd;"></i>
+            <p>No hay campos personalizados configurados para esta entidad.</p>
+            <p style="font-size: 0.9rem;">Configure campos personalizados en el Diseñador de Formularios.</p>
+        </div>
+    }
+</div>
