@@ -376,6 +376,47 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #endregion
 
+    #region Preview Actions
+
+    private async Task MoveFieldLeftInPreview(FormSectionDto section, FormFieldLayoutDto field)
+    {
+        await MoveFieldLeft(section, field);
+    }
+
+    private async Task MoveFieldRightInPreview(FormSectionDto section, FormFieldLayoutDto field)
+    {
+        await MoveFieldRight(section, field);
+    }
+
+    private async Task ConfigureFieldInPreview(FormFieldLayoutDto field)
+    {
+        await ConfigureField(field);
+    }
+
+    private async Task RemoveFieldFromPreview(FormSectionDto section, FormFieldLayoutDto field)
+    {
+        var confirmed = await DialogService.Confirm(
+            $"¿Estás seguro de que deseas eliminar el campo '{field.DisplayName}' de la vista previa?",
+            "Confirmar Eliminación",
+            new ConfirmOptions()
+            {
+                OkButtonText = "Eliminar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (confirmed == true)
+        {
+            await RemoveField(section, field);
+        }
+    }
+
+    private void OnFieldSizeChangedInPreview()
+    {
+        StateHasChanged();
+    }
+
+    #endregion
+
     #region Custom Fields Management
 
     private async Task CreateNewCustomField()
@@ -792,17 +833,23 @@ public partial class FormDesigner : AuthorizedPageBase
     {
         var displayName = field.DisplayName + (field.IsRequired ? " *" : "");
 
-        // Para campos boolean, usar diseño horizontal simple
+        // Para campos boolean, usar diseño horizontal simple pero dentro de un FormField
         if (field.FieldType.ToLowerInvariant() == "boolean")
         {
-            builder.AddMarkupContent(0, $@"
-                <div style='width: 100%; padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 1rem;'>
-                    <span style='font-weight: 500; min-width: 140px; color: #374151;'>{displayName}</span>
-                    <div style='width: 40px; height: 20px; background: #10b981; border-radius: 10px; position: relative;'>
-                        <div style='width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);'></div>
-                    </div>
-                    <span style='color: #10b981; font-weight: 500;'>Activado</span>
-                </div>");
+            builder.OpenComponent<RadzenFormField>(0);
+            builder.AddAttribute(1, "Text", displayName);
+            builder.AddAttribute(2, "Style", "width: 100%");
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
+            {
+                fieldBuilder.AddMarkupContent(0, $@"
+                    <div style='display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;'>
+                        <div style='width: 40px; height: 20px; background: #10b981; border-radius: 10px; position: relative;'>
+                            <div style='width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);'></div>
+                        </div>
+                        <span style='color: #10b981; font-weight: 500;'>Activado</span>
+                    </div>");
+            }));
+            builder.CloseComponent();
             return;
         }
 

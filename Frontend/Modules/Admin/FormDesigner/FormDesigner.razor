@@ -179,7 +179,50 @@
                                                         @foreach (var field in row)
                                                         {
                                                             <RadzenColumn Size="@field.GridSize">
-                                                                @RenderSimpleFieldPreview(field)
+                                                                <div class="form-field-container preview-field"
+                                                                     data-field-id="@field.Id">
+                                                                    <div class="field-wrapper">
+                                                                        <div class="field-controls">
+                                                                            @{
+                                                                                var fieldsInSection = formSection.Fields.Where(f => !f.IsSystemField && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                                                                                var currentIndex = fieldsInSection.IndexOf(field);
+                                                                            }
+
+                                                                            @if (currentIndex > 0)
+                                                                            {
+                                                                                <RadzenButton Icon="keyboard_arrow_left" Size="ButtonSize.ExtraSmall"
+                                                                                            Variant="Variant.Text"
+                                                                                            Click="@(() => MoveFieldLeftInPreview(formSection, field))"
+                                                                                            Title="Mover izquierda" />
+                                                                            }
+
+                                                                            @if (currentIndex < fieldsInSection.Count - 1)
+                                                                            {
+                                                                                <RadzenButton Icon="keyboard_arrow_right" Size="ButtonSize.ExtraSmall"
+                                                                                            Variant="Variant.Text"
+                                                                                            Click="@(() => MoveFieldRightInPreview(formSection, field))"
+                                                                                            Title="Mover derecha" />
+                                                                            }
+
+                                                                            <RadzenDropDown @bind-Value="field.GridSize"
+                                                                                          Data="@fieldSizeOptions"
+                                                                                          TextProperty="Text"
+                                                                                          ValueProperty="Value"
+                                                                                          Style="width: 80px;"
+                                                                                          Size="ButtonSize.ExtraSmall"
+                                                                                          Change="@(() => OnFieldSizeChangedInPreview())" />
+                                                                            <RadzenButton Icon="settings" Size="ButtonSize.ExtraSmall"
+                                                                                        Variant="Variant.Text"
+                                                                                        Click="@(() => ConfigureFieldInPreview(field))"
+                                                                                        Title="Propiedades" />
+                                                                            <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall"
+                                                                                        Variant="Variant.Text"
+                                                                                        Click="@(() => RemoveFieldFromPreview(formSection, field))"
+                                                                                        Title="Eliminar" />
+                                                                        </div>
+                                                                        @RenderSimpleFieldPreview(field)
+                                                                    </div>
+                                                                </div>
                                                             </RadzenColumn>
                                                         }
                                                     </RadzenRow>
@@ -577,6 +620,41 @@
     opacity: 1;
 }
 
+/* Estilos específicos para la Vista Previa */
+.preview-field {
+    position: relative;
+}
+
+.preview-field .field-wrapper {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.preview-field .field-wrapper:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.preview-field .field-controls {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: var(--rz-base-100);
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+    z-index: 10;
+    border: 1px solid var(--rz-border-color);
+}
+
+.preview-field .field-wrapper:hover .field-controls {
+    opacity: 1;
+}
+
 .entities-grid .rz-datatable-data tr:hover {
     background-color: var(--rz-primary-lighter);
     cursor: pointer;
@@ -627,6 +705,11 @@
     }
 
     .empty-canvas, .empty-section {
+        border-color: var(--rz-border-color-dark);
+    }
+
+    .preview-field .field-controls {
+        background: var(--rz-base-200);
         border-color: var(--rz-border-color-dark);
     }
 }
