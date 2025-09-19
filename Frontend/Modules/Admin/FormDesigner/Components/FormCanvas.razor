@@ -1,7 +1,6 @@
 @using Forms.Models.DTOs
 @using Forms.Models.Enums
 @using Microsoft.AspNetCore.Components.Rendering
-@using Frontend.Modules.Admin.FormDesigner.Components
 
 <div class="form-canvas">
     <RadzenCard class="rz-h-100">
@@ -18,21 +17,6 @@
             </RadzenStack>
         </RadzenStack>
 
-        <!-- Vista Previa Integrada -->
-        @if (HasPreviewFields)
-        {
-            <PreviewSection CurrentLayout="@CurrentLayout"
-                          SelectedSection="@SelectedSection"
-                          FieldSizeOptions="@FieldSizeOptions"
-                          OnSelectSection="@OnSelectSection"
-                          OnConfigureSection="@OnConfigureSection"
-                          OnDeleteSection="@OnDeleteSection"
-                          OnMoveFieldLeft="@OnMoveFieldLeft"
-                          OnMoveFieldRight="@OnMoveFieldRight"
-                          OnConfigureField="@OnConfigureField"
-                          OnRemoveField="@OnRemoveField"
-                          OnFieldSizeChanged="@OnFieldSizeChanged" />
-        }
 
         <div class="form-sections-container">
             @if (!CurrentLayout.Sections.Any())

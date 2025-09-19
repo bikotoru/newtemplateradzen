@@ -21,6 +21,7 @@ public partial class PreviewSection : ComponentBase
     [Parameter] public EventCallback<FormFieldLayoutDto> OnConfigureField { get; set; }
     [Parameter] public EventCallback<(FormSectionDto, FormFieldLayoutDto)> OnRemoveField { get; set; }
     [Parameter] public EventCallback OnFieldSizeChanged { get; set; }
+    [Parameter] public EventCallback OnAddSection { get; set; }
 
 
     private RenderFragment RenderFieldPreview(FormFieldLayoutDto field) => builder =>

@@ -68,20 +68,19 @@
                         OnEditFieldClick="@EditCustomField"
                         OnCreateFieldClick="@ShowCreateFieldDialog" />
 
-            <!-- Canvas Central: Diseño del Formulario -->
-            <FormCanvas CurrentLayout="@currentLayout"
-                       SelectedSection="@selectedSection"
-                       GridSizeOptions="@gridSizeOptions"
-                       FieldSizeOptions="@fieldSizeOptions"
-                       OnAddSection="@AddNewSection"
-                       OnSelectSection="@SelectSection"
-                       OnConfigureSection="@ConfigureSection"
-                       OnDeleteSection="@DeleteSection"
-                       OnMoveFieldLeft="@HandleMoveFieldLeft"
-                       OnMoveFieldRight="@HandleMoveFieldRight"
-                       OnConfigureField="@ConfigureField"
-                       OnRemoveField="@HandleRemoveField"
-                       OnFieldSizeChanged="@OnFieldSizeChangedInPreview" />
+            <!-- Vista Previa Central: Formulario Funcional -->
+            <PreviewSection CurrentLayout="@currentLayout"
+                          SelectedSection="@selectedSection"
+                          FieldSizeOptions="@fieldSizeOptions"
+                          OnAddSection="@AddNewSection"
+                          OnSelectSection="@SelectSection"
+                          OnConfigureSection="@ConfigureSection"
+                          OnDeleteSection="@DeleteSection"
+                          OnMoveFieldLeft="@HandleMoveFieldLeft"
+                          OnMoveFieldRight="@HandleMoveFieldRight"
+                          OnConfigureField="@ConfigureField"
+                          OnRemoveField="@HandleRemoveField"
+                          OnFieldSizeChanged="@OnFieldSizeChangedInPreview" />
 
             <!-- Panel Derecho: Propiedades -->
             <PropertiesPanel SelectedField="@selectedField"

@@ -1,15 +1,33 @@
 @using Forms.Models.DTOs
 @using Frontend.Components.Base
 
-<div class="preview-section" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 2px dashed #0078d4;">
-    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-info rz-mb-3">
-        <RadzenIcon Icon="preview" class="rz-mr-2" />
-        Vista Previa - Así se verá el formulario
-    </RadzenText>
+<div class="preview-section">
+    <RadzenCard class="rz-h-100">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" class="rz-mb-3">
+            <RadzenText TextStyle="TextStyle.H6">
+                <RadzenIcon Icon="preview" class="rz-mr-2" />
+                Vista Previa - Así se verá el formulario
+            </RadzenText>
+            <RadzenButton Icon="add" Text="Agregar Sección"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Outlined"
+                        Click="@OnAddSection" />
+        </RadzenStack>
 
-    <RadzenRow Gap="1rem">
-        @foreach (var formSection in CurrentLayout.Sections.Where(s => s.Fields.Any(f => !f.IsSystemField)).OrderBy(s => s.SortOrder))
-        {
+    @if (!CurrentLayout.Sections.Any())
+    {
+        <div class="empty-canvas">
+            <RadzenIcon Icon="web_asset_off" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+            <RadzenText TextStyle="TextStyle.H6" class="rz-color-disabled rz-mt-2">
+                No hay secciones creadas. Agrega una sección para comenzar.
+            </RadzenText>
+        </div>
+    }
+    else
+    {
+        <RadzenRow Gap="1rem">
+            @foreach (var formSection in CurrentLayout.Sections.OrderBy(s => s.SortOrder))
+            {
             <RadzenColumn Size="@(formSection.GridSize)">
                 <EssentialsCard Title="@(formSection.Title)"
                                Icon="folder"
@@ -59,6 +77,15 @@
                             {
                                 rows.Add(currentRow);
                             }
+                        }
+
+                        @if (!customFields.Any())
+                        {
+                            <div style="text-align: center; padding: 2rem; border: 2px dashed #e5e7eb; border-radius: 8px; color: #9ca3af;">
+                                <RadzenIcon Icon="add_circle_outline" Style="font-size: 2rem; margin-bottom: 0.5rem;" />
+                                <div>Esta sección está vacía</div>
+                                <div style="font-size: 0.9rem;">Arrastra campos aquí desde el panel izquierdo</div>
+                            </div>
                         }
 
                         @foreach (var row in rows)
@@ -118,11 +145,28 @@
                     </ChildContent>
                 </EssentialsCard>
             </RadzenColumn>
-        }
-    </RadzenRow>
+            }
+        </RadzenRow>
+    }
+    </RadzenCard>
 </div>
 
 <style>
+.preview-section {
+    height: 100%;
+}
+
+.empty-canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    border: 2px dashed var(--rz-border-color);
+    border-radius: 8px;
+    margin: 2rem 0;
+}
+
 /* Estilos específicos para la Vista Previa */
 .preview-field {
     position: relative;

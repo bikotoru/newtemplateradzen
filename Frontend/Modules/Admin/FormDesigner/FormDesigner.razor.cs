@@ -283,14 +283,20 @@ public partial class FormDesigner : AuthorizedPageBase
 
     private async Task AddFieldToForm(FormFieldItemDto field)
     {
-        // Si no hay secciones, crear una por defecto
-        if (!currentLayout.Sections.Any())
+        // Verificar que hay una sección seleccionada
+        if (selectedSection == null)
         {
-            await AddNewSection();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Seleccionar Sección",
+                Detail = "Primero debes seleccionar una sección haciendo clic en el botón 'Seleccionar' de la sección donde deseas agregar el campo.",
+                Duration = 4000
+            });
+            return;
         }
 
-        var firstSection = currentLayout.Sections.First();
-        await AddFieldToSection(firstSection, field);
+        await AddFieldToSection(selectedSection, field);
     }
 
     private async Task AddFieldToSection(FormSectionDto section, FormFieldItemDto field)

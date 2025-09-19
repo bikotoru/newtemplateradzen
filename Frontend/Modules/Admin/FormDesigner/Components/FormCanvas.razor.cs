@@ -25,7 +25,6 @@ public partial class FormCanvas : ComponentBase
     [Parameter] public EventCallback OnFieldSizeChanged { get; set; }
 
 
-    private bool HasPreviewFields => CurrentLayout.Sections.Any(s => s.Fields.Any(f => !f.IsSystemField));
 
     private string GetSectionGridStyle(FormSectionDto section)
     {
