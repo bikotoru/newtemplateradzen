@@ -301,15 +301,15 @@ public partial class FormDesigner : AuthorizedPageBase
 
     private async Task AddFieldToSection(FormSectionDto section, FormFieldItemDto field)
     {
-        // Verificar que el campo no esté ya en la sección
-        if (section.Fields.Any(f => f.FieldName == field.FieldName))
+        // Verificar que el campo no esté ya en ninguna sección del formulario
+        if (currentLayout.Sections.Any(s => s.Fields.Any(f => f.FieldName == field.FieldName)))
         {
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Warning,
                 Summary = "Campo ya existe",
-                Detail = $"El campo '{field.DisplayName}' ya está en esta sección.",
-                Duration = 3000
+                Detail = $"El campo '{field.DisplayName}' ya está agregado en el formulario. Cada campo solo puede usarse una vez.",
+                Duration = 4000
             });
             return;
         }
@@ -328,7 +328,7 @@ public partial class FormDesigner : AuthorizedPageBase
 
         section.Fields.Add(newField);
         selectedField = newField;
-        selectedSection = null;
+        // Mantener selectedSection para agregar campos más rápidamente
         StateHasChanged();
     }
 

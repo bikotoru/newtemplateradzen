@@ -1,5 +1,5 @@
 @inject IJSRuntime JSRuntime
-    <div class="essentials-card">
+    <div class="essentials-card @(IsSelected ? "card-selected" : "")">
         <div class="card-header @(IsSelected ? "selected" : "")" @onclick="HandleHeaderClick">
             <div class="header-left" @onclick="ToggleCollapsed" @onclick:stopPropagation="true">
                 <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
@@ -23,11 +23,12 @@
                     <div class="action-buttons">
                         @if (ShowSelectButton)
                         {
-                            <RadzenButton Icon="@(IsSelected ? "radio_button_checked" : "radio_button_unchecked")"
+                            <RadzenButton Icon="@(IsSelected ? "check_circle" : "radio_button_unchecked")"
                                         Size="ButtonSize.ExtraSmall"
-                                        Variant="Variant.Text"
+                                        Variant="@(IsSelected ? Variant.Filled : Variant.Text)"
+                                        ButtonStyle="@(IsSelected ? ButtonStyle.Success : ButtonStyle.Base)"
                                         Click="HandleSelectClick"
-                                        Title="Seleccionar"
+                                        Title="@(IsSelected ? "Seleccionado" : "Seleccionar")"
                                         @onclick:stopPropagation="true" />
                         }
                         @if (ShowSettingsButton)
@@ -152,6 +153,13 @@
         border-radius: 2px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         margin-bottom: 16px;
+        transition: all 0.2s ease;
+    }
+
+    .essentials-card.card-selected {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 1px #0078d4, 0 8px 24px rgba(0, 120, 212, 0.15);
+        transform: translateY(-2px);
     }
 
     body.dark-theme .essentials-card,
@@ -159,6 +167,13 @@
         background: #1e1e1e;
         border-color: #3c3c3c;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    body.dark-theme .essentials-card.card-selected,
+    [data-theme="dark"] .essentials-card.card-selected {
+        border-color: #106ebe;
+        box-shadow: 0 0 0 1px #106ebe, 0 8px 24px rgba(16, 110, 190, 0.2);
+        transform: translateY(-2px);
     }
 
     .card-header {
@@ -174,9 +189,10 @@
     }
 
     .card-header.selected {
-        background: #e6f3ff;
+        background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%);
         border-color: #0078d4;
-        box-shadow: 0 0 0 1px #0078d4;
+        box-shadow: 0 0 0 2px #0078d4, 0 4px 12px rgba(0, 120, 212, 0.2);
+        transform: translateY(-1px);
     }
 
     body.dark-theme .card-header,
@@ -187,9 +203,10 @@
 
     body.dark-theme .card-header.selected,
     [data-theme="dark"] .card-header.selected {
-        background: #1a3a5c;
+        background: linear-gradient(135deg, #1a3a5c 0%, #0d2d4a 100%);
         border-color: #106ebe;
-        box-shadow: 0 0 0 1px #106ebe;
+        box-shadow: 0 0 0 2px #106ebe, 0 4px 12px rgba(16, 110, 190, 0.3);
+        transform: translateY(-1px);
     }
 
     .card-header:hover {
