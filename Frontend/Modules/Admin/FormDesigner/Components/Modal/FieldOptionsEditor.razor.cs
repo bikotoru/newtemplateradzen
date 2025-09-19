@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Radzen;
 using Forms.Models.Configurations;
 
-namespace Frontend.Modules.Admin.FormDesigner;
+namespace Frontend.Modules.Admin.FormDesigner.Components.Modal;
 
 public partial class FieldOptionsEditor : ComponentBase
 {

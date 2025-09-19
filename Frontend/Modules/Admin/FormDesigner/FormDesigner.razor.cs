@@ -8,6 +8,8 @@ using Forms.Models.DTOs;
 using Forms.Models.Enums;
 using Frontend.Services;
 using Frontend.Modules.Admin.CustomFields;
+using Frontend.Modules.Admin.FormDesigner.Components.Modal;
+using Frontend.Modules.Admin.FormDesigner.Components.Common;
 using Shared.Models.Entities.SystemEntities;
 using Shared.Models.Responses;
 using System.Text.Json;
@@ -384,27 +386,22 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #endregion
 
-    #region Preview Actions
+    #region Event Handlers
 
-    private async Task MoveFieldLeftInPreview(FormSectionDto section, FormFieldLayoutDto field)
+    private async Task HandleMoveFieldLeft((FormSectionDto section, FormFieldLayoutDto field) args)
     {
-        await MoveFieldLeft(section, field);
+        await MoveFieldLeft(args.section, args.field);
     }
 
-    private async Task MoveFieldRightInPreview(FormSectionDto section, FormFieldLayoutDto field)
+    private async Task HandleMoveFieldRight((FormSectionDto section, FormFieldLayoutDto field) args)
     {
-        await MoveFieldRight(section, field);
+        await MoveFieldRight(args.section, args.field);
     }
 
-    private async Task ConfigureFieldInPreview(FormFieldLayoutDto field)
-    {
-        await ConfigureField(field);
-    }
-
-    private async Task RemoveFieldFromPreview(FormSectionDto section, FormFieldLayoutDto field)
+    private async Task HandleRemoveField((FormSectionDto section, FormFieldLayoutDto field) args)
     {
         var confirmed = await DialogService.Confirm(
-            $"¿Estás seguro de que deseas eliminar el campo '{field.DisplayName}' de la vista previa?",
+            $"¿Estás seguro de que deseas eliminar el campo '{args.field.DisplayName}'?",
             "Confirmar Eliminación",
             new ConfirmOptions()
             {
@@ -414,16 +411,16 @@ public partial class FormDesigner : AuthorizedPageBase
 
         if (confirmed == true)
         {
-            await RemoveField(section, field);
+            await RemoveField(args.section, args.field);
         }
     }
+
+    #endregion
 
     private void OnFieldSizeChangedInPreview()
     {
         StateHasChanged();
     }
-
-    #endregion
 
     #region Options Management
 
@@ -511,144 +508,6 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #endregion
 
-    #region Utilidades
-
-    private string GetFieldIcon(string fieldType)
-    {
-        return fieldType switch
-        {
-            "text" => "text_fields",
-            "textarea" => "notes",
-            "number" => "pin",
-            "date" => "calendar_today",
-            "boolean" => "toggle_on",
-            "select" => "list",
-            "multiselect" => "checklist",
-            _ => "help"
-        };
-    }
-
-    private string GetFieldTypeDisplay(string fieldType)
-    {
-        return fieldType switch
-        {
-            "text" => "Texto",
-            "textarea" => "Área de Texto",
-            "number" => "Número",
-            "date" => "Fecha",
-            "boolean" => "Sí/No",
-            "select" => "Lista",
-            "multiselect" => "Selección Múltiple",
-            _ => fieldType
-        };
-    }
-
-    private string GetSectionGridStyle(FormSectionDto section)
-    {
-        var columns = section.GridSize switch
-        {
-            4 => "repeat(1, 1fr)",
-            6 => "repeat(2, 1fr)",
-            8 => "repeat(3, 1fr)",
-            12 => "repeat(4, 1fr)",
-            _ => "repeat(2, 1fr)"
-        };
-
-        return $"grid-template-columns: {columns};";
-    }
-
-    private string GetFieldGridStyle(FormFieldLayoutDto field)
-    {
-        var span = field.GridSize switch
-        {
-            3 => "span 1",
-            4 => "span 1",
-            6 => "span 2",
-            8 => "span 3",
-            12 => "span 4",
-            _ => "span 2"
-        };
-
-        return $"grid-column: {span};";
-    }
-
-    private RenderFragment RenderFieldPreview(FormFieldLayoutDto field)
-    {
-        return builder =>
-        {
-            var fieldType = FieldTypeExtensions.FromString(field.FieldType);
-
-            builder.OpenComponent<RadzenFormField>(0);
-            builder.AddAttribute(1, "Text", field.DisplayName + (field.IsRequired ? " *" : ""));
-            builder.AddAttribute(2, "Variant", Variant.Outlined);
-            builder.AddAttribute(2, "Style", "width: 100%");
-            builder.AddAttribute(3, "ChildContent", (RenderFragment)(childBuilder =>
-            {
-                switch (fieldType)
-                {
-                    case FieldType.Text:
-                        childBuilder.OpenComponent<RadzenTextBox>(0);
-                        childBuilder.AddAttribute(1, "Placeholder", "Ejemplo de texto...");
-                        childBuilder.AddAttribute(2, "Style", "width: 100%;");
-                        childBuilder.AddAttribute(3, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.TextArea:
-                        childBuilder.OpenComponent<RadzenTextArea>(0);
-                        childBuilder.AddAttribute(1, "Placeholder", "Ejemplo de texto largo...");
-                        childBuilder.AddAttribute(2, "Rows", 3);
-                        childBuilder.AddAttribute(3, "Style", "width: 100%;");
-                        childBuilder.AddAttribute(4, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.Number:
-                        childBuilder.OpenComponent<RadzenNumeric<decimal?>>(0);
-                        childBuilder.AddAttribute(1, "Placeholder", "123");
-                        childBuilder.AddAttribute(2, "Style", "width: 100%;");
-                        childBuilder.AddAttribute(3, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.Date:
-                        childBuilder.OpenComponent<RadzenDatePicker<DateTime?>>(0);
-                        childBuilder.AddAttribute(1, "Placeholder", "Selecciona una fecha");
-                        childBuilder.AddAttribute(2, "Style", "width: 100%;");
-                        childBuilder.AddAttribute(3, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.Boolean:
-                        childBuilder.OpenComponent<RadzenSwitch>(0);
-                        childBuilder.AddAttribute(1, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.Select:
-                        childBuilder.OpenComponent<RadzenDropDown<string>>(0);
-                        childBuilder.AddAttribute(1, "Placeholder", "Selecciona una opción");
-                        childBuilder.AddAttribute(2, "Data", GetFieldOptionsForMainPreview(field));
-                        childBuilder.AddAttribute(3, "Style", "width: 100%;");
-                        childBuilder.AddAttribute(4, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-
-                    case FieldType.MultiSelect:
-                        childBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(0);
-                        childBuilder.AddAttribute(1, "Data", GetFieldOptionsForMainPreview(field));
-                        childBuilder.AddAttribute(2, "Multiple", true);
-                        childBuilder.AddAttribute(3, "Style", "width: 100%; height: 100px;");
-                        childBuilder.AddAttribute(4, "Disabled", true);
-                        childBuilder.CloseComponent();
-                        break;
-                }
-            }));
-            builder.CloseComponent();
-        };
-    }
-
-    #endregion
 
     #region Acciones
 
@@ -848,11 +707,6 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #region Clases auxiliares
 
-    public class GridSizeOption
-    {
-        public int Value { get; set; }
-        public string Text { get; set; } = "";
-    }
 
     public class CustomFieldApiResponse<T>
     {
@@ -875,127 +729,4 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #endregion
 
-    #region Preview Methods
-
-    private RenderFragment RenderSimpleFieldPreview(FormFieldLayoutDto field) => builder =>
-    {
-        var displayName = field.DisplayName + (field.IsRequired ? " *" : "");
-
-        // Para campos boolean, usar diseño horizontal simple pero dentro de un FormField
-        if (field.FieldType.ToLowerInvariant() == "boolean")
-        {
-            builder.OpenComponent<RadzenFormField>(0);
-            builder.AddAttribute(1, "Text", displayName);
-            builder.AddAttribute(2, "Style", "width: 100%");
-            builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
-            {
-                fieldBuilder.AddMarkupContent(0, $@"
-                    <div style='display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;'>
-                        <div style='width: 40px; height: 20px; background: #10b981; border-radius: 10px; position: relative;'>
-                            <div style='width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);'></div>
-                        </div>
-                        <span style='color: #10b981; font-weight: 500;'>Activado</span>
-                    </div>");
-            }));
-            builder.CloseComponent();
-            return;
-        }
-
-        // Para otros tipos, usar RadzenFormField simple
-        builder.OpenComponent<RadzenFormField>(0);
-        builder.AddAttribute(1, "Text", displayName);
-        builder.AddAttribute(2, "Style", "width: 100%");
-        builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
-        {
-            switch (field.FieldType.ToLowerInvariant())
-            {
-                case "select":
-                    fieldBuilder.OpenComponent<RadzenDropDown<string>>(10);
-                    fieldBuilder.AddAttribute(11, "Placeholder", "Selecciona una opción");
-                    fieldBuilder.AddAttribute(12, "Data", GetFieldOptions(field));
-                    fieldBuilder.AddAttribute(13, "TextProperty", "Label");
-                    fieldBuilder.AddAttribute(14, "ValueProperty", "Value");
-                    fieldBuilder.AddAttribute(15, "Disabled", true);
-                    fieldBuilder.AddAttribute(16, "Style", "width: 100%");
-                    fieldBuilder.CloseComponent();
-                    break;
-
-                case "date":
-                    fieldBuilder.OpenComponent<RadzenTextBox>(20);
-                    fieldBuilder.AddAttribute(21, "Value", DateTime.Now.ToString("dd/MM/yyyy"));
-                    fieldBuilder.AddAttribute(22, "Disabled", true);
-                    fieldBuilder.AddAttribute(23, "Style", "width: 100%");
-                    fieldBuilder.CloseComponent();
-                    break;
-
-                case "number":
-                    fieldBuilder.OpenComponent<RadzenTextBox>(30);
-                    fieldBuilder.AddAttribute(31, "Value", "123");
-                    fieldBuilder.AddAttribute(32, "Disabled", true);
-                    fieldBuilder.AddAttribute(33, "Style", "width: 100%");
-                    fieldBuilder.CloseComponent();
-                    break;
-
-                case "textarea":
-                    fieldBuilder.OpenComponent<RadzenTextArea>(40);
-                    fieldBuilder.AddAttribute(41, "Value", "Texto de ejemplo...");
-                    fieldBuilder.AddAttribute(42, "Disabled", true);
-                    fieldBuilder.AddAttribute(43, "Style", "width: 100%; height: 80px;");
-                    fieldBuilder.CloseComponent();
-                    break;
-
-                case "multiselect":
-                    fieldBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(60);
-                    fieldBuilder.AddAttribute(61, "Data", GetFieldOptions(field));
-                    fieldBuilder.AddAttribute(62, "TextProperty", "Label");
-                    fieldBuilder.AddAttribute(63, "ValueProperty", "Value");
-                    fieldBuilder.AddAttribute(64, "Multiple", true);
-                    fieldBuilder.AddAttribute(65, "Style", "width: 100%; height: 100px;");
-                    fieldBuilder.AddAttribute(66, "Disabled", true);
-                    fieldBuilder.CloseComponent();
-                    break;
-
-                default: // text, email, etc.
-                    fieldBuilder.OpenComponent<RadzenTextBox>(50);
-                    fieldBuilder.AddAttribute(51, "Value", "Texto de ejemplo");
-                    fieldBuilder.AddAttribute(52, "Disabled", true);
-                    fieldBuilder.AddAttribute(53, "Style", "width: 100%");
-                    fieldBuilder.CloseComponent();
-                    break;
-            }
-        }));
-        builder.CloseComponent();
-    };
-
-    #endregion
-
-    #region Options Helper Methods
-
-    private object GetFieldOptions(FormFieldLayoutDto field)
-    {
-        if (field.UIConfig?.Options?.Any() == true)
-        {
-            return field.UIConfig.Options;
-        }
-
-        // Opciones por defecto si no hay configuradas
-        return new List<SelectOption>
-        {
-            new() { Value = "opcion1", Label = "Opción 1" },
-            new() { Value = "opcion2", Label = "Opción 2" }
-        };
-    }
-
-    private object GetFieldOptionsForMainPreview(FormFieldLayoutDto field)
-    {
-        if (field.UIConfig?.Options?.Any() == true)
-        {
-            return field.UIConfig.Options.Select(o => o.Label).ToList();
-        }
-
-        // Opciones por defecto si no hay configuradas
-        return new List<string> { "Opción 1", "Opción 2" };
-    }
-
-    #endregion
 }

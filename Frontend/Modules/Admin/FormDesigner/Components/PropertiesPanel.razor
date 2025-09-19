@@ -1,0 +1,186 @@
+@using Forms.Models.DTOs
+@using Forms.Models.Configurations
+
+<div class="properties-panel">
+    <RadzenCard class="rz-h-100">
+        <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+            <RadzenIcon Icon="tune" class="rz-mr-2" />
+            Propiedades
+        </RadzenText>
+
+        @if (SelectedField != null)
+        {
+            <div class="property-editor">
+                <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-3">
+                    Campo: @SelectedField.DisplayName
+                </RadzenText>
+
+                <RadzenStack Gap="1rem">
+                    <RadzenFormField Text="Nombre para mostrar" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox @bind-Value="SelectedField.DisplayName" Style="width: 100%;" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Tamaño en grid" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDropDown @bind-Value="SelectedField.GridSize"
+                                      Data="@FieldSizeOptions"
+                                      TextProperty="Text"
+                                      ValueProperty="Value"
+                                      Style="width: 100%;" />
+                    </RadzenFormField>
+
+                    <RadzenCheckBox @bind-Value="SelectedField.IsRequired" Name="required" />
+                    <RadzenLabel Text="Campo obligatorio" Component="required" />
+
+                    <RadzenCheckBox @bind-Value="SelectedField.IsReadOnly" Name="readonly" />
+                    <RadzenLabel Text="Solo lectura" Component="readonly" />
+
+                    <RadzenCheckBox @bind-Value="SelectedField.IsVisible" Name="visible" />
+                    <RadzenLabel Text="Visible" Component="visible" />
+
+                    @if (SelectedField.FieldType.ToLowerInvariant() == "select" || SelectedField.FieldType.ToLowerInvariant() == "multiselect")
+                    {
+                        <div class="options-section">
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2">
+                                <RadzenText TextStyle="TextStyle.Subtitle2">Opciones</RadzenText>
+                                <RadzenButton Icon="add" Text="Editar Opciones" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                            Click="@(() => OnEditOptionsClick.InvokeAsync(SelectedField))" />
+                            </RadzenStack>
+
+                            @if (SelectedField.UIConfig?.Options?.Any() == true)
+                            {
+                                <div class="options-list">
+                                    @foreach (var option in SelectedField.UIConfig.Options)
+                                    {
+                                        <div class="option-item">
+                                            <RadzenIcon Icon="radio_button_unchecked" class="option-icon" />
+                                            <span class="option-label">@option.Label</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="no-options">
+                                    <RadzenText TextStyle="TextStyle.Caption" class="rz-color-disabled">
+                                        No hay opciones configuradas
+                                    </RadzenText>
+                                </div>
+                            }
+                        </div>
+                    }
+                </RadzenStack>
+            </div>
+        }
+        else if (SelectedSection != null)
+        {
+            <div class="property-editor">
+                <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-3">
+                    Sección: @SelectedSection.Title
+                </RadzenText>
+
+                <RadzenStack Gap="1rem">
+                    <RadzenFormField Text="Título de la sección" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox @bind-Value="SelectedSection.Title" Style="width: 100%;" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Descripción" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextArea @bind-Value="SelectedSection.Description" Style="width: 100%;" Rows="3" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Columnas de la sección" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDropDown @bind-Value="SelectedSection.GridSize"
+                                      Data="@GridSizeOptions"
+                                      TextProperty="Text"
+                                      ValueProperty="Value"
+                                      Style="width: 100%;" />
+                    </RadzenFormField>
+
+                    <RadzenCheckBox @bind-Value="SelectedSection.IsCollapsible" Name="collapsible" />
+                    <RadzenLabel Text="Permite colapsar" Component="collapsible" />
+
+                    <RadzenCheckBox @bind-Value="SelectedSection.IsExpanded" Name="expanded" />
+                    <RadzenLabel Text="Expandida por defecto" Component="expanded" />
+                </RadzenStack>
+            </div>
+        }
+        else
+        {
+            <div class="no-selection">
+                <RadzenIcon Icon="mouse" Style="font-size: 3rem; color: var(--rz-text-disabled-color);" />
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-color-disabled rz-mt-2">
+                    Selecciona un campo o sección para ver sus propiedades
+                </RadzenText>
+            </div>
+        }
+    </RadzenCard>
+</div>
+
+<style>
+.properties-panel {
+    height: 100%;
+}
+
+.property-editor {
+    padding: 1rem 0;
+}
+
+.no-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+}
+
+/* Estilos para la sección de opciones */
+.options-section {
+    border-top: 1px solid var(--rz-border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.options-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 4px;
+    padding: 0.5rem;
+    background: var(--rz-base-50);
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--rz-border-color);
+    transition: background-color 0.2s ease;
+}
+
+.option-item:last-child {
+    border-bottom: none;
+}
+
+.option-item:hover {
+    background-color: var(--rz-primary-lighter);
+}
+
+.option-icon {
+    font-size: 1rem;
+    color: var(--rz-primary);
+}
+
+.option-label {
+    font-weight: 500;
+    flex: 1;
+}
+
+.no-options {
+    padding: 1rem;
+    text-align: center;
+    border: 1px dashed var(--rz-border-color);
+    border-radius: 4px;
+    background: var(--rz-base-50);
+}
+</style>

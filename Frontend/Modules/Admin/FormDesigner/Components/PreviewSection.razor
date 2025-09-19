@@ -1,0 +1,168 @@
+@using Forms.Models.DTOs
+@using Frontend.Components.Base
+
+<div class="preview-section" style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 2px dashed #0078d4;">
+    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-info rz-mb-3">
+        <RadzenIcon Icon="preview" class="rz-mr-2" />
+        Vista Previa - Así se verá el formulario
+    </RadzenText>
+
+    <RadzenRow Gap="1rem">
+        @foreach (var formSection in CurrentLayout.Sections.Where(s => s.Fields.Any(f => !f.IsSystemField)).OrderBy(s => s.SortOrder))
+        {
+            <RadzenColumn Size="@(formSection.GridSize)">
+                <EssentialsCard Title="@(formSection.Title)"
+                               Icon="folder"
+                               IconColor="#0078d4"
+                               IsCollapsed="@(!formSection.IsExpanded)"
+                               ShowEssentials="false"
+                               ShowActionButtons="true"
+                               ShowSelectButton="true"
+                               ShowSettingsButton="true"
+                               ShowDeleteButton="true"
+                               IsSelectable="true"
+                               IsSelected="@(SelectedSection == formSection)"
+                               OnSelectClick="@(() => OnSelectSection.InvokeAsync(formSection))"
+                               OnSettingsClick="@(() => OnConfigureSection.InvokeAsync(formSection))"
+                               OnDeleteClick="@(() => OnDeleteSection.InvokeAsync(formSection))"
+                               OnCardClick="@(() => OnSelectSection.InvokeAsync(formSection))">
+
+                    <ChildContent>
+                        @if (!string.IsNullOrEmpty(formSection.Description))
+                        {
+                            <div style="color: #666; margin-bottom: 1rem; font-size: 0.9rem; padding-bottom: 1rem; border-bottom: 1px solid #f3f4f6;">
+                                @(formSection.Description)
+                            </div>
+                        }
+
+                        @{
+                            var customFields = formSection.Fields.Where(f => !f.IsSystemField && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                            var rows = new List<List<FormFieldLayoutDto>>();
+                            var currentRow = new List<FormFieldLayoutDto>();
+                            var currentRowSize = 0;
+
+                            foreach (var field in customFields)
+                            {
+                                if (currentRowSize + field.GridSize > 12)
+                                {
+                                    if (currentRow.Any())
+                                    {
+                                        rows.Add(currentRow);
+                                        currentRow = new List<FormFieldLayoutDto>();
+                                        currentRowSize = 0;
+                                    }
+                                }
+                                currentRow.Add(field);
+                                currentRowSize += field.GridSize;
+                            }
+                            if (currentRow.Any())
+                            {
+                                rows.Add(currentRow);
+                            }
+                        }
+
+                        @foreach (var row in rows)
+                        {
+                            <RadzenRow Gap="1rem" style="margin-bottom: 1rem;">
+                                @foreach (var field in row)
+                                {
+                                    <RadzenColumn Size="@field.GridSize">
+                                        <div class="form-field-container preview-field"
+                                             data-field-id="@field.Id">
+                                            <div class="field-wrapper">
+                                                <div class="field-controls">
+                                                    @{
+                                                        var fieldsInSection = formSection.Fields.Where(f => !f.IsSystemField && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                                                        var currentIndex = fieldsInSection.IndexOf(field);
+                                                    }
+
+                                                    @if (currentIndex > 0)
+                                                    {
+                                                        <RadzenButton Icon="keyboard_arrow_left" Size="ButtonSize.ExtraSmall"
+                                                                    Variant="Variant.Text"
+                                                                    Click="@(() => OnMoveFieldLeft.InvokeAsync((formSection, field)))"
+                                                                    Title="Mover izquierda" />
+                                                    }
+
+                                                    @if (currentIndex < fieldsInSection.Count - 1)
+                                                    {
+                                                        <RadzenButton Icon="keyboard_arrow_right" Size="ButtonSize.ExtraSmall"
+                                                                    Variant="Variant.Text"
+                                                                    Click="@(() => OnMoveFieldRight.InvokeAsync((formSection, field)))"
+                                                                    Title="Mover derecha" />
+                                                    }
+
+                                                    <RadzenDropDown @bind-Value="field.GridSize"
+                                                                  Data="@FieldSizeOptions"
+                                                                  TextProperty="Text"
+                                                                  ValueProperty="Value"
+                                                                  Style="width: 80px;"
+                                                                  Size="ButtonSize.ExtraSmall"
+                                                                  Change="@(() => OnFieldSizeChanged.InvokeAsync())" />
+                                                    <RadzenButton Icon="settings" Size="ButtonSize.ExtraSmall"
+                                                                Variant="Variant.Text"
+                                                                Click="@(() => OnConfigureField.InvokeAsync(field))"
+                                                                Title="Propiedades" />
+                                                    <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall"
+                                                                Variant="Variant.Text"
+                                                                Click="@(() => OnRemoveField.InvokeAsync((formSection, field)))"
+                                                                Title="Eliminar" />
+                                                </div>
+                                                @RenderFieldPreview(field)
+                                            </div>
+                                        </div>
+                                    </RadzenColumn>
+                                }
+                            </RadzenRow>
+                        }
+                    </ChildContent>
+                </EssentialsCard>
+            </RadzenColumn>
+        }
+    </RadzenRow>
+</div>
+
+<style>
+/* Estilos específicos para la Vista Previa */
+.preview-field {
+    position: relative;
+}
+
+.preview-field .field-wrapper {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.preview-field .field-wrapper:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.preview-field .field-controls {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: var(--rz-base-100);
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+    z-index: 10;
+    border: 1px solid var(--rz-border-color);
+}
+
+.preview-field .field-wrapper:hover .field-controls {
+    opacity: 1;
+}
+
+/* Modo oscuro */
+@@media (prefers-color-scheme: dark) {
+    .preview-field .field-controls {
+        background: var(--rz-base-200);
+        border-color: var(--rz-border-color-dark);
+    }
+}
+</style>
