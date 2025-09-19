@@ -268,6 +268,13 @@ public partial class FormDesigner : AuthorizedPageBase
         StateHasChanged();
     }
 
+    private async Task SelectSection(FormSectionDto section)
+    {
+        selectedSection = section;
+        selectedField = null;
+        StateHasChanged();
+    }
+
     #endregion
 
     #region Manejo de Campos

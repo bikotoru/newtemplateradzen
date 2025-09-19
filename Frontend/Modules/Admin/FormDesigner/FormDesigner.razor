@@ -137,7 +137,17 @@
                                                        Icon="folder"
                                                        IconColor="#0078d4"
                                                        IsCollapsed="@(!formSection.IsExpanded)"
-                                                       ShowEssentials="false">
+                                                       ShowEssentials="false"
+                                                       ShowActionButtons="true"
+                                                       ShowSelectButton="true"
+                                                       ShowSettingsButton="true"
+                                                       ShowDeleteButton="true"
+                                                       IsSelectable="true"
+                                                       IsSelected="@(selectedSection == formSection)"
+                                                       OnSelectClick="@(() => SelectSection(formSection))"
+                                                       OnSettingsClick="@(() => ConfigureSection(formSection))"
+                                                       OnDeleteClick="@(() => DeleteSection(formSection))"
+                                                       OnCardClick="@(() => SelectSection(formSection))">
 
                                             <ChildContent>
                                                 @if (!string.IsNullOrEmpty(formSection.Description))
