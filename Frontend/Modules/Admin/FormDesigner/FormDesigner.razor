@@ -376,6 +376,38 @@
 
                                 <RadzenCheckBox @bind-Value="selectedField.IsVisible" Name="visible" />
                                 <RadzenLabel Text="Visible" Component="visible" />
+
+                                @if (selectedField.FieldType.ToLowerInvariant() == "select" || selectedField.FieldType.ToLowerInvariant() == "multiselect")
+                                {
+                                    <div class="options-section">
+                                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="rz-mb-2">
+                                            <RadzenText TextStyle="TextStyle.Subtitle2">Opciones</RadzenText>
+                                            <RadzenButton Icon="add" Text="Editar Opciones" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                                        Click="@(() => EditFieldOptions(selectedField))" />
+                                        </RadzenStack>
+
+                                        @if (selectedField.UIConfig?.Options?.Any() == true)
+                                        {
+                                            <div class="options-list">
+                                                @foreach (var option in selectedField.UIConfig.Options)
+                                                {
+                                                    <div class="option-item">
+                                                        <RadzenIcon Icon="radio_button_unchecked" class="option-icon" />
+                                                        <span class="option-label">@option.Label</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="no-options">
+                                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-disabled">
+                                                    No hay opciones configuradas
+                                                </RadzenText>
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             </RadzenStack>
                         </div>
                     }
@@ -671,6 +703,63 @@
     justify-content: center;
     height: 200px;
     text-align: center;
+}
+
+/* Estilos para la sección de opciones */
+.options-section {
+    border-top: 1px solid var(--rz-border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.options-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 4px;
+    padding: 0.5rem;
+    background: var(--rz-base-50);
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--rz-border-color);
+    transition: background-color 0.2s ease;
+}
+
+.option-item:last-child {
+    border-bottom: none;
+}
+
+.option-item:hover {
+    background-color: var(--rz-primary-lighter);
+}
+
+.option-icon {
+    font-size: 1rem;
+    color: var(--rz-primary);
+}
+
+.option-label {
+    font-weight: 500;
+    flex: 1;
+}
+
+.option-desc {
+    font-size: 0.8rem;
+    color: var(--rz-text-secondary-color);
+    font-style: italic;
+}
+
+.no-options {
+    padding: 1rem;
+    text-align: center;
+    border: 1px dashed var(--rz-border-color);
+    border-radius: 4px;
+    background: var(--rz-base-50);
 }
 
 @@media (max-width: 1200px) {

@@ -1,0 +1,94 @@
+@using Forms.Models.Configurations
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenStack Gap="1rem">
+    <RadzenText TextStyle="TextStyle.H6">
+        <RadzenIcon Icon="list" class="rz-mr-2" />
+        Opciones para: @FieldName
+    </RadzenText>
+
+    <RadzenStack Gap="1rem">
+        @if (WorkingOptions.Any())
+        {
+            <div class="options-editor">
+                @for (int i = 0; i < WorkingOptions.Count; i++)
+                {
+                    var index = i; // Capturar el índice para el closure
+                    var option = WorkingOptions[index];
+
+                    <RadzenCard class="option-card">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                            <RadzenStack Gap="0.5rem" Style="flex: 1;">
+                                <RadzenFormField Text="Etiqueta" Variant="Variant.Outlined">
+                                    <RadzenTextBox @bind-Value="option.Label" Style="width: 100%;" Placeholder="Texto que verá el usuario" />
+                                </RadzenFormField>
+                                <RadzenFormField Text="Valor" Variant="Variant.Outlined">
+                                    <RadzenTextBox @bind-Value="option.Value" Style="width: 100%;" Placeholder="Valor interno" />
+                                </RadzenFormField>
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenCheckBox @bind-Value="option.Disabled" Name="@($"disabled_{index}")" />
+                                    <RadzenLabel Text="Opción deshabilitada" Component="@($"disabled_{index}")" />
+                                </RadzenStack>
+                            </RadzenStack>
+
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.5rem">
+                                @if (index > 0)
+                                {
+                                    <RadzenButton Icon="keyboard_arrow_up" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                Click="@(() => MoveOptionUp(index))" Title="Mover arriba" />
+                                }
+                                @if (index < WorkingOptions.Count - 1)
+                                {
+                                    <RadzenButton Icon="keyboard_arrow_down" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                Click="@(() => MoveOptionDown(index))" Title="Mover abajo" />
+                                }
+                                <RadzenButton Icon="delete" Size="ButtonSize.Small" Variant="Variant.Text" ButtonStyle="ButtonStyle.Danger"
+                                            Click="@(() => RemoveOption(index))" Title="Eliminar opción" />
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                }
+            </div>
+        }
+        else
+        {
+            <RadzenCard>
+                <div class="empty-options">
+                    <RadzenIcon Icon="list_alt" Style="font-size: 3rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-disabled rz-mt-2">
+                        No hay opciones configuradas. Agrega la primera opción para comenzar.
+                    </RadzenText>
+                </div>
+            </RadzenCard>
+        }
+
+        <RadzenButton Icon="add" Text="Agregar Opción" Variant="Variant.Outlined"
+                    Click="AddNewOption" Style="width: 100%;" />
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem" class="rz-mt-4">
+        <RadzenButton Text="Cancelar" Variant="Variant.Text" Click="Cancel" />
+        <RadzenButton Text="Guardar Opciones" Variant="Variant.Filled" Click="SaveOptions" />
+    </RadzenStack>
+</RadzenStack>
+
+<style>
+.options-editor {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.option-card {
+    margin-bottom: 1rem;
+}
+
+.empty-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+}
+</style>

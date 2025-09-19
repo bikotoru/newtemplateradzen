@@ -12,6 +12,7 @@ using Shared.Models.Entities.SystemEntities;
 using Shared.Models.Responses;
 using System.Text.Json;
 using Frontend.Components.Auth;
+using Forms.Models.Configurations;
 
 namespace Frontend.Modules.Admin.FormDesigner;
 
@@ -417,6 +418,46 @@ public partial class FormDesigner : AuthorizedPageBase
 
     #endregion
 
+    #region Options Management
+
+    private async Task EditFieldOptions(FormFieldLayoutDto field)
+    {
+        // Asegurarse de que UIConfig existe
+        if (field.UIConfig == null)
+        {
+            field.UIConfig = new UIConfig();
+        }
+
+        // Asegurarse de que la lista de opciones existe
+        if (field.UIConfig.Options == null)
+        {
+            field.UIConfig.Options = new List<SelectOption>();
+        }
+
+        var result = await DialogService.OpenAsync<FieldOptionsEditor>("Editar Opciones",
+            new Dictionary<string, object>
+            {
+                { "FieldName", field.DisplayName },
+                { "Options", field.UIConfig.Options.ToList() } // Pasar una copia
+            },
+            new DialogOptions()
+            {
+                Width = "800px",
+                Height = "600px",
+                Resizable = true,
+                Draggable = true
+            });
+
+        // Si el usuario confirmó los cambios, actualizar las opciones
+        if (result is List<SelectOption> updatedOptions)
+        {
+            field.UIConfig.Options = updatedOptions;
+            StateHasChanged();
+        }
+    }
+
+    #endregion
+
     #region Custom Fields Management
 
     private async Task CreateNewCustomField()
@@ -580,7 +621,7 @@ public partial class FormDesigner : AuthorizedPageBase
                     case FieldType.Select:
                         childBuilder.OpenComponent<RadzenDropDown<string>>(0);
                         childBuilder.AddAttribute(1, "Placeholder", "Selecciona una opción");
-                        childBuilder.AddAttribute(2, "Data", new List<string> { "Opción 1", "Opción 2" });
+                        childBuilder.AddAttribute(2, "Data", GetFieldOptionsForMainPreview(field));
                         childBuilder.AddAttribute(3, "Style", "width: 100%;");
                         childBuilder.AddAttribute(4, "Disabled", true);
                         childBuilder.CloseComponent();
@@ -588,7 +629,7 @@ public partial class FormDesigner : AuthorizedPageBase
 
                     case FieldType.MultiSelect:
                         childBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(0);
-                        childBuilder.AddAttribute(1, "Data", new List<string> { "Opción 1", "Opción 2" });
+                        childBuilder.AddAttribute(1, "Data", GetFieldOptionsForMainPreview(field));
                         childBuilder.AddAttribute(2, "Multiple", true);
                         childBuilder.AddAttribute(3, "Style", "width: 100%; height: 100px;");
                         childBuilder.AddAttribute(4, "Disabled", true);
@@ -862,10 +903,13 @@ public partial class FormDesigner : AuthorizedPageBase
             switch (field.FieldType.ToLowerInvariant())
             {
                 case "select":
-                    fieldBuilder.OpenComponent<RadzenTextBox>(10);
-                    fieldBuilder.AddAttribute(11, "Value", "Opción seleccionada");
-                    fieldBuilder.AddAttribute(12, "Disabled", true);
-                    fieldBuilder.AddAttribute(13, "Style", "width: 100%");
+                    fieldBuilder.OpenComponent<RadzenDropDown<string>>(10);
+                    fieldBuilder.AddAttribute(11, "Placeholder", "Selecciona una opción");
+                    fieldBuilder.AddAttribute(12, "Data", GetFieldOptions(field));
+                    fieldBuilder.AddAttribute(13, "TextProperty", "Label");
+                    fieldBuilder.AddAttribute(14, "ValueProperty", "Value");
+                    fieldBuilder.AddAttribute(15, "Disabled", true);
+                    fieldBuilder.AddAttribute(16, "Style", "width: 100%");
                     fieldBuilder.CloseComponent();
                     break;
 
@@ -893,6 +937,17 @@ public partial class FormDesigner : AuthorizedPageBase
                     fieldBuilder.CloseComponent();
                     break;
 
+                case "multiselect":
+                    fieldBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(60);
+                    fieldBuilder.AddAttribute(61, "Data", GetFieldOptions(field));
+                    fieldBuilder.AddAttribute(62, "TextProperty", "Label");
+                    fieldBuilder.AddAttribute(63, "ValueProperty", "Value");
+                    fieldBuilder.AddAttribute(64, "Multiple", true);
+                    fieldBuilder.AddAttribute(65, "Style", "width: 100%; height: 100px;");
+                    fieldBuilder.AddAttribute(66, "Disabled", true);
+                    fieldBuilder.CloseComponent();
+                    break;
+
                 default: // text, email, etc.
                     fieldBuilder.OpenComponent<RadzenTextBox>(50);
                     fieldBuilder.AddAttribute(51, "Value", "Texto de ejemplo");
@@ -904,6 +959,36 @@ public partial class FormDesigner : AuthorizedPageBase
         }));
         builder.CloseComponent();
     };
+
+    #endregion
+
+    #region Options Helper Methods
+
+    private object GetFieldOptions(FormFieldLayoutDto field)
+    {
+        if (field.UIConfig?.Options?.Any() == true)
+        {
+            return field.UIConfig.Options;
+        }
+
+        // Opciones por defecto si no hay configuradas
+        return new List<SelectOption>
+        {
+            new() { Value = "opcion1", Label = "Opción 1" },
+            new() { Value = "opcion2", Label = "Opción 2" }
+        };
+    }
+
+    private object GetFieldOptionsForMainPreview(FormFieldLayoutDto field)
+    {
+        if (field.UIConfig?.Options?.Any() == true)
+        {
+            return field.UIConfig.Options.Select(o => o.Label).ToList();
+        }
+
+        // Opciones por defecto si no hay configuradas
+        return new List<string> { "Opción 1", "Opción 2" };
+    }
 
     #endregion
 }
