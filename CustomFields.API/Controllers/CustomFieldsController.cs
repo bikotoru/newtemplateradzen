@@ -247,6 +247,59 @@ public class CustomFieldsController : ControllerBase
     }
 
     /// <summary>
+    /// Obtiene un campo personalizado por ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetCustomFieldById(Guid id)
+    {
+        // Validar usuario y permiso
+        var (user, hasPermission, errorResult) = await ValidatePermissionAsync("view");
+        if (errorResult != null) return errorResult;
+
+        try
+        {
+            _logger.LogInformation($"Getting custom field {id} by user {user!.Id}");
+
+            // Usar la organización del usuario autenticado
+            var organizationId = user.OrganizationId;
+
+            var customFieldRaw = await _context.SystemCustomFieldDefinitions
+                .FirstOrDefaultAsync(cf => cf.Id == id && cf.OrganizationId == organizationId && cf.IsEnabled);
+
+            if (customFieldRaw == null)
+            {
+                return NotFound(new { success = false, message = "Campo personalizado no encontrado" });
+            }
+
+            var customField = new CustomFieldDefinitionDto
+            {
+                Id = customFieldRaw.Id,
+                EntityName = customFieldRaw.EntityName,
+                FieldName = customFieldRaw.FieldName,
+                DisplayName = customFieldRaw.DisplayName,
+                FieldType = customFieldRaw.FieldType,
+                Description = customFieldRaw.Description,
+                IsRequired = customFieldRaw.IsRequired,
+                DefaultValue = customFieldRaw.DefaultValue,
+                SortOrder = customFieldRaw.SortOrder,
+                ValidationConfig = DeserializeValidationConfig(customFieldRaw.ValidationConfig),
+                UIConfig = DeserializeUIConfig(customFieldRaw.Uiconfig),
+                IsEnabled = customFieldRaw.IsEnabled,
+                OrganizationId = customFieldRaw.OrganizationId ?? Guid.Empty,
+                FechaCreacion = customFieldRaw.FechaCreacion,
+                FechaModificacion = customFieldRaw.FechaModificacion
+            };
+
+            return Ok(new { success = true, data = customField });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener campo personalizado {Id}", id);
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Obtiene campos personalizados de una entidad específica
     /// </summary>
     [HttpGet("entity/{entityName}")]

@@ -18,10 +18,13 @@ public partial class CustomFieldDesigner : ComponentBase
 
     [Parameter] public string? EntityName { get; set; }
     [Parameter] public string? EntityDisplayName { get; set; }
+    [Parameter] public Guid? FieldId { get; set; }
 
     private int selectedTabIndex = 0;
     private bool isCreating = false;
     private bool createPermissions = true;
+    private bool isEditMode = false;
+    private bool isLoading = false;
 
     // Datos del campo actual
     private CreateCustomFieldRequest currentField = new()
@@ -53,16 +56,92 @@ public partial class CustomFieldDesigner : ComponentBase
         new() { Value = "multiselect", DisplayName = "Selección Múltiple", Description = "Lista de selección múltiple", Icon = "checklist" }
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Configurar la entidad basada en los parámetros recibidos
-        if (!string.IsNullOrEmpty(EntityName))
+        // Determinar si estamos en modo edición
+        isEditMode = FieldId.HasValue;
+
+        if (isEditMode && FieldId.HasValue)
         {
-            currentField.EntityName = EntityName;
+            // Cargar el campo existente para edición
+            await LoadExistingField(FieldId.Value);
         }
-        else if (string.IsNullOrEmpty(currentField.EntityName))
+        else
         {
-            currentField.EntityName = availableEntities.FirstOrDefault() ?? "";
+            // Configurar la entidad basada en los parámetros recibidos para modo creación
+            if (!string.IsNullOrEmpty(EntityName))
+            {
+                currentField.EntityName = EntityName;
+            }
+            else if (string.IsNullOrEmpty(currentField.EntityName))
+            {
+                currentField.EntityName = availableEntities.FirstOrDefault() ?? "";
+            }
+        }
+    }
+
+    private async Task LoadExistingField(Guid fieldId)
+    {
+        try
+        {
+            isLoading = true;
+
+            var response = await Api.GetAsync<CustomFieldDefinitionDto>($"api/customfielddefinitions/{fieldId}", BackendType.FormBackend);
+
+            if (response.Success && response.Data != null)
+            {
+                var existingField = response.Data;
+
+                // Cargar datos en el formulario
+                currentField = new CreateCustomFieldRequest
+                {
+                    EntityName = existingField.EntityName,
+                    FieldName = existingField.FieldName,
+                    DisplayName = existingField.DisplayName,
+                    Description = existingField.Description,
+                    FieldType = existingField.FieldType,
+                    IsRequired = existingField.IsRequired,
+                    DefaultValue = existingField.DefaultValue,
+                    SortOrder = existingField.SortOrder,
+                    OrganizationId = existingField.OrganizationId
+                };
+
+                // Cargar configuraciones
+                validationConfig = existingField.ValidationConfig ?? new ValidationConfig();
+                uiConfig = existingField.UIConfig ?? new UIConfig { Options = new List<SelectOption>() };
+
+                // Si no hay opciones en UIConfig, inicializar lista vacía
+                if (uiConfig.Options == null)
+                    uiConfig.Options = new List<SelectOption>();
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "No se pudo cargar el campo personalizado.",
+                    Duration = 4000
+                });
+
+                DialogService.Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando campo: {ex.Message}",
+                Duration = 4000
+            });
+
+            DialogService.Close();
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -307,63 +386,110 @@ public partial class CustomFieldDesigner : ComponentBase
         {
             isCreating = true;
 
-            // Preparar la request
-            var request = new CreateCustomFieldRequest
+            if (isEditMode && FieldId.HasValue)
             {
-                EntityName = currentField.EntityName,
-                FieldName = currentField.FieldName,
-                DisplayName = currentField.DisplayName,
-                Description = currentField.Description,
-                FieldType = currentField.FieldType,
-                IsRequired = currentField.IsRequired,
-                DefaultValue = currentField.DefaultValue,
-                SortOrder = currentField.SortOrder,
-                ValidationConfig = validationConfig,
-                UIConfig = uiConfig,
-                OrganizationId = currentField.OrganizationId
-            };
-
-            // Llamar a la API
-            var response = await Api.PostAsync<CustomFieldDefinitionDto>("api/customfielddefinitions", request, BackendType.FormBackend);
-
-            if (response.Success)
-            {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Success,
-                    Summary = "Campo Creado",
-                    Detail = $"El campo '{currentField.DisplayName}' se ha creado exitosamente con permisos automáticos.",
-                    Duration = 4000
-                });
-
-                // Limpiar formulario
-                ResetForm();
-                selectedTabIndex = 0;
+                // Modo edición - usar PUT
+                await UpdateField();
             }
             else
             {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Error,
-                    Summary = "Error",
-                    Detail = $"No se pudo crear el campo: {response.Message}",
-                    Duration = 4000
-                });
+                // Modo creación - usar POST
+                await CreateNewField();
             }
         }
-        catch (Exception ex)
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private async Task CreateNewField()
+    {
+        // Preparar la request
+        var request = new CreateCustomFieldRequest
+        {
+            EntityName = currentField.EntityName,
+            FieldName = currentField.FieldName,
+            DisplayName = currentField.DisplayName,
+            Description = currentField.Description,
+            FieldType = currentField.FieldType,
+            IsRequired = currentField.IsRequired,
+            DefaultValue = currentField.DefaultValue,
+            SortOrder = currentField.SortOrder,
+            ValidationConfig = validationConfig,
+            UIConfig = uiConfig,
+            OrganizationId = currentField.OrganizationId
+        };
+
+        // Llamar a la API
+        var response = await Api.PostAsync<CustomFieldDefinitionDto>("api/customfielddefinitions", request, BackendType.FormBackend);
+
+        if (response.Success)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Campo Creado",
+                Detail = $"El campo '{currentField.DisplayName}' se ha creado exitosamente con permisos automáticos.",
+                Duration = 4000
+            });
+
+            // Limpiar formulario
+            ResetForm();
+            selectedTabIndex = 0;
+            DialogService.Close();
+        }
+        else
         {
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Error,
                 Summary = "Error",
-                Detail = $"Error inesperado: {ex.Message}",
+                Detail = $"No se pudo crear el campo: {response.Message}",
                 Duration = 4000
             });
         }
-        finally
+    }
+
+    private async Task UpdateField()
+    {
+        // Preparar la request de actualización
+        var updateRequest = new UpdateCustomFieldRequest
         {
-            isCreating = false;
+            DisplayName = currentField.DisplayName,
+            Description = currentField.Description,
+            IsRequired = currentField.IsRequired,
+            DefaultValue = currentField.DefaultValue,
+            SortOrder = currentField.SortOrder,
+            ValidationConfig = validationConfig,
+            UIConfig = uiConfig,
+            IsEnabled = true
+        };
+
+        // Llamar a la API
+        var response = await Api.PutAsync<CustomFieldDefinitionDto>($"api/customfielddefinitions/{FieldId.Value}", updateRequest, BackendType.FormBackend);
+
+        if (response.Success)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Campo Actualizado",
+                Detail = $"El campo '{currentField.DisplayName}' se ha actualizado exitosamente.",
+                Duration = 4000
+            });
+
+            DialogService.Close();
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"No se pudo actualizar el campo: {response.Message}",
+                Duration = 4000
+            });
         }
     }
 

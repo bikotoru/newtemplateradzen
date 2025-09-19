@@ -5,7 +5,16 @@
 
 <div style="height: 100%; overflow-y: auto;">
 
-    <RadzenTabs @bind-SelectedIndex="selectedTabIndex" class="rz-mt-4">
+    @if (isLoading)
+    {
+        <div class="rz-text-align-center rz-p-12">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4">Cargando campo personalizado...</RadzenText>
+        </div>
+    }
+    else
+    {
+        <RadzenTabs @bind-SelectedIndex="selectedTabIndex" class="rz-mt-4">
         <Tabs>
             <!-- Paso 1: Información Básica -->
             <RadzenTabsItem Text="📋 Información Básica">
@@ -23,12 +32,23 @@
                                             <RadzenTextBox @bind-Value="currentField.FieldName"
                                                          @oninput="OnFieldNameChanged"
                                                          Placeholder="ej: TelefonoEmergencia"
-                                                         Style="width: 100%;" />
+                                                         Style="width: 100%;"
+                                                         Disabled="@isEditMode" />
                                         </ChildContent>
                                         <Helper>
-                                            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-info">
-                                                Se guardará como: @(GetFullFieldName())
-                                            </RadzenText>
+                                            @if (isEditMode)
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-warning">
+                                                    <RadzenIcon Icon="lock" Style="font-size: 14px;" />
+                                                    El nombre del campo no se puede modificar
+                                                </RadzenText>
+                                            }
+                                            else
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-info">
+                                                    Se guardará como: @(GetFullFieldName())
+                                                </RadzenText>
+                                            }
                                         </Helper>
                                     </RadzenFormField>
 
@@ -61,16 +81,31 @@
             <RadzenTabsItem Text="🎨 Tipo de Campo">
                 <div class="rz-p-4">
                     <RadzenText TextStyle="TextStyle.H6" class="rz-mb-4">
-                        Selecciona el Tipo de Campo
+                        @if (isEditMode)
+                        {
+                            <text>Tipo de Campo (No Modificable)</text>
+                        }
+                        else
+                        {
+                            <text>Selecciona el Tipo de Campo</text>
+                        }
                     </RadzenText>
+
+                    @if (isEditMode)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning" class="rz-mb-4">
+                            <RadzenIcon Icon="lock" class="rz-mr-2" />
+                            El tipo de campo no se puede modificar una vez creado
+                        </RadzenAlert>
+                    }
 
                     <RadzenRow Gap="1rem">
                         @foreach (var fieldType in availableFieldTypes)
                         {
                             <RadzenColumn Size="4" SizeMD="3" SizeLG="2">
-                                <RadzenCard class="@GetFieldTypeCardClass(fieldType.Value)"
-                                          Style="cursor: pointer; transition: all 0.3s ease;"
-                                          @onclick="() => SelectFieldType(fieldType.Value)">
+                                <RadzenCard class="@($"{GetFieldTypeCardClass(fieldType.Value)} {(isEditMode ? "disabled" : "")}")"
+                                          Style="@($"{(isEditMode ? "cursor: not-allowed; opacity: 0.6;" : "cursor: pointer;")} transition: all 0.3s ease;")"
+                                          @onclick="() => { if (!isEditMode) SelectFieldType(fieldType.Value); }">
 
                                     <div class="rz-text-align-center rz-p-3">
                                         <RadzenIcon Icon="@fieldType.Icon"
@@ -251,7 +286,7 @@
                         <RadzenButton Text="Cancelar"
                                     ButtonStyle="ButtonStyle.Light"
                                     Click="Cancel" />
-                        <RadzenButton Text="Crear Campo"
+                        <RadzenButton Text="@(isEditMode ? "Actualizar Campo" : "Crear Campo")"
                                     ButtonStyle="ButtonStyle.Primary"
                                     Icon="save"
                                     Click="CreateField"
@@ -282,6 +317,7 @@
                         Click="NextStep" />
         </RadzenStack>
     </RadzenCard>
+    }
 </div>
 
 <style>
@@ -298,6 +334,16 @@
 .field-type-card.selected {
     border-color: var(--rz-primary);
     background: var(--rz-primary-lighter);
+}
+
+.field-type-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.field-type-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .preview-container {
