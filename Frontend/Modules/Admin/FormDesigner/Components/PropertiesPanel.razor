@@ -37,6 +37,91 @@
                     <RadzenCheckBox @bind-Value="SelectedField.IsVisible" Name="visible" />
                     <RadzenLabel Text="Visible" Component="visible" />
 
+                    @* Configuraciones específicas por tipo de campo *@
+                    @{
+                        // Asegurar que UIConfig existe
+                        if (SelectedField.UIConfig == null)
+                        {
+                            SelectedField.UIConfig = new UIConfig();
+                        }
+                        var fieldType = SelectedField.FieldType.ToLowerInvariant();
+                    }
+
+                    @* Configuración para campos Boolean/Switch *@
+                    @if (fieldType == "boolean")
+                    {
+                        <div class="field-config-section">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                                <RadzenIcon Icon="toggle_on" class="rz-mr-1" />
+                                Configuración del Switch
+                            </RadzenText>
+
+                            <RadzenFormField Text="Texto cuando es Verdadero" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenTextBox @bind-Value="SelectedField.UIConfig.TrueLabel"
+                                             Placeholder="Sí, Activo, Habilitado..."
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Texto cuando es Falso" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenTextBox @bind-Value="SelectedField.UIConfig.FalseLabel"
+                                             Placeholder="No, Inactivo, Deshabilitado..."
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+                        </div>
+                    }
+
+                    @* Configuración para campos Date *@
+                    @if (fieldType == "date")
+                    {
+                        <div class="field-config-section">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                                <RadzenIcon Icon="calendar_today" class="rz-mr-1" />
+                                Configuración de Fecha
+                            </RadzenText>
+
+                            <RadzenFormField Text="Formato de fecha" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenDropDown @bind-Value="SelectedField.UIConfig.Format"
+                                              Data="@GetDateFormatOptions()"
+                                              TextProperty="Text"
+                                              ValueProperty="Value"
+                                              Style="width: 100%;"
+                                              Placeholder="Selecciona formato..." />
+                            </RadzenFormField>
+                        </div>
+                    }
+
+                    @* Configuración para campos Number *@
+                    @if (fieldType == "number")
+                    {
+                        <div class="field-config-section">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">
+                                <RadzenIcon Icon="pin" class="rz-mr-1" />
+                                Configuración de Número
+                            </RadzenText>
+
+                            <RadzenFormField Text="Decimales" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenDropDown @bind-Value="SelectedField.UIConfig.DecimalPlaces"
+                                              Data="@GetDecimalOptions()"
+                                              TextProperty="Text"
+                                              ValueProperty="Value"
+                                              Style="width: 100%;"
+                                              Placeholder="Selecciona decimales..." />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Prefijo (opcional)" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenTextBox @bind-Value="SelectedField.UIConfig.Prefix"
+                                             Placeholder="$, €, #, etc..."
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Sufijo (opcional)" Variant="Variant.Outlined" Style="width: 100%;">
+                                <RadzenTextBox @bind-Value="SelectedField.UIConfig.Suffix"
+                                             Placeholder="%, kg, USD, etc..."
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+                        </div>
+                    }
+
                     @if (SelectedField.FieldType.ToLowerInvariant() == "select" || SelectedField.FieldType.ToLowerInvariant() == "multiselect")
                     {
                         <div class="options-section">
@@ -182,5 +267,16 @@
     border: 1px dashed var(--rz-border-color);
     border-radius: 4px;
     background: var(--rz-base-50);
+}
+
+/* Estilos para configuraciones específicas de campos */
+.field-config-section {
+    border-top: 1px solid var(--rz-border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+    background: var(--rz-base-25);
+    border-radius: 6px;
+    padding: 1rem;
+    border-left: 3px solid var(--rz-primary);
 }
 </style>

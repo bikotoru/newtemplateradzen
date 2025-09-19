@@ -14,6 +14,7 @@ public class UIConfig
     // Number específico
     public string? Prefix { get; set; }
     public string? Suffix { get; set; }
+    public int? DecimalPlaces { get; set; } // N0, N1, N2, etc.
 
     // Boolean específico
     public string? Style { get; set; } // "checkbox", "switch", "radio"

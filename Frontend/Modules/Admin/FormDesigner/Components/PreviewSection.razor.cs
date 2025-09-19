@@ -31,6 +31,9 @@ public partial class PreviewSection : ComponentBase
         // Para campos boolean, usar diseño horizontal simple pero dentro de un FormField
         if (field.FieldType.ToLowerInvariant() == "boolean")
         {
+            var trueLabel = field.UIConfig?.TrueLabel ?? "Activado";
+            var falseLabel = field.UIConfig?.FalseLabel ?? "Desactivado";
+
             builder.OpenComponent<RadzenFormField>(0);
             builder.AddAttribute(1, "Text", displayName);
             builder.AddAttribute(2, "Style", "width: 100%");
@@ -41,7 +44,8 @@ public partial class PreviewSection : ComponentBase
                         <div style='width: 40px; height: 20px; background: #10b981; border-radius: 10px; position: relative;'>
                             <div style='width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);'></div>
                         </div>
-                        <span style='color: #10b981; font-weight: 500;'>Activado</span>
+                        <span style='color: #10b981; font-weight: 500;'>{trueLabel}</span>
+                        <span style='color: #94a3b8; font-size: 0.9rem;'>/ {falseLabel}</span>
                     </div>");
             }));
             builder.CloseComponent();
@@ -68,18 +72,29 @@ public partial class PreviewSection : ComponentBase
                     break;
 
                 case "date":
+                    var dateFormat = field.UIConfig?.Format ?? "dd/MM/yyyy";
+                    var sampleDate = DateTime.Now.ToString(dateFormat);
                     fieldBuilder.OpenComponent<RadzenTextBox>(20);
-                    fieldBuilder.AddAttribute(21, "Value", DateTime.Now.ToString("dd/MM/yyyy"));
+                    fieldBuilder.AddAttribute(21, "Value", sampleDate);
                     fieldBuilder.AddAttribute(22, "Disabled", true);
                     fieldBuilder.AddAttribute(23, "Style", "width: 100%");
+                    fieldBuilder.AddAttribute(24, "Placeholder", $"Formato: {dateFormat}");
                     fieldBuilder.CloseComponent();
                     break;
 
                 case "number":
+                    var prefix = field.UIConfig?.Prefix ?? "";
+                    var suffix = field.UIConfig?.Suffix ?? "";
+                    var decimals = field.UIConfig?.DecimalPlaces ?? 0;
+                    var formatString = $"N{decimals}";
+                    var sampleNumber = (1234.5678m).ToString(formatString);
+                    var displayValue = $"{prefix}{sampleNumber}{suffix}";
+
                     fieldBuilder.OpenComponent<RadzenTextBox>(30);
-                    fieldBuilder.AddAttribute(31, "Value", "123");
+                    fieldBuilder.AddAttribute(31, "Value", displayValue);
                     fieldBuilder.AddAttribute(32, "Disabled", true);
                     fieldBuilder.AddAttribute(33, "Style", "width: 100%");
+                    fieldBuilder.AddAttribute(34, "Placeholder", $"Formato: {formatString}{(!string.IsNullOrEmpty(prefix) || !string.IsNullOrEmpty(suffix) ? $" ({prefix}...{suffix})" : "")}");
                     fieldBuilder.CloseComponent();
                     break;
 
