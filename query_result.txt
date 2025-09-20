@@ -1,0 +1,5 @@
+LayoutConfig                                                                                                                                                                                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[{"Id":"5b14c7da-361a-4eba-ba21-533817357578","Title":"Informaci\u00F3n General","Description":"Datos b\u00E1sicos del formulario","GridSize":6,"SortOrder":1,"IsCollapsible":true,"IsExpanded":true,"Fields":[{"Id":"2f1414e6-b96f-4dff-addf-a8331f3afb1e","Fie
+
+(1 rows affected)

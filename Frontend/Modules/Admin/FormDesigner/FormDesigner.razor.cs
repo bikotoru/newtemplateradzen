@@ -195,6 +195,40 @@ public partial class FormDesigner : AuthorizedPageBase
             if (response.Success && response.Data != null)
             {
                 currentLayout = response.Data;
+
+                // Debug logging para verificar qué se recibió del servidor
+                Console.WriteLine($"[FormDesigner] LoadFormLayout - Layout cargado para: {currentEntityName}");
+                foreach (var section in currentLayout.Sections)
+                {
+                    Console.WriteLine($"[FormDesigner] Sección: {section.Title}");
+                    foreach (var field in section.Fields)
+                    {
+                        Console.WriteLine($"[FormDesigner] - Campo: {field.FieldName} ({field.FieldType})");
+                        if (field.UIConfig != null)
+                        {
+                            Console.WriteLine($"[FormDesigner]   UIConfig - TrueLabel: {field.UIConfig.TrueLabel}, FalseLabel: {field.UIConfig.FalseLabel}");
+                            Console.WriteLine($"[FormDesigner]   UIConfig - Format: {field.UIConfig.Format}, DecimalPlaces: {field.UIConfig.DecimalPlaces}");
+                            Console.WriteLine($"[FormDesigner]   UIConfig - Prefix: {field.UIConfig.Prefix}, Suffix: {field.UIConfig.Suffix}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[FormDesigner]   UIConfig: NULL desde servidor!");
+                        }
+                    }
+                }
+
+                // Asegurar que todos los campos tienen UIConfig inicializado
+                foreach (var section in currentLayout.Sections)
+                {
+                    foreach (var field in section.Fields)
+                    {
+                        if (field.UIConfig == null)
+                        {
+                            Console.WriteLine($"[FormDesigner] Inicializando UIConfig para campo: {field.FieldName}");
+                            field.UIConfig = new UIConfig();
+                        }
+                    }
+                }
             }
             else
             {
@@ -323,7 +357,8 @@ public partial class FormDesigner : AuthorizedPageBase
             SortOrder = section.Fields.Count,
             IsRequired = field.IsRequired,
             IsSystemField = field.IsSystemField,
-            IsVisible = true
+            IsVisible = true,
+            UIConfig = new UIConfig() // Inicializar UIConfig para nuevos campos
         };
 
         section.Fields.Add(newField);
@@ -341,6 +376,12 @@ public partial class FormDesigner : AuthorizedPageBase
 
     private async Task ConfigureField(FormFieldLayoutDto field)
     {
+        // Asegurar que UIConfig esté inicializado
+        if (field.UIConfig == null)
+        {
+            field.UIConfig = new UIConfig();
+        }
+
         selectedField = field;
         selectedSection = null;
         StateHasChanged();
@@ -532,6 +573,27 @@ public partial class FormDesigner : AuthorizedPageBase
                 Sections = currentLayout.Sections
             };
 
+            // Debug logging para verificar qué se está enviando
+            Console.WriteLine($"[FormDesigner] SaveLayout - Guardando layout para: {request.EntityName}");
+            foreach (var section in request.Sections)
+            {
+                Console.WriteLine($"[FormDesigner] Sección: {section.Title}");
+                foreach (var field in section.Fields)
+                {
+                    Console.WriteLine($"[FormDesigner] - Campo: {field.FieldName} ({field.FieldType})");
+                    if (field.UIConfig != null)
+                    {
+                        Console.WriteLine($"[FormDesigner]   UIConfig - TrueLabel: {field.UIConfig.TrueLabel}, FalseLabel: {field.UIConfig.FalseLabel}");
+                        Console.WriteLine($"[FormDesigner]   UIConfig - Format: {field.UIConfig.Format}, DecimalPlaces: {field.UIConfig.DecimalPlaces}");
+                        Console.WriteLine($"[FormDesigner]   UIConfig - Prefix: {field.UIConfig.Prefix}, Suffix: {field.UIConfig.Suffix}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[FormDesigner]   UIConfig: NULL!");
+                    }
+                }
+            }
+
             var response = await Api.PostAsync<FormLayoutDto>("api/form-designer/formulario/save-layout", request, BackendType.FormBackend);
 
             if (response.Success)
@@ -547,6 +609,27 @@ public partial class FormDesigner : AuthorizedPageBase
                 if (response.Data != null)
                 {
                     currentLayout = response.Data;
+
+                    // Debug logging para verificar qué se recibió después de guardar
+                    Console.WriteLine($"[FormDesigner] SaveLayout Response - Layout recibido para: {currentLayout.EntityName}");
+                    foreach (var section in currentLayout.Sections)
+                    {
+                        Console.WriteLine($"[FormDesigner] Sección: {section.Title}");
+                        foreach (var field in section.Fields)
+                        {
+                            Console.WriteLine($"[FormDesigner] - Campo: {field.FieldName} ({field.FieldType})");
+                            if (field.UIConfig != null)
+                            {
+                                Console.WriteLine($"[FormDesigner]   UIConfig - TrueLabel: {field.UIConfig.TrueLabel}, FalseLabel: {field.UIConfig.FalseLabel}");
+                                Console.WriteLine($"[FormDesigner]   UIConfig - Format: {field.UIConfig.Format}, DecimalPlaces: {field.UIConfig.DecimalPlaces}");
+                                Console.WriteLine($"[FormDesigner]   UIConfig - Prefix: {field.UIConfig.Prefix}, Suffix: {field.UIConfig.Suffix}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[FormDesigner]   UIConfig: NULL en respuesta!");
+                            }
+                        }
+                    }
                 }
             }
             else

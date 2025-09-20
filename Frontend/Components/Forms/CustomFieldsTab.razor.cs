@@ -178,22 +178,83 @@ public partial class CustomFieldsTab : ComponentBase
                     break;
 
                 case "number":
-                    fieldBuilder.OpenComponent<RadzenNumeric<decimal?>>(20);
-                    fieldBuilder.AddAttribute(21, "Value", decimal.TryParse(value?.ToString(), out var numValue) ? numValue : (decimal?)null);
-                    fieldBuilder.AddAttribute(22, "Placeholder", $"Ingrese {field.DisplayName.ToLower()}");
-                    fieldBuilder.AddAttribute(23, "Disabled", isDisabled);
-                    fieldBuilder.AddAttribute(24, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, async newValue =>
-                        await UpdateCustomFieldValue(field.FieldName, newValue)));
-                    fieldBuilder.CloseComponent();
+                    var prefix = field.UIConfig?.Prefix ?? "";
+                    var suffix = field.UIConfig?.Suffix ?? "";
+                    var decimals = field.UIConfig?.DecimalPlaces ?? 2;
+                    var placeholder = $"Ingrese {field.DisplayName.ToLower()}";
+
+                    // Si tiene prefijo o sufijo, crear un contenedor visual
+                    if (!string.IsNullOrEmpty(prefix) || !string.IsNullOrEmpty(suffix))
+                    {
+                        fieldBuilder.OpenComponent<RadzenStack>(20);
+                        fieldBuilder.AddAttribute(21, "Orientation", Orientation.Horizontal);
+                        fieldBuilder.AddAttribute(22, "AlignItems", AlignItems.Stretch);
+                        fieldBuilder.AddAttribute(23, "Gap", "0");
+                        fieldBuilder.AddAttribute(24, "Style", "border: 1px solid var(--rz-border-color); border-radius: 4px; overflow: hidden;");
+                        fieldBuilder.AddAttribute(25, "ChildContent", (RenderFragment)(stackBuilder =>
+                        {
+                            // Prefijo
+                            if (!string.IsNullOrEmpty(prefix))
+                            {
+                                stackBuilder.OpenComponent<RadzenText>(251);
+                                stackBuilder.AddAttribute(252, "Style", "background: var(--rz-base-200); padding: 0.75rem; border-right: 1px solid var(--rz-border-color); font-weight: 500; display: flex; align-items: center;");
+                                stackBuilder.AddAttribute(253, "Text", prefix);
+                                stackBuilder.CloseComponent();
+                            }
+
+                            // Campo numérico
+                            stackBuilder.OpenComponent<RadzenNumeric<decimal?>>(26);
+                            stackBuilder.AddAttribute(261, "Value", decimal.TryParse(value?.ToString(), out var numValue) ? numValue : (decimal?)null);
+                            stackBuilder.AddAttribute(262, "Placeholder", placeholder);
+                            stackBuilder.AddAttribute(263, "Disabled", isDisabled);
+                            stackBuilder.AddAttribute(264, "Format", $"N{decimals}");
+                            stackBuilder.AddAttribute(265, "Style", "border: none; flex: 1;");
+                            stackBuilder.AddAttribute(266, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, async newValue =>
+                                await UpdateCustomFieldValue(field.FieldName, newValue)));
+                            stackBuilder.CloseComponent();
+
+                            // Sufijo
+                            if (!string.IsNullOrEmpty(suffix))
+                            {
+                                stackBuilder.OpenComponent<RadzenText>(27);
+                                stackBuilder.AddAttribute(271, "Style", "background: var(--rz-base-200); padding: 0.75rem; border-left: 1px solid var(--rz-border-color); font-weight: 500; display: flex; align-items: center;");
+                                stackBuilder.AddAttribute(272, "Text", suffix);
+                                stackBuilder.CloseComponent();
+                            }
+                        }));
+                        fieldBuilder.CloseComponent();
+                    }
+                    else
+                    {
+                        // Campo numérico simple sin prefijo/sufijo
+                        fieldBuilder.OpenComponent<RadzenNumeric<decimal?>>(28);
+                        fieldBuilder.AddAttribute(281, "Value", decimal.TryParse(value?.ToString(), out var numValue) ? numValue : (decimal?)null);
+                        fieldBuilder.AddAttribute(282, "Placeholder", placeholder);
+                        fieldBuilder.AddAttribute(283, "Disabled", isDisabled);
+                        fieldBuilder.AddAttribute(284, "Format", $"N{decimals}");
+                        fieldBuilder.AddAttribute(285, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(286, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, async newValue =>
+                            await UpdateCustomFieldValue(field.FieldName, newValue)));
+                        fieldBuilder.CloseComponent();
+                    }
                     break;
 
                 case "date":
+                    var dateFormat = field.UIConfig?.Format ?? "dd/MM/yyyy";
+                    var showTime = dateFormat.Contains("HH:mm");
+
                     fieldBuilder.OpenComponent<RadzenDatePicker<DateTime?>>(30);
                     fieldBuilder.AddAttribute(31, "Value", DateTime.TryParse(value?.ToString(), out var dateValue) ? dateValue : (DateTime?)null);
                     fieldBuilder.AddAttribute(32, "Disabled", isDisabled);
-                    fieldBuilder.AddAttribute(33, "DateFormat", "dd/MM/yyyy");
-                    fieldBuilder.AddAttribute(34, "ValueChanged", EventCallback.Factory.Create<DateTime?>(this, async newValue =>
-                        await UpdateCustomFieldValue(field.FieldName, newValue?.ToString("yyyy-MM-dd"))));
+                    fieldBuilder.AddAttribute(33, "DateFormat", dateFormat);
+                    fieldBuilder.AddAttribute(34, "ShowTime", showTime);
+                    fieldBuilder.AddAttribute(35, "ShowSeconds", dateFormat.Contains("ss"));
+                    fieldBuilder.AddAttribute(36, "HourFormat", "24");
+                    fieldBuilder.AddAttribute(37, "ValueChanged", EventCallback.Factory.Create<DateTime?>(this, async newValue =>
+                    {
+                        var formattedValue = newValue?.ToString("yyyy-MM-dd" + (showTime ? " HH:mm:ss" : ""));
+                        await UpdateCustomFieldValue(field.FieldName, formattedValue);
+                    }));
                     fieldBuilder.CloseComponent();
                     break;
 
@@ -226,6 +287,59 @@ public partial class CustomFieldsTab : ComponentBase
                     }
                     break;
 
+                case "multiselect":
+                    // Obtener opciones del uiConfig
+                    var multiSelectOptions = field.UIConfig?.Options?.Where(o => !o.Disabled).ToList() ?? new List<global::Forms.Models.Configurations.SelectOption>();
+
+                    if (multiSelectOptions.Any())
+                    {
+                        // Parsear valor actual como lista de strings
+                        var currentValues = new List<string>();
+                        if (value != null)
+                        {
+                            try
+                            {
+                                if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+                                {
+                                    currentValues = jsonElement.EnumerateArray().Select(x => x.GetString() ?? "").ToList();
+                                }
+                                else if (value is string strValue && !string.IsNullOrEmpty(strValue))
+                                {
+                                    currentValues = JsonSerializer.Deserialize<List<string>>(strValue) ?? new List<string>();
+                                }
+                            }
+                            catch
+                            {
+                                currentValues = new List<string>();
+                            }
+                        }
+
+                        fieldBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(70);
+                        fieldBuilder.AddAttribute(71, "Data", multiSelectOptions);
+                        fieldBuilder.AddAttribute(72, "ValueProperty", "Value");
+                        fieldBuilder.AddAttribute(73, "TextProperty", "Label");
+                        fieldBuilder.AddAttribute(74, "Value", currentValues.AsEnumerable());
+                        fieldBuilder.AddAttribute(75, "Multiple", true);
+                        fieldBuilder.AddAttribute(76, "Disabled", isDisabled);
+                        fieldBuilder.AddAttribute(77, "Style", "width: 100%; height: 120px;");
+                        fieldBuilder.AddAttribute(78, "ValueChanged", EventCallback.Factory.Create<IEnumerable<string>>(this, async newValues =>
+                        {
+                            var serializedValues = JsonSerializer.Serialize(newValues?.ToList() ?? new List<string>());
+                            await UpdateCustomFieldValue(field.FieldName, serializedValues);
+                        }));
+                        fieldBuilder.CloseComponent();
+                    }
+                    else
+                    {
+                        // Fallback si no hay opciones configuradas
+                        fieldBuilder.OpenComponent<RadzenTextBox>(79);
+                        fieldBuilder.AddAttribute(791, "Value", value?.ToString() ?? "");
+                        fieldBuilder.AddAttribute(792, "Placeholder", "No hay opciones configuradas");
+                        fieldBuilder.AddAttribute(793, "Disabled", true);
+                        fieldBuilder.CloseComponent();
+                    }
+                    break;
+
                 default: // text
                     fieldBuilder.OpenComponent<RadzenTextBox>(60);
                     fieldBuilder.AddAttribute(61, "Value", value?.ToString() ?? "");
@@ -243,8 +357,8 @@ public partial class CustomFieldsTab : ComponentBase
     private void RenderBooleanField(RenderTreeBuilder builder, FormFieldLayoutDto field, object? value, bool isDisabled, string displayName)
     {
         var boolValue = bool.TryParse(value?.ToString(), out var parsedBool) && parsedBool;
-        var trueLabel = field.UIConfig?.TrueLabel ?? "Verdadero";
-        var falseLabel = field.UIConfig?.FalseLabel ?? "Falso";
+        var trueLabel = field.UIConfig?.TrueLabel ?? "Sí";
+        var falseLabel = field.UIConfig?.FalseLabel ?? "No";
         var currentValue = boolValue ? trueLabel : falseLabel;
 
         // Layout personalizado sin RadzenFormField

@@ -40,6 +40,7 @@ builder.Services.AddScoped<BaseQueryService<SystemFormEntities>>(provider =>
     return new BaseQueryService<SystemFormEntities>(appDbContext, logger);
 });
 
+
 // Register specialized SystemFormEntityService that handles organization filters correctly
 builder.Services.AddScoped<SystemFormEntityService>();
 
