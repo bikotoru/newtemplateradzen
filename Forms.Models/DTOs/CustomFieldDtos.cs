@@ -20,6 +20,13 @@ public class CustomFieldDefinitionDto
     public ValidationConfig? ValidationConfig { get; set; }
     public UIConfig? UIConfig { get; set; }
 
+    // Propiedades auxiliares para optimización de queries (no se serializan)
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? ValidationConfigJson { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? UIConfigJson { get; set; }
+
     // Metadatos
     public DateTime FechaCreacion { get; set; }
     public DateTime FechaModificacion { get; set; }

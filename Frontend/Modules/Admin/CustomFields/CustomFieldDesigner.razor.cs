@@ -15,6 +15,7 @@ public partial class CustomFieldDesigner : ComponentBase
     [Inject] public API Api { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
     [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public Frontend.Services.AvailableEntitiesService AvailableEntitiesService { get; set; } = default!;
 
     [Parameter] public string? EntityName { get; set; }
     [Parameter] public string? EntityDisplayName { get; set; }
@@ -36,14 +37,9 @@ public partial class CustomFieldDesigner : ComponentBase
     private ValidationConfig validationConfig = new();
     private UIConfig uiConfig = new() { Options = new List<SelectOption>() };
 
-    // Datos para dropdowns
-    private List<string> availableEntities = new()
-    {
-        "Empleado",
-        "Empresa",
-        "Cliente",
-        "Proveedor"
-    };
+    // Datos para dropdowns - se cargan dinámicamente desde system_form_entities
+    private List<AvailableEntityOption> availableEntities = new();
+    private bool entitiesLoading = false;
 
     private List<FieldTypeOption> availableFieldTypes = new()
     {
@@ -53,11 +49,17 @@ public partial class CustomFieldDesigner : ComponentBase
         new() { Value = "date", DisplayName = "Fecha", Description = "Selector de fecha", Icon = "calendar_today" },
         new() { Value = "boolean", DisplayName = "Sí/No", Description = "Campo verdadero/falso", Icon = "toggle_on" },
         new() { Value = "select", DisplayName = "Lista", Description = "Lista desplegable", Icon = "list" },
-        new() { Value = "multiselect", DisplayName = "Selección Múltiple", Description = "Lista de selección múltiple", Icon = "checklist" }
+        new() { Value = "multiselect", DisplayName = "Selección Múltiple", Description = "Lista de selección múltiple", Icon = "checklist" },
+        new() { Value = "entity_reference", DisplayName = "Referencia Entidad", Description = "Referencia a otra entidad", Icon = "link" },
+        new() { Value = "user_reference", DisplayName = "Referencia Usuario", Description = "Referencia a usuario", Icon = "person" },
+        new() { Value = "file_reference", DisplayName = "Referencia Archivo", Description = "Referencia a archivo", Icon = "attach_file" }
     };
 
     protected override async Task OnInitializedAsync()
     {
+        // Cargar entidades disponibles primero
+        await LoadAvailableEntities();
+
         // Determinar si estamos en modo edición
         isEditMode = FieldId.HasValue;
 
@@ -75,7 +77,7 @@ public partial class CustomFieldDesigner : ComponentBase
             }
             else if (string.IsNullOrEmpty(currentField.EntityName))
             {
-                currentField.EntityName = availableEntities.FirstOrDefault() ?? "";
+                currentField.EntityName = availableEntities.FirstOrDefault()?.Value ?? "";
             }
         }
     }
@@ -503,7 +505,7 @@ public partial class CustomFieldDesigner : ComponentBase
     {
         currentField = new CreateCustomFieldRequest
         {
-            EntityName = availableEntities.FirstOrDefault() ?? "",
+            EntityName = availableEntities.FirstOrDefault()?.Value ?? "",
             SortOrder = 100,
             IsRequired = false
         };
@@ -541,6 +543,87 @@ public partial class CustomFieldDesigner : ComponentBase
         return $"{EntityName}.CustomField.{currentField.FieldName}";
     }
 
+    private bool HasReferenceConfig()
+    {
+        return currentField.FieldType is "entity_reference" or "user_reference" or "file_reference";
+    }
+
+    private global::Forms.Models.Configurations.ReferenceConfig GetReferenceConfig()
+    {
+        // Asegurar que UIConfig existe
+        if (uiConfig.ReferenceConfig == null)
+        {
+            uiConfig.ReferenceConfig = new global::Forms.Models.Configurations.ReferenceConfig
+            {
+                TargetEntity = "",
+                DisplayProperty = "Name",
+                ValueProperty = "Id",
+                AllowMultiple = false,
+                AllowCreate = true,
+                AllowClear = true,
+                EnableCache = true,
+                CacheTTLMinutes = 5
+            };
+        }
+
+        return uiConfig.ReferenceConfig;
+    }
+
+    /// <summary>
+    /// Cargar entidades disponibles desde la API
+    /// </summary>
+    private async Task LoadAvailableEntities()
+    {
+        try
+        {
+            entitiesLoading = true;
+            StateHasChanged();
+
+            var response = await AvailableEntitiesService.GetAvailableEntitiesAsync();
+
+            if (response.Success && response.Data.Any())
+            {
+                availableEntities = response.Data.Select(e => new AvailableEntityOption
+                {
+                    Value = e.EntityName,
+                    Text = e.DisplayName,
+                    Description = e.Description,
+                    Category = e.Category,
+                    Icon = e.IconName
+                }).ToList();
+
+                Console.WriteLine($"[CustomFieldDesigner] Loaded {availableEntities.Count} available entities from API");
+            }
+            else
+            {
+                // Fallback a entidades básicas si falla la API
+                availableEntities = new List<AvailableEntityOption>
+                {
+                    new() { Value = "Region", Text = "Región", Description = "Región geográfica" },
+                    new() { Value = "SystemUsers", Text = "Usuarios del Sistema", Description = "Usuarios del sistema" }
+                };
+
+                Console.WriteLine($"[CustomFieldDesigner] API failed, using fallback entities: {response.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldDesigner] Error loading entities: {ex.Message}");
+
+            // Fallback en caso de error
+            availableEntities = new List<AvailableEntityOption>
+            {
+                new() { Value = "Region", Text = "Región", Description = "Región geográfica" },
+                new() { Value = "SystemUsers", Text = "Usuarios del Sistema", Description = "Usuarios del sistema" }
+            };
+        }
+        finally
+        {
+            entitiesLoading = false;
+            StateHasChanged();
+        }
+    }
+
     #endregion
 
     #region Clases auxiliares
@@ -551,6 +634,15 @@ public partial class CustomFieldDesigner : ComponentBase
         public string DisplayName { get; set; } = "";
         public string Description { get; set; } = "";
         public string Icon { get; set; } = "";
+    }
+
+    public class AvailableEntityOption
+    {
+        public string Value { get; set; } = "";
+        public string Text { get; set; } = "";
+        public string? Description { get; set; }
+        public string? Category { get; set; }
+        public string? Icon { get; set; }
     }
 
     public class PermissionPreview

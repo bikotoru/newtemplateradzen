@@ -11,7 +11,11 @@ public enum FieldType
     Date = 4,
     Boolean = 5,
     Select = 6,
-    MultiSelect = 7
+    MultiSelect = 7,
+    // Nuevos tipos para referencias
+    EntityReference = 8,
+    UserReference = 9,
+    FileReference = 10
 }
 
 /// <summary>
@@ -28,6 +32,9 @@ public static class FieldTypeExtensions
         FieldType.Boolean => "boolean",
         FieldType.Select => "select",
         FieldType.MultiSelect => "multiselect",
+        FieldType.EntityReference => "entity_reference",
+        FieldType.UserReference => "user_reference",
+        FieldType.FileReference => "file_reference",
         _ => throw new ArgumentOutOfRangeException(nameof(fieldType))
     };
 
@@ -40,6 +47,9 @@ public static class FieldTypeExtensions
         "boolean" => FieldType.Boolean,
         "select" => FieldType.Select,
         "multiselect" => FieldType.MultiSelect,
+        "entity_reference" => FieldType.EntityReference,
+        "user_reference" => FieldType.UserReference,
+        "file_reference" => FieldType.FileReference,
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid field type")
     };
 
@@ -52,6 +62,9 @@ public static class FieldTypeExtensions
         FieldType.Boolean => "Verdadero/Falso",
         FieldType.Select => "Lista Desplegable",
         FieldType.MultiSelect => "Selección Múltiple",
+        FieldType.EntityReference => "Referencia a Entidad",
+        FieldType.UserReference => "Referencia a Usuario",
+        FieldType.FileReference => "Referencia a Archivo",
         _ => throw new ArgumentOutOfRangeException(nameof(fieldType))
     };
 
@@ -64,6 +77,9 @@ public static class FieldTypeExtensions
         FieldType.Boolean => "Campo de sí/no, verdadero/falso",
         FieldType.Select => "Lista desplegable con una sola selección",
         FieldType.MultiSelect => "Lista con selección múltiple",
+        FieldType.EntityReference => "Referencia a otro registro del sistema",
+        FieldType.UserReference => "Referencia a un usuario del sistema",
+        FieldType.FileReference => "Referencia a un archivo o documento",
         _ => throw new ArgumentOutOfRangeException(nameof(fieldType))
     };
 
@@ -75,4 +91,12 @@ public static class FieldTypeExtensions
 
     public static bool IsText(this FieldType fieldType) =>
         fieldType == FieldType.Text || fieldType == FieldType.TextArea;
+
+    public static bool IsReference(this FieldType fieldType) =>
+        fieldType == FieldType.EntityReference ||
+        fieldType == FieldType.UserReference ||
+        fieldType == FieldType.FileReference;
+
+    public static bool RequiresLookup(this FieldType fieldType) =>
+        IsReference(fieldType);
 }

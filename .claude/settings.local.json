@@ -12,7 +12,9 @@
       "Bash(del:*)",
       "Bash(rm:*)",
       "Read(//mnt/c/Users/vuret/OneDrive/Escritorio/**)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

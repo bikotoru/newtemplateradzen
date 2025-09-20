@@ -212,30 +212,39 @@ public class CustomFieldsController : ControllerBase
             // Usar la organización del usuario autenticado
             var organizationId = user.OrganizationId;
 
-            var customFieldsRaw = await _context.SystemCustomFieldDefinitions
+            // Query optimizada con proyección directa para mejor performance
+            var customFields = await _context.SystemCustomFieldDefinitions
                 .Where(cf => cf.OrganizationId == organizationId && cf.IsEnabled)
                 .OrderBy(cf => cf.EntityName)
                 .ThenBy(cf => cf.SortOrder)
+                .AsNoTracking() // Mejora performance al no trackear cambios
+                .Select(cf => new CustomFieldDefinitionDto
+                {
+                    Id = cf.Id,
+                    EntityName = cf.EntityName,
+                    FieldName = cf.FieldName,
+                    DisplayName = cf.DisplayName,
+                    FieldType = cf.FieldType,
+                    Description = cf.Description,
+                    IsRequired = cf.IsRequired,
+                    DefaultValue = cf.DefaultValue,
+                    SortOrder = cf.SortOrder,
+                    // Evitar deserialización en memoria al proyectar directamente
+                    ValidationConfigJson = cf.ValidationConfig,
+                    UIConfigJson = cf.Uiconfig,
+                    IsEnabled = cf.IsEnabled,
+                    OrganizationId = cf.OrganizationId ?? Guid.Empty,
+                    FechaCreacion = cf.FechaCreacion,
+                    FechaModificacion = cf.FechaModificacion
+                })
                 .ToListAsync();
 
-            var customFields = customFieldsRaw.Select(cf => new CustomFieldDefinitionDto
+            // Deserializar configuraciones solo para los campos que las necesiten
+            foreach (var field in customFields)
             {
-                Id = cf.Id,
-                EntityName = cf.EntityName,
-                FieldName = cf.FieldName,
-                DisplayName = cf.DisplayName,
-                FieldType = cf.FieldType,
-                Description = cf.Description,
-                IsRequired = cf.IsRequired,
-                DefaultValue = cf.DefaultValue,
-                SortOrder = cf.SortOrder,
-                ValidationConfig = DeserializeValidationConfig(cf.ValidationConfig),
-                UIConfig = DeserializeUIConfig(cf.Uiconfig),
-                IsEnabled = cf.IsEnabled,
-                OrganizationId = cf.OrganizationId ?? Guid.Empty,
-                FechaCreacion = cf.FechaCreacion,
-                FechaModificacion = cf.FechaModificacion
-            }).ToList();
+                field.ValidationConfig = DeserializeValidationConfig(field.ValidationConfigJson);
+                field.UIConfig = DeserializeUIConfig(field.UIConfigJson);
+            }
 
             return Ok(new { success = true, data = customFields });
         }
@@ -316,29 +325,37 @@ public class CustomFieldsController : ControllerBase
             // Usar la organización del usuario autenticado
             var organizationId = user.OrganizationId;
 
-            var customFieldsRaw = await _context.SystemCustomFieldDefinitions
+            // Query optimizada para entidad específica
+            var customFields = await _context.SystemCustomFieldDefinitions
                 .Where(cf => cf.EntityName == entityName && cf.OrganizationId == organizationId && cf.IsEnabled)
                 .OrderBy(cf => cf.SortOrder)
+                .AsNoTracking()
+                .Select(cf => new CustomFieldDefinitionDto
+                {
+                    Id = cf.Id,
+                    EntityName = cf.EntityName,
+                    FieldName = cf.FieldName,
+                    DisplayName = cf.DisplayName,
+                    FieldType = cf.FieldType,
+                    Description = cf.Description,
+                    IsRequired = cf.IsRequired,
+                    DefaultValue = cf.DefaultValue,
+                    SortOrder = cf.SortOrder,
+                    ValidationConfigJson = cf.ValidationConfig,
+                    UIConfigJson = cf.Uiconfig,
+                    IsEnabled = cf.IsEnabled,
+                    OrganizationId = cf.OrganizationId ?? Guid.Empty,
+                    FechaCreacion = cf.FechaCreacion,
+                    FechaModificacion = cf.FechaModificacion
+                })
                 .ToListAsync();
 
-            var customFields = customFieldsRaw.Select(cf => new CustomFieldDefinitionDto
+            // Post-procesar configuraciones
+            foreach (var field in customFields)
             {
-                Id = cf.Id,
-                EntityName = cf.EntityName,
-                FieldName = cf.FieldName,
-                DisplayName = cf.DisplayName,
-                FieldType = cf.FieldType,
-                Description = cf.Description,
-                IsRequired = cf.IsRequired,
-                DefaultValue = cf.DefaultValue,
-                SortOrder = cf.SortOrder,
-                ValidationConfig = DeserializeValidationConfig(cf.ValidationConfig),
-                UIConfig = DeserializeUIConfig(cf.Uiconfig),
-                IsEnabled = cf.IsEnabled,
-                OrganizationId = cf.OrganizationId ?? Guid.Empty,
-                FechaCreacion = cf.FechaCreacion,
-                FechaModificacion = cf.FechaModificacion
-            }).ToList();
+                field.ValidationConfig = DeserializeValidationConfig(field.ValidationConfigJson);
+                field.UIConfig = DeserializeUIConfig(field.UIConfigJson);
+            }
 
             return Ok(new { success = true, data = customFields });
         }

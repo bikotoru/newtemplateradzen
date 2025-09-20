@@ -295,18 +295,22 @@ public class FormDesignerController : ControllerBase
                 }
             }
 
-            // Configurar opciones de serialización para omitir valores null
+            // Configurar opciones de serialización para UIConfig consistency
             var serializerOptions = new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
+                WriteIndented = false,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter() }
             };
+
+            // Pre-procesar UIConfig antes de serializar para evitar inconsistencias
+            PreprocessUIConfigBeforeSave(request.Sections);
 
             // Serializar las secciones a JSON
             var sectionsJson = JsonSerializer.Serialize(request.Sections ?? new List<FormSectionDto>(), serializerOptions);
 
-            _logger.LogInformation($"[FormDesignerController] Serialized JSON to save:");
-            _logger.LogInformation($"[FormDesignerController] {sectionsJson}");
+            _logger.LogDebug($"[FormDesignerController] Serialized JSON to save: {sectionsJson}");
 
             // Buscar si ya existe un layout para esta entidad y organización (sin importar si es default)
             _logger.LogInformation($"[FormDesignerController] Searching for existing layout:");
@@ -655,7 +659,7 @@ public class FormDesignerController : ControllerBase
     }
 
     /// <summary>
-    /// Deserializa la configuración de UI desde JSON
+    /// Deserializa la configuración de UI desde JSON con opciones consistentes
     /// </summary>
     private static UIConfig? DeserializeUIConfig(string? json)
     {
@@ -666,13 +670,67 @@ public class FormDesignerController : ControllerBase
         {
             var options = new JsonSerializerOptions
             {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter() },
+                PropertyNameCaseInsensitive = true
             };
             return JsonSerializer.Deserialize<UIConfig>(json, options);
         }
-        catch
+        catch (Exception ex)
         {
+            // Log the error for debugging
+            System.Diagnostics.Debug.WriteLine($"Error deserializing UIConfig: {ex.Message}");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Pre-procesa UIConfig antes del guardado para evitar inconsistencias
+    /// </summary>
+    private static void PreprocessUIConfigBeforeSave(List<FormSectionDto>? sections)
+    {
+        if (sections == null) return;
+
+        foreach (var section in sections)
+        {
+            if (section.Fields == null) continue;
+
+            foreach (var field in section.Fields)
+            {
+                if (field.UIConfig == null) continue;
+
+                // Normalizar valores null/vacíos
+                if (string.IsNullOrWhiteSpace(field.UIConfig.TrueLabel))
+                    field.UIConfig.TrueLabel = null;
+
+                if (string.IsNullOrWhiteSpace(field.UIConfig.FalseLabel))
+                    field.UIConfig.FalseLabel = null;
+
+                if (string.IsNullOrWhiteSpace(field.UIConfig.Prefix))
+                    field.UIConfig.Prefix = null;
+
+                if (string.IsNullOrWhiteSpace(field.UIConfig.Suffix))
+                    field.UIConfig.Suffix = null;
+
+                if (string.IsNullOrWhiteSpace(field.UIConfig.Format))
+                    field.UIConfig.Format = null;
+
+                // Normalizar valores por defecto según tipo de campo
+                if (field.FieldType?.ToLowerInvariant() == "boolean")
+                {
+                    field.UIConfig.TrueLabel ??= "Sí";
+                    field.UIConfig.FalseLabel ??= "No";
+                }
+
+                // Asegurar lista de opciones inicializada
+                if (field.UIConfig.Options == null &&
+                    (field.FieldType?.ToLowerInvariant() == "select" ||
+                     field.FieldType?.ToLowerInvariant() == "multiselect"))
+                {
+                    field.UIConfig.Options = new List<global::Forms.Models.Configurations.SelectOption>();
+                }
+            }
         }
     }
 

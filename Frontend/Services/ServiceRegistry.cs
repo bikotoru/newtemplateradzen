@@ -20,6 +20,8 @@ public static class ServiceRegistry
         services.AddScoped<CryptoService>();
         services.AddScoped<FileDownloadService>();
         services.AddScoped<QueryService>();
+        services.AddSingleton<EntityRegistrationService>();
+        services.AddScoped<AvailableEntitiesService>();
 
         // Module Services
         services.AddScoped<RegionService>();

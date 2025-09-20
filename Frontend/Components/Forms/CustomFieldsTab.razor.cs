@@ -11,6 +11,7 @@ namespace Frontend.Components.Forms;
 public partial class CustomFieldsTab : ComponentBase
 {
     [Inject] private IServiceProvider ServiceProvider { get; set; } = null!;
+    [Inject] private Frontend.Services.EntityRegistrationService EntityRegistrationService { get; set; } = null!;
 
     [Parameter] public string EntityName { get; set; } = "";
     [Parameter] public string? CustomFieldsValue { get; set; }
@@ -340,6 +341,12 @@ public partial class CustomFieldsTab : ComponentBase
                     }
                     break;
 
+                case "entity_reference":
+                case "user_reference":
+                case "file_reference":
+                    RenderReferenceField(fieldBuilder, field, value, isDisabled);
+                    break;
+
                 default: // text
                     fieldBuilder.OpenComponent<RadzenTextBox>(60);
                     fieldBuilder.AddAttribute(61, "Value", value?.ToString() ?? "");
@@ -396,5 +403,163 @@ public partial class CustomFieldsTab : ComponentBase
             stackBuilder.CloseComponent();
         }));
         builder.CloseComponent();
+    }
+
+    private void RenderReferenceField(RenderTreeBuilder builder, FormFieldLayoutDto field, object? value, bool isDisabled)
+    {
+        // Configuración de referencia
+        var referenceConfig = field.UIConfig?.ReferenceConfig;
+        if (referenceConfig == null)
+        {
+            // Fallback a text box si no hay configuración
+            builder.OpenComponent<RadzenTextBox>(100);
+            builder.AddAttribute(101, "Value", value?.ToString() ?? "");
+            builder.AddAttribute(102, "Placeholder", $"Configure la referencia para {field.DisplayName}");
+            builder.AddAttribute(103, "Disabled", true);
+            builder.CloseComponent();
+            return;
+        }
+
+        // Determinar el tipo de valor esperado
+        var valueType = GetReferenceValueType(field.FieldType);
+
+        // Render Lookup component
+        var lookupType = GetLookupComponentType(referenceConfig.TargetEntity);
+        if (lookupType != null)
+        {
+            builder.OpenComponent(200, lookupType);
+
+            // Configurar propiedades básicas del Lookup
+            builder.AddAttribute(201, "Value", GetReferenceValue(value, valueType));
+            builder.AddAttribute(202, "ValueChanged", CreateReferenceValueChangedCallback(field.FieldName, valueType));
+            builder.AddAttribute(203, "DisplayProperty", referenceConfig.DisplayProperty);
+            builder.AddAttribute(204, "ValueProperty", referenceConfig.ValueProperty);
+            builder.AddAttribute(205, "Placeholder", $"Seleccione {field.DisplayName.ToLower()}");
+            builder.AddAttribute(206, "AllowClear", referenceConfig.AllowClear);
+            builder.AddAttribute(207, "Disabled", isDisabled);
+            builder.AddAttribute(208, "ShowAdd", referenceConfig.AllowCreate && !isDisabled);
+            builder.AddAttribute(209, "EnableCache", referenceConfig.EnableCache);
+
+            // Configurar cache TTL
+            if (referenceConfig.CacheTTLMinutes > 0)
+            {
+                builder.AddAttribute(210, "CacheTTL", TimeSpan.FromMinutes(referenceConfig.CacheTTLMinutes));
+            }
+
+            // Configurar Service específico según la entidad
+            var service = GetServiceForEntity(referenceConfig.TargetEntity);
+            if (service != null)
+            {
+                builder.AddAttribute(211, "Service", service);
+            }
+
+            builder.CloseComponent();
+        }
+        else
+        {
+            // Fallback si no se puede determinar el tipo de lookup
+            builder.OpenComponent<RadzenTextBox>(300);
+            builder.AddAttribute(301, "Value", value?.ToString() ?? "");
+            builder.AddAttribute(302, "Placeholder", $"Referencia a {referenceConfig.TargetEntity}");
+            builder.AddAttribute(303, "Disabled", true);
+            builder.AddAttribute(304, "Style", "background-color: #f3f4f6;");
+            builder.CloseComponent();
+        }
+    }
+
+    private Type GetReferenceValueType(string fieldType)
+    {
+        return fieldType.ToLowerInvariant() switch
+        {
+            "entity_reference" => typeof(Guid?),
+            "user_reference" => typeof(Guid?),
+            "file_reference" => typeof(string), // Puede ser path o ID
+            _ => typeof(string)
+        };
+    }
+
+    private object? GetReferenceValue(object? value, Type expectedType)
+    {
+        if (value == null) return null;
+
+        try
+        {
+            if (expectedType == typeof(Guid?) || expectedType == typeof(Guid))
+            {
+                if (value is Guid guid) return guid;
+                if (Guid.TryParse(value.ToString(), out var parsedGuid)) return parsedGuid;
+                return null;
+            }
+
+            return value.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private object CreateReferenceValueChangedCallback(string fieldName, Type valueType)
+    {
+        if (valueType == typeof(Guid?) || valueType == typeof(Guid))
+        {
+            return EventCallback.Factory.Create<Guid?>(this, async newValue =>
+                await UpdateCustomFieldValue(fieldName, newValue));
+        }
+
+        return EventCallback.Factory.Create<string>(this, async newValue =>
+            await UpdateCustomFieldValue(fieldName, newValue));
+    }
+
+    private Type? GetLookupComponentType(string targetEntity)
+    {
+        try
+        {
+            // Usar EntityRegistrationService para obtener el tipo de Lookup
+            var lookupType = EntityRegistrationService.CreateLookupType(targetEntity);
+
+            if (lookupType != null)
+            {
+                Console.WriteLine($"[CustomFieldsTab] Successfully created lookup type for '{targetEntity}'");
+                return lookupType;
+            }
+
+            // Log entidades disponibles para debugging
+            var availableEntities = EntityRegistrationService.GetAllEntities();
+            Console.WriteLine($"[CustomFieldsTab] Entity '{targetEntity}' not found. Available entities: {string.Join(", ", availableEntities.Keys)}");
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error getting lookup type for '{targetEntity}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private object? GetServiceForEntity(string targetEntity)
+    {
+        try
+        {
+            // Usar EntityRegistrationService para obtener el servicio
+            var service = EntityRegistrationService.GetEntityService(targetEntity);
+
+            if (service != null)
+            {
+                Console.WriteLine($"[CustomFieldsTab] Successfully retrieved service for '{targetEntity}'");
+                return service;
+            }
+
+            // Log entidades disponibles para debugging
+            var availableEntities = EntityRegistrationService.GetAllEntities();
+            Console.WriteLine($"[CustomFieldsTab] Service for '{targetEntity}' not found. Available entities: {string.Join(", ", availableEntities.Keys)}");
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error getting service for '{targetEntity}': {ex.Message}");
+            return null;
+        }
     }
 }

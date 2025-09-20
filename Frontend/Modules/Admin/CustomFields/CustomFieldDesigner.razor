@@ -229,6 +229,93 @@
                                             }
                                         }
                                     }
+
+                                    @if (HasReferenceConfig())
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mt-3">
+                                            Configuración de Referencia
+                                        </RadzenText>
+
+                                        <RadzenFormField Text="Entidad Objetivo" Variant="Variant.Outlined">
+                                            @if (entitiesLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="rz-mt-1">Cargando entidades...</RadzenText>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().TargetEntity"
+                                                              Data="@availableEntities"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione entidad..."
+                                                              Style="width: 100%;">
+                                                    <Template Context="entity">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            @if (!string.IsNullOrEmpty(entity.Icon))
+                                                            {
+                                                                <RadzenIcon Icon="@entity.Icon" Style="font-size: 16px;" />
+                                                            }
+                                                            <div>
+                                                                <div>@entity.Text</div>
+                                                                @if (!string.IsNullOrEmpty(entity.Description))
+                                                                {
+                                                                    <div style="font-size: 0.8rem; color: var(--rz-text-disabled-color);">@entity.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Campo de Visualización" Variant="Variant.Outlined">
+                                            <RadzenTextBox @bind-Value="@GetReferenceConfig().DisplayProperty"
+                                                         Placeholder="ej: Name, DisplayName"
+                                                         Style="width: 100%;" />
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Campo de Valor" Variant="Variant.Outlined">
+                                            <RadzenTextBox @bind-Value="@GetReferenceConfig().ValueProperty"
+                                                         Placeholder="ej: Id"
+                                                         Style="width: 100%;" />
+                                        </RadzenFormField>
+
+                                        <RadzenRow Gap="1rem">
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowMultiple" Name="allowMultiple" />
+                                                <RadzenLabel Text="Selección múltiple" Component="allowMultiple" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowCreate" Name="allowCreate" />
+                                                <RadzenLabel Text="Permitir crear" Component="allowCreate" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+
+                                        <RadzenRow Gap="1rem">
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowClear" Name="allowClear" />
+                                                <RadzenLabel Text="Permitir limpiar" Component="allowClear" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().EnableCache" Name="enableCache" />
+                                                <RadzenLabel Text="Habilitar cache" Component="enableCache" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+
+                                        @if (GetReferenceConfig().EnableCache)
+                                        {
+                                            <RadzenFormField Text="TTL Cache (minutos)" Variant="Variant.Outlined">
+                                                <RadzenNumeric @bind-Value="@GetReferenceConfig().CacheTTLMinutes"
+                                                             TValue="int"
+                                                             Min="1"
+                                                             Max="60"
+                                                             Style="width: 100%;" />
+                                            </RadzenFormField>
+                                        }
+                                    }
                                 </RadzenStack>
                             </RadzenCard>
                         </RadzenColumn>

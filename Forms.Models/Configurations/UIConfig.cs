@@ -28,6 +28,9 @@ public class UIConfig
     // Date específico
     public string? Format { get; set; }
     public bool ShowCalendar { get; set; } = true;
+
+    // Reference específico
+    public ReferenceConfig? ReferenceConfig { get; set; }
 }
 
 /// <summary>
