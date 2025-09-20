@@ -41,6 +41,12 @@ public partial class CustomFieldDesigner : ComponentBase
     private List<AvailableEntityOption> availableEntities = new();
     private bool entitiesLoading = false;
 
+    // Campos disponibles para la entidad seleccionada
+    private List<FieldOption> availableDisplayFields = new();
+    private List<FieldOption> availableValueFields = new();
+    private bool fieldsLoading = false;
+    private string lastLoadedEntity = "";
+
     private List<FieldTypeOption> availableFieldTypes = new()
     {
         new() { Value = "text", DisplayName = "Texto", Description = "Campo de texto corto", Icon = "text_fields" },
@@ -624,6 +630,142 @@ public partial class CustomFieldDesigner : ComponentBase
         }
     }
 
+    /// <summary>
+    /// Cargar campos disponibles para la entidad seleccionada
+    /// </summary>
+    private async Task LoadEntityFields(string entityName)
+    {
+        if (string.IsNullOrEmpty(entityName) || entityName == lastLoadedEntity)
+            return;
+
+        try
+        {
+            fieldsLoading = true;
+            lastLoadedEntity = entityName;
+            StateHasChanged();
+
+            Console.WriteLine($"[CustomFieldDesigner] Loading fields for entity: {entityName}");
+
+            var response = await AvailableEntitiesService.GetEntityFieldsAsync(entityName);
+
+            if (response.Success && response.Data != null)
+            {
+                // Combinar campos de tabla y custom fields para display
+                var displayFields = new List<FieldOption>();
+
+                // Agregar campos de tabla (excluyendo Id y campos de sistema)
+                foreach (var field in response.Data.TableFields.Where(f =>
+                    f.FieldName != "Id" &&
+                    !f.FieldName.EndsWith("Id") &&
+                    f.FieldName != "Active" &&
+                    f.FieldName != "FechaCreacion" &&
+                    f.FieldName != "FechaModificacion"))
+                {
+                    displayFields.Add(new FieldOption
+                    {
+                        Value = field.FieldName,
+                        Text = field.DisplayName,
+                        Description = $"Campo de tabla ({field.DataType})",
+                        FieldType = "table",
+                        DataType = field.DataType
+                    });
+                }
+
+                // Agregar campos custom
+                foreach (var field in response.Data.CustomFields)
+                {
+                    displayFields.Add(new FieldOption
+                    {
+                        Value = field.FieldName,
+                        Text = field.DisplayName,
+                        Description = $"Campo personalizado ({field.FieldType})",
+                        FieldType = "custom",
+                        DataType = field.FieldType
+                    });
+                }
+
+                availableDisplayFields = displayFields.OrderBy(f => f.Text).ToList();
+
+                // Para campos de valor, incluir solo Id y campos únicos
+                var valueFields = new List<FieldOption>
+                {
+                    new() { Value = "Id", Text = "ID", Description = "Identificador único", FieldType = "table", DataType = "uniqueidentifier" }
+                };
+
+                // Agregar otros campos de tabla que puedan servir como identificadores
+                foreach (var field in response.Data.TableFields.Where(f =>
+                    f.FieldName != "Id" &&
+                    (f.FieldName.EndsWith("Id") || f.DataType == "uniqueidentifier")))
+                {
+                    valueFields.Add(new FieldOption
+                    {
+                        Value = field.FieldName,
+                        Text = field.DisplayName,
+                        Description = $"Campo identificador ({field.DataType})",
+                        FieldType = "table",
+                        DataType = field.DataType
+                    });
+                }
+
+                availableValueFields = valueFields;
+
+                // Auto-configurar valores por defecto
+                var referenceConfig = GetReferenceConfig();
+                if (string.IsNullOrEmpty(referenceConfig.DisplayProperty) && availableDisplayFields.Any())
+                {
+                    referenceConfig.DisplayProperty = availableDisplayFields.First().Value;
+                }
+                referenceConfig.ValueProperty = "Id"; // Siempre Id por defecto
+
+                Console.WriteLine($"[CustomFieldDesigner] Loaded {availableDisplayFields.Count} display fields and {availableValueFields.Count} value fields for {entityName}");
+            }
+            else
+            {
+                // Fallback en caso de error
+                availableDisplayFields = new List<FieldOption>
+                {
+                    new() { Value = "Name", Text = "Nombre", Description = "Campo de nombre por defecto", FieldType = "fallback", DataType = "string" }
+                };
+                availableValueFields = new List<FieldOption>
+                {
+                    new() { Value = "Id", Text = "ID", Description = "Identificador único", FieldType = "table", DataType = "uniqueidentifier" }
+                };
+
+                Console.WriteLine($"[CustomFieldDesigner] Failed to load fields for {entityName}: {response.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldDesigner] Error loading fields for {entityName}: {ex.Message}");
+
+            // Fallback en caso de error
+            availableDisplayFields = new List<FieldOption>
+            {
+                new() { Value = "Name", Text = "Nombre", Description = "Campo de nombre por defecto", FieldType = "fallback", DataType = "string" }
+            };
+            availableValueFields = new List<FieldOption>
+            {
+                new() { Value = "Id", Text = "ID", Description = "Identificador único", FieldType = "table", DataType = "uniqueidentifier" }
+            };
+        }
+        finally
+        {
+            fieldsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Manejar cambio de entidad objetivo
+    /// </summary>
+    private async Task OnTargetEntityChanged(string newEntityName)
+    {
+        if (!string.IsNullOrEmpty(newEntityName))
+        {
+            await LoadEntityFields(newEntityName);
+        }
+    }
+
     #endregion
 
     #region Clases auxiliares
@@ -643,6 +785,15 @@ public partial class CustomFieldDesigner : ComponentBase
         public string? Description { get; set; }
         public string? Category { get; set; }
         public string? Icon { get; set; }
+    }
+
+    public class FieldOption
+    {
+        public string Value { get; set; } = "";
+        public string Text { get; set; } = "";
+        public string? Description { get; set; }
+        public string FieldType { get; set; } = ""; // "table", "custom", "fallback"
+        public string DataType { get; set; } = "";
     }
 
     public class PermissionPreview

@@ -13,22 +13,23 @@ public class EntityRegistrationService
     private static readonly ConcurrentDictionary<string, EntityConfiguration> _registeredEntities = new();
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EntityRegistrationService> _logger;
-    private readonly SystemFormEntitiesService _systemFormEntitiesService;
 
     public EntityRegistrationService(
         IServiceProvider serviceProvider,
-        ILogger<EntityRegistrationService> logger,
-        SystemFormEntitiesService systemFormEntitiesService)
+        ILogger<EntityRegistrationService> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _systemFormEntitiesService = systemFormEntitiesService;
 
         // Registrar entidades conocidas al inicio
         RegisterKnownEntities();
 
-        // Cargar entidades desde system_form_entities (mucho mejor que archivos!)
-        _ = LoadEntitiesFromSystemFormEntitiesAsync();
+        // Cargar entidades desde system_form_entities de forma diferida
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000); // Esperar a que la aplicación esté lista
+            await LoadEntitiesFromSystemFormEntitiesAsync();
+        });
     }
 
     public class EntityConfiguration
@@ -160,7 +161,9 @@ public class EntityRegistrationService
 
         try
         {
-            return _serviceProvider.GetService(config.ServiceType);
+            // Usar scope para obtener servicios scoped de forma segura
+            using var scope = _serviceProvider.CreateScope();
+            return scope.ServiceProvider.GetService(config.ServiceType);
         }
         catch (Exception ex)
         {
@@ -341,8 +344,12 @@ public class EntityRegistrationService
         {
             _logger.LogInformation("Loading entities from system_form_entities table...");
 
+            // Crear un scope para obtener servicios scoped
+            using var scope = _serviceProvider.CreateScope();
+            var systemFormEntitiesService = scope.ServiceProvider.GetRequiredService<SystemFormEntitiesService>();
+
             // Obtener todas las entidades activas que permiten custom fields
-            var response = await _systemFormEntitiesService.GetAllUnpagedAsync();
+            var response = await systemFormEntitiesService.GetAllUnpagedAsync();
 
             if (!response.Success || response.Data == null)
             {

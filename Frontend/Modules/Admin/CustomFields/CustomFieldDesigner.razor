@@ -251,7 +251,8 @@
                                                               TextProperty="Text"
                                                               ValueProperty="Value"
                                                               Placeholder="Seleccione entidad..."
-                                                              Style="width: 100%;">
+                                                              Style="width: 100%;"
+                                                              Change="@(async (object value) => await OnTargetEntityChanged(value?.ToString() ?? ""))">
                                                     <Template Context="entity">
                                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                                                             @if (!string.IsNullOrEmpty(entity.Icon))
@@ -272,15 +273,78 @@
                                         </RadzenFormField>
 
                                         <RadzenFormField Text="Campo de Visualización" Variant="Variant.Outlined">
-                                            <RadzenTextBox @bind-Value="@GetReferenceConfig().DisplayProperty"
-                                                         Placeholder="ej: Name, DisplayName"
-                                                         Style="width: 100%;" />
+                                            @if (fieldsLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="rz-mt-1">Cargando campos...</RadzenText>
+                                                </div>
+                                            }
+                                            else if (availableDisplayFields.Any())
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().DisplayProperty"
+                                                              Data="@availableDisplayFields"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione campo para mostrar..."
+                                                              Style="width: 100%;">
+                                                    <Template Context="field">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <RadzenIcon Icon="@(field.FieldType == "custom" ? "extension" : "table_chart")" Style="font-size: 14px;" />
+                                                            <div>
+                                                                <div>@field.Text</div>
+                                                                @if (!string.IsNullOrEmpty(field.Description))
+                                                                {
+                                                                    <div style="font-size: 0.75rem; color: var(--rz-text-disabled-color);">@field.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                            else
+                                            {
+                                                <RadzenTextBox @bind-Value="@GetReferenceConfig().DisplayProperty"
+                                                             Placeholder="ej: Name, DisplayName"
+                                                             Style="width: 100%;" />
+                                            }
                                         </RadzenFormField>
 
                                         <RadzenFormField Text="Campo de Valor" Variant="Variant.Outlined">
-                                            <RadzenTextBox @bind-Value="@GetReferenceConfig().ValueProperty"
-                                                         Placeholder="ej: Id"
-                                                         Style="width: 100%;" />
+                                            @if (fieldsLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                </div>
+                                            }
+                                            else if (availableValueFields.Any())
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().ValueProperty"
+                                                              Data="@availableValueFields"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione campo de valor..."
+                                                              Style="width: 100%;">
+                                                    <Template Context="field">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <RadzenIcon Icon="@(field.Value == "Id" ? "vpn_key" : "table_chart")" Style="font-size: 14px;" />
+                                                            <div>
+                                                                <div>@field.Text</div>
+                                                                @if (!string.IsNullOrEmpty(field.Description))
+                                                                {
+                                                                    <div style="font-size: 0.75rem; color: var(--rz-text-disabled-color);">@field.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                            else
+                                            {
+                                                <RadzenTextBox @bind-Value="@GetReferenceConfig().ValueProperty"
+                                                             Placeholder="ej: Id"
+                                                             Style="width: 100%;" />
+                                            }
                                         </RadzenFormField>
 
                                         <RadzenRow Gap="1rem">

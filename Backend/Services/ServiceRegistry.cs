@@ -4,6 +4,7 @@ using Backend.Modules.Admin.SystemRoles;
 using Backend.Modules.Admin.SystemUsers;
 using Backend.Modules.Core.Localidades.Regions;
 using Backend.Utils.Security;
+using Backend.Utils.Services;
 
 namespace Backend.Services;
 
@@ -23,6 +24,7 @@ public static class ServiceRegistry
         
         // Utils Services
         services.AddScoped<TokenCacheService>();
+        services.AddScoped<DatabaseMigrationService>();
         
         return services;
     }

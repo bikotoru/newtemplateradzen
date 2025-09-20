@@ -407,18 +407,27 @@ public partial class CustomFieldsTab : ComponentBase
 
     private void RenderReferenceField(RenderTreeBuilder builder, FormFieldLayoutDto field, object? value, bool isDisabled)
     {
-        // Configuración de referencia
-        var referenceConfig = field.UIConfig?.ReferenceConfig;
-        if (referenceConfig == null)
+        try
         {
-            // Fallback a text box si no hay configuración
-            builder.OpenComponent<RadzenTextBox>(100);
-            builder.AddAttribute(101, "Value", value?.ToString() ?? "");
-            builder.AddAttribute(102, "Placeholder", $"Configure la referencia para {field.DisplayName}");
-            builder.AddAttribute(103, "Disabled", true);
-            builder.CloseComponent();
-            return;
-        }
+            // Verificaciones null básicas
+            if (builder == null || field == null)
+            {
+                Console.WriteLine("[CustomFieldsTab] RenderReferenceField: builder or field is null");
+                return;
+            }
+
+            // Configuración de referencia
+            var referenceConfig = field.UIConfig?.ReferenceConfig;
+            if (referenceConfig == null)
+            {
+                // Fallback a text box si no hay configuración
+                builder.OpenComponent<RadzenTextBox>(100);
+                builder.AddAttribute(101, "Value", value?.ToString() ?? "");
+                builder.AddAttribute(102, "Placeholder", $"Configure la referencia para {field.DisplayName}");
+                builder.AddAttribute(103, "Disabled", true);
+                builder.CloseComponent();
+                return;
+            }
 
         // Determinar el tipo de valor esperado
         var valueType = GetReferenceValueType(field.FieldType);
@@ -429,11 +438,18 @@ public partial class CustomFieldsTab : ComponentBase
         {
             builder.OpenComponent(200, lookupType);
 
+            // Obtener configuración correcta desde EntityRegistrationService
+            var entityConfig = EntityRegistrationService?.GetEntityConfiguration(referenceConfig.TargetEntity);
+            var displayProperty = entityConfig?.DisplayProperty ?? referenceConfig.DisplayProperty ?? "Name";
+            var valueProperty = entityConfig?.ValueProperty ?? referenceConfig.ValueProperty ?? "Id";
+
+            Console.WriteLine($"[CustomFieldsTab] Using DisplayProperty: '{displayProperty}' for entity: '{referenceConfig.TargetEntity}'");
+
             // Configurar propiedades básicas del Lookup
             builder.AddAttribute(201, "Value", GetReferenceValue(value, valueType));
             builder.AddAttribute(202, "ValueChanged", CreateReferenceValueChangedCallback(field.FieldName, valueType));
-            builder.AddAttribute(203, "DisplayProperty", referenceConfig.DisplayProperty);
-            builder.AddAttribute(204, "ValueProperty", referenceConfig.ValueProperty);
+            builder.AddAttribute(203, "DisplayProperty", displayProperty);
+            builder.AddAttribute(204, "ValueProperty", valueProperty);
             builder.AddAttribute(205, "Placeholder", $"Seleccione {field.DisplayName.ToLower()}");
             builder.AddAttribute(206, "AllowClear", referenceConfig.AllowClear);
             builder.AddAttribute(207, "Disabled", isDisabled);
@@ -463,6 +479,17 @@ public partial class CustomFieldsTab : ComponentBase
             builder.AddAttribute(302, "Placeholder", $"Referencia a {referenceConfig.TargetEntity}");
             builder.AddAttribute(303, "Disabled", true);
             builder.AddAttribute(304, "Style", "background-color: #f3f4f6;");
+            builder.CloseComponent();
+        }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error in RenderReferenceField: {ex.Message}");
+            // Fallback rendering
+            builder.OpenComponent<RadzenTextBox>(400);
+            builder.AddAttribute(401, "Value", value?.ToString() ?? "");
+            builder.AddAttribute(402, "Placeholder", "Error rendering reference field");
+            builder.AddAttribute(403, "Disabled", true);
             builder.CloseComponent();
         }
     }
@@ -515,6 +542,18 @@ public partial class CustomFieldsTab : ComponentBase
     {
         try
         {
+            if (EntityRegistrationService == null)
+            {
+                Console.WriteLine("[CustomFieldsTab] EntityRegistrationService is null");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(targetEntity))
+            {
+                Console.WriteLine("[CustomFieldsTab] targetEntity is null or empty");
+                return null;
+            }
+
             // Usar EntityRegistrationService para obtener el tipo de Lookup
             var lookupType = EntityRegistrationService.CreateLookupType(targetEntity);
 
@@ -526,7 +565,8 @@ public partial class CustomFieldsTab : ComponentBase
 
             // Log entidades disponibles para debugging
             var availableEntities = EntityRegistrationService.GetAllEntities();
-            Console.WriteLine($"[CustomFieldsTab] Entity '{targetEntity}' not found. Available entities: {string.Join(", ", availableEntities.Keys)}");
+            var entitiesStr = availableEntities?.Keys != null ? string.Join(", ", availableEntities.Keys) : "none";
+            Console.WriteLine($"[CustomFieldsTab] Entity '{targetEntity}' not found. Available entities: {entitiesStr}");
 
             return null;
         }
@@ -541,6 +581,18 @@ public partial class CustomFieldsTab : ComponentBase
     {
         try
         {
+            if (EntityRegistrationService == null)
+            {
+                Console.WriteLine("[CustomFieldsTab] EntityRegistrationService is null");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(targetEntity))
+            {
+                Console.WriteLine("[CustomFieldsTab] targetEntity is null or empty");
+                return null;
+            }
+
             // Usar EntityRegistrationService para obtener el servicio
             var service = EntityRegistrationService.GetEntityService(targetEntity);
 
@@ -552,7 +604,8 @@ public partial class CustomFieldsTab : ComponentBase
 
             // Log entidades disponibles para debugging
             var availableEntities = EntityRegistrationService.GetAllEntities();
-            Console.WriteLine($"[CustomFieldsTab] Service for '{targetEntity}' not found. Available entities: {string.Join(", ", availableEntities.Keys)}");
+            var entitiesStr = availableEntities?.Keys != null ? string.Join(", ", availableEntities.Keys) : "none";
+            Console.WriteLine($"[CustomFieldsTab] Service for '{targetEntity}' not found. Available entities: {entitiesStr}");
 
             return null;
         }

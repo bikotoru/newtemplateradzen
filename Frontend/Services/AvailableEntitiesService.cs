@@ -122,6 +122,45 @@ public class AvailableEntitiesService
             };
         }
     }
+
+    /// <summary>
+    /// Obtener campos disponibles para una entidad específica
+    /// </summary>
+    public async Task<EntityFieldsResponse> GetEntityFieldsAsync(string entityName)
+    {
+        try
+        {
+            _logger.LogInformation("Getting fields for entity: {EntityName}", entityName);
+
+            var response = await _api.GetAsync<EntityFieldsResponse>($"{_baseUrl}/{entityName}/fields");
+
+            if (response.Success && response.Data != null)
+            {
+                _logger.LogInformation("Successfully retrieved {TableFields} table fields and {CustomFields} custom fields for entity {EntityName}",
+                    response.Data.Data.TableFields.Count, response.Data.Data.CustomFields.Count, entityName);
+
+                return response.Data;
+            }
+
+            _logger.LogWarning("Failed to get fields for entity {EntityName}: {Message}", entityName, response.Message);
+            return new EntityFieldsResponse
+            {
+                Success = false,
+                Message = response.Message ?? $"Error getting fields for entity {entityName}",
+                Data = new EntityFieldsDto()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting fields for entity {EntityName}", entityName);
+            return new EntityFieldsResponse
+            {
+                Success = false,
+                Message = $"Error: {ex.Message}",
+                Data = new EntityFieldsDto()
+            };
+        }
+    }
 }
 
 /// <summary>
@@ -156,4 +195,50 @@ public class CategoriesResponse
     public List<string> Data { get; set; } = new();
     public string Message { get; set; } = "";
     public int Count { get; set; }
+}
+
+/// <summary>
+/// DTO para campos de tabla física
+/// </summary>
+public class TableFieldDto
+{
+    public string FieldName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string DataType { get; set; } = "";
+    public bool IsNullable { get; set; }
+    public string? DefaultValue { get; set; }
+}
+
+/// <summary>
+/// DTO para campos custom
+/// </summary>
+public class CustomFieldDto
+{
+    public string FieldName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string FieldType { get; set; } = "";
+    public string? Description { get; set; }
+}
+
+/// <summary>
+/// DTO completo de campos de entidad
+/// </summary>
+public class EntityFieldsDto
+{
+    public string EntityName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string TableName { get; set; } = "";
+    public List<TableFieldDto> TableFields { get; set; } = new();
+    public List<CustomFieldDto> CustomFields { get; set; } = new();
+    public string DefaultValueField { get; set; } = "Id";
+}
+
+/// <summary>
+/// Respuesta de campos de entidad
+/// </summary>
+public class EntityFieldsResponse
+{
+    public bool Success { get; set; }
+    public EntityFieldsDto Data { get; set; } = new();
+    public string Message { get; set; } = "";
 }

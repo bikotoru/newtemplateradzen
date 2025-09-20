@@ -161,29 +161,19 @@ public class FormDesignerController : ControllerBase
                 // Enriquecer los campos con información de uiConfig y validationConfig
                 if (sections != null)
                 {
+                    // Primero agregar campos personalizados faltantes
+                    await AddMissingCustomFields(sections, entityName, user.OrganizationId);
+
+                    // Luego enriquecer los campos existentes
                     await EnrichFieldsWithCustomFieldData(sections, user.OrganizationId);
 
                     // Log después del enriquecimiento
-                    _logger.LogInformation($"[FormDesignerController] After enrichment:");
+                    _logger.LogInformation($"[FormDesignerController] After enrichment and adding missing fields:");
                     foreach (var section in sections)
                     {
                         foreach (var field in section.Fields)
                         {
-                            _logger.LogInformation($"[FormDesignerController] Field: {field.FieldName}");
-                            if (field.UIConfig != null)
-                            {
-                                _logger.LogInformation($"[FormDesignerController]   UIConfig after enrichment:");
-                                _logger.LogInformation($"[FormDesignerController]     TrueLabel: {field.UIConfig.TrueLabel}");
-                                _logger.LogInformation($"[FormDesignerController]     FalseLabel: {field.UIConfig.FalseLabel}");
-                                _logger.LogInformation($"[FormDesignerController]     Format: {field.UIConfig.Format}");
-                                _logger.LogInformation($"[FormDesignerController]     DecimalPlaces: {field.UIConfig.DecimalPlaces}");
-                                _logger.LogInformation($"[FormDesignerController]     Prefix: {field.UIConfig.Prefix}");
-                                _logger.LogInformation($"[FormDesignerController]     Suffix: {field.UIConfig.Suffix}");
-                            }
-                            else
-                            {
-                                _logger.LogWarning($"[FormDesignerController]   UIConfig is NULL after enrichment for field {field.FieldName}");
-                            }
+                            _logger.LogInformation($"[FormDesignerController] Field: {field.FieldName} (Type: {field.FieldType})");
                         }
                     }
                 }
@@ -566,6 +556,112 @@ public class FormDesignerController : ControllerBase
     /// <summary>
     /// Enriquece los campos de las secciones con información de uiConfig y validationConfig desde SystemCustomFieldDefinitions
     /// </summary>
+    private async Task AddMissingCustomFields(List<FormSectionDto> sections, string entityName, Guid? organizationId)
+    {
+        try
+        {
+            _logger.LogInformation($"[FormDesignerController] Adding missing custom fields for entity: {entityName}");
+
+            // Obtener todos los campos existentes en las secciones
+            var existingFieldNames = sections
+                .SelectMany(s => s.Fields)
+                .Select(f => f.FieldName)
+                .ToHashSet();
+
+            // Obtener todos los campos personalizados definidos para esta entidad
+            var customFields = await _context.SystemCustomFieldDefinitions
+                .Where(cf => cf.EntityName == entityName &&
+                            cf.Active &&
+                            cf.IsEnabled &&
+                            (cf.OrganizationId == organizationId || cf.OrganizationId == null))
+                .OrderBy(cf => cf.SortOrder)
+                .ToListAsync();
+
+            _logger.LogInformation($"[FormDesignerController] Found {customFields.Count} custom fields defined for {entityName}");
+
+            // Filtrar campos que no están en el layout
+            var missingFields = customFields
+                .Where(cf => !existingFieldNames.Contains(cf.FieldName))
+                .ToList();
+
+            _logger.LogInformation($"[FormDesignerController] Found {missingFields.Count} missing fields to add");
+
+            if (!missingFields.Any())
+                return;
+
+            // Obtener la primera sección o crear una si no existe
+            FormSectionDto targetSection;
+            if (sections.Any())
+            {
+                targetSection = sections.First();
+            }
+            else
+            {
+                targetSection = new FormSectionDto
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Campos Personalizados",
+                    Description = "Campos personalizados de la entidad",
+                    GridSize = 12,
+                    SortOrder = 1,
+                    IsCollapsible = true,
+                    IsExpanded = true,
+                    Fields = new List<FormFieldLayoutDto>()
+                };
+                sections.Add(targetSection);
+            }
+
+            // Agregar los campos faltantes a la primera sección
+            foreach (var customField in missingFields)
+            {
+                var fieldLayout = new FormFieldLayoutDto
+                {
+                    Id = customField.Id,
+                    FieldName = customField.FieldName,
+                    DisplayName = customField.DisplayName,
+                    FieldType = customField.FieldType,
+                    Description = customField.Description,
+                    IsRequired = customField.IsRequired,
+                    IsSystemField = false,
+                    IsVisible = true,
+                    IsReadOnly = false,
+                    GridSize = GetDefaultGridSizeForFieldType(customField.FieldType),
+                    SortOrder = customField.SortOrder,
+                    DefaultValue = customField.DefaultValue,
+                    // Deserializar configuraciones
+                    UIConfig = DeserializeUIConfig(customField.Uiconfig),
+                    ValidationConfig = DeserializeValidationConfig(customField.ValidationConfig)
+                };
+
+                targetSection.Fields.Add(fieldLayout);
+                _logger.LogInformation($"[FormDesignerController] Added missing field: {customField.FieldName} ({customField.FieldType})");
+            }
+
+            _logger.LogInformation($"[FormDesignerController] Successfully added {missingFields.Count} missing fields");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error adding missing custom fields for entity: {entityName}");
+        }
+    }
+
+    private int GetDefaultGridSizeForFieldType(string fieldType)
+    {
+        return fieldType?.ToLowerInvariant() switch
+        {
+            "textarea" => 12, // Texto largo ocupa toda la fila
+            "boolean" => 6,   // Booleanos pueden ir en media fila
+            "date" => 6,      // Fechas en media fila
+            "number" => 6,    // Números en media fila
+            "select" => 6,    // Selects en media fila
+            "multiselect" => 12, // Multiselect ocupa toda la fila
+            "entity_reference" => 6, // Referencias en media fila
+            "user_reference" => 6,   // Referencias de usuario en media fila
+            "file_reference" => 12,  // Referencias de archivo ocupan toda la fila
+            _ => 6           // Por defecto media fila
+        };
+    }
+
     private async Task EnrichFieldsWithCustomFieldData(List<FormSectionDto> sections, Guid? organizationId)
     {
         // Obtener todos los nombres de campos personalizados de las secciones
