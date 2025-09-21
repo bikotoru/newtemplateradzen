@@ -46,7 +46,7 @@
                         <RadzenColumn Size="6">
                             @if (!string.IsNullOrEmpty(selectedEntityName))
                             {
-                                <RadzenButton Text="@($"{entityFields.Count} campos disponibles - Configurar")"
+                                <RadzenButton Text="@($"{entityFields.Where(f => f.IsVisible).Count()} campos disponibles - Configurar")"
                                             Icon="settings"
                                             ButtonStyle="ButtonStyle.Info"
                                             Size="ButtonSize.Small"
@@ -651,73 +651,122 @@ POST /api/{selectedEntityName}/paged
         }
 
         var result = await DialogService.OpenAsync("Configurar Campos Visibles", ds =>
-            @<div style="max-width: 600px;">
+            @<div style="max-width: 800px;">
                 <RadzenStack Gap="1rem">
                     <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
-                        Selecciona qué campos quieres ver en los resultados. Puedes arrastrar para reordenar.
+                        Selecciona qué campos quieres ver en los resultados y configura cómo se muestran.
                     </RadzenAlert>
 
-                    <RadzenText TextStyle="TextStyle.H6">Campos Disponibles:</RadzenText>
+                    <RadzenRow>
+                        <RadzenColumn Size="6">
+                            <RadzenText TextStyle="TextStyle.H6">Campos Disponibles:</RadzenText>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 0.5rem;">
+                                @foreach (var field in entityFields.Where(f => f.IsVisible))
+                                {
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <RadzenCard Style="padding: 0.5rem;">
+                                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                                <RadzenCheckBox Value="@GetFieldSelection(field)"
+                                                              Change="@((bool value) => ToggleFieldSelection(field))" />
+                                                <RadzenStack Gap="0.1rem" Style="flex: 1;">
+                                                    <RadzenText TextStyle="TextStyle.Subtitle2">@field.DisplayName</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                                        @field.PropertyName (@field.FieldCategory)
+                                                    </RadzenText>
+                                                </RadzenStack>
+                                                <RadzenButton Icon="add"
+                                                            Size="ButtonSize.ExtraSmall"
+                                                            ButtonStyle="ButtonStyle.Success"
+                                                            Visible="@(!GetFieldSelection(field))"
+                                                            Click="@(() => ToggleFieldSelection(field))"
+                                                            title="Agregar campo" />
+                                            </RadzenStack>
+                                        </RadzenCard>
+                                    </div>
+                                }
+                            </div>
+                        </RadzenColumn>
 
-                    <RadzenDataList Data="@entityFields.Where(f => f.IsVisible)"
-                                  WrapItems="false"
-                                  AllowPaging="false"
-                                  Style="max-height: 400px; overflow-y: auto;">
-                        <Template Context="field">
-                            <RadzenCard Style="margin-bottom: 0.5rem;">
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
-                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                        <RadzenCheckBox Value="@GetFieldSelection(field)"
-                                                      Change="@((bool value) => ToggleFieldSelection(field))" />
-                                        <RadzenStack Gap="0.25rem">
-                                            <RadzenText TextStyle="TextStyle.Subtitle2">@field.DisplayName</RadzenText>
-                                            <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
-                                                @field.PropertyName (@field.FieldCategory)
-                                            </RadzenText>
-                                        </RadzenStack>
-                                    </RadzenStack>
-
-                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
-                                        @if (GetFieldSelectionIndex(field) >= 0)
-                                        {
-                                            <RadzenButton Icon="keyboard_arrow_up"
-                                                        Size="ButtonSize.ExtraSmall"
-                                                        ButtonStyle="ButtonStyle.Light"
-                                                        Click="@(() => MoveFieldUp(field))"
-                                                        Disabled="@(GetFieldSelectionIndex(field) == 0)" />
-                                            <RadzenButton Icon="keyboard_arrow_down"
-                                                        Size="ButtonSize.ExtraSmall"
-                                                        ButtonStyle="ButtonStyle.Light"
-                                                        Click="@(() => MoveFieldDown(field))"
-                                                        Disabled="@(GetFieldSelectionIndex(field) == selectedFields.Count - 1)" />
-                                        }
-                                    </RadzenStack>
-                                </RadzenStack>
-                            </RadzenCard>
-                        </Template>
-                    </RadzenDataList>
-
-                    <RadzenAlert AlertStyle="AlertStyle.Success" Icon="visibility" Visible="@selectedFields.Any()">
-                        Campos seleccionados: @string.Join(", ", selectedFields.Select(f => f.DisplayName))
-                    </RadzenAlert>
+                        <RadzenColumn Size="6">
+                            <RadzenText TextStyle="TextStyle.H6">Campos Seleccionados (@selectedFields.Count):</RadzenText>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 0.5rem;">
+                                @if (selectedFields.Any())
+                                {
+                                    @for (int i = 0; i < selectedFields.Count; i++)
+                                    {
+                                        var field = selectedFields[i];
+                                        var index = i;
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <RadzenCard Style="padding: 0.5rem; background: var(--rz-success-lighter);">
+                                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                                    <RadzenText TextStyle="TextStyle.Body2" Style="min-width: 20px;">@(index + 1).</RadzenText>
+                                                    <RadzenStack Gap="0.5rem" Style="flex: 1;">
+                                                        <RadzenTextBox @bind-Value="@field.DisplayName"
+                                                                     Placeholder="Nombre para mostrar"
+                                                                     Style="width: 100%;"
+                                                                     Change="@StateHasChanged" />
+                                                        <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                                            @field.PropertyName (@field.FieldCategory)
+                                                        </RadzenText>
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.1rem">
+                                                        <RadzenButton Icon="keyboard_arrow_up"
+                                                                    Size="ButtonSize.ExtraSmall"
+                                                                    ButtonStyle="ButtonStyle.Light"
+                                                                    Click="@(() => MoveFieldUp(field))"
+                                                                    Disabled="@(index == 0)"
+                                                                    title="Mover arriba" />
+                                                        <RadzenButton Icon="keyboard_arrow_down"
+                                                                    Size="ButtonSize.ExtraSmall"
+                                                                    ButtonStyle="ButtonStyle.Light"
+                                                                    Click="@(() => MoveFieldDown(field))"
+                                                                    Disabled="@(index == selectedFields.Count - 1)"
+                                                                    title="Mover abajo" />
+                                                        <RadzenButton Icon="remove"
+                                                                    Size="ButtonSize.ExtraSmall"
+                                                                    ButtonStyle="ButtonStyle.Danger"
+                                                                    Click="@(() => ToggleFieldSelection(field))"
+                                                                    title="Quitar campo" />
+                                                    </RadzenStack>
+                                                </RadzenStack>
+                                            </RadzenCard>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <RadzenText TextStyle="TextStyle.Body2" Style="text-align: center; color: var(--rz-text-secondary-color); padding: 2rem;">
+                                        No hay campos seleccionados.<br/>
+                                        Selecciona campos de la lista de la izquierda.
+                                    </RadzenText>
+                                }
+                            </div>
+                        </RadzenColumn>
+                    </RadzenRow>
                 </RadzenStack>
 
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
-                    <RadzenButton Text="Seleccionar Todo"
-                                Icon="select_all"
-                                ButtonStyle="ButtonStyle.Light"
-                                Click="@SelectAllVisibleFields" />
-                    <RadzenButton Text="Limpiar Selección"
-                                Icon="clear_all"
-                                ButtonStyle="ButtonStyle.Light"
-                                Click="@ClearFieldSelection" />
-                    <RadzenButton Text="Aplicar"
-                                ButtonStyle="ButtonStyle.Primary"
-                                Icon="check"
-                                Click="@(() => ds.Close(true))" />
-                    <RadzenButton Text="Cancelar"
-                                ButtonStyle="ButtonStyle.Light"
-                                Click="@(() => ds.Close(false))" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.SpaceBetween" Style="margin-top: 1rem;">
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Text="Seleccionar Todo"
+                                    Icon="select_all"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@SelectAllVisibleFields" />
+                        <RadzenButton Text="Limpiar Todo"
+                                    Icon="clear_all"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@ClearFieldSelection" />
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Text="Aplicar"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Icon="check"
+                                    Click="@(() => ds.Close(true))" />
+                        <RadzenButton Text="Cancelar"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="@(() => ds.Close(false))" />
+                    </RadzenStack>
                 </RadzenStack>
             </div>
         );
