@@ -1,0 +1,242 @@
+@using Frontend.Services
+@using Radzen
+@using Radzen.Blazor
+
+<div style="max-width: 800px;">
+    <RadzenStack Gap="1rem">
+        <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
+            Selecciona qué campos quieres ver en los resultados y configura cómo se muestran.
+        </RadzenAlert>
+
+        <RadzenRow>
+            <RadzenColumn Size="6">
+                <RadzenText TextStyle="TextStyle.H6">Campos Disponibles:</RadzenText>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 0.5rem;">
+                    @foreach (var field in AvailableFields.Where(f => f.IsVisible))
+                    {
+                        var isSelected = IsFieldSelected(field);
+                        <div style="margin-bottom: 0.5rem;">
+                            <RadzenCard Style="padding: 0.5rem;">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenStack Gap="0.1rem" Style="flex: 1;">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2">@field.DisplayName</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                            @field.PropertyName (@field.FieldCategory)
+                                        </RadzenText>
+                                    </RadzenStack>
+                                    @if (isSelected)
+                                    {
+                                        <RadzenButton Icon="remove_circle"
+                                                    ButtonStyle="ButtonStyle.Danger"
+                                                    Size="ButtonSize.ExtraSmall"
+                                                    Click="@(() => ToggleField(field))"
+                                                    title="Quitar campo" />
+                                    }
+                                    else
+                                    {
+                                        <RadzenButton Icon="add_circle"
+                                                    ButtonStyle="ButtonStyle.Success"
+                                                    Size="ButtonSize.ExtraSmall"
+                                                    Click="@(() => ToggleField(field))"
+                                                    title="Agregar campo" />
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </div>
+                    }
+                </div>
+            </RadzenColumn>
+
+            <RadzenColumn Size="6">
+                <RadzenText TextStyle="TextStyle.H6">Campos Seleccionados (@SelectedFields.Count):</RadzenText>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 0.5rem;">
+                    @if (SelectedFields.Any())
+                    {
+                        @foreach (var field in SelectedFields.Select((f, i) => new { Field = f, Index = i }))
+                        {
+                            <div style="margin-bottom: 0.5rem;">
+                                <RadzenCard Style="padding: 0.5rem; background: var(--rz-success-lighter);">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                        <RadzenText TextStyle="TextStyle.Body2" Style="min-width: 20px;">@(field.Index + 1).</RadzenText>
+                                        <RadzenStack Gap="0.5rem" Style="flex: 1;">
+                                            <RadzenTextBox Value="@field.Field.DisplayName"
+                                                         ValueChanged="@((string value) => UpdateFieldDisplayName(field.Field, value))"
+                                                         Placeholder="Nombre para mostrar"
+                                                         Style="width: 100%;" />
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                                @field.Field.PropertyName (@field.Field.FieldCategory)
+                                            </RadzenText>
+                                        </RadzenStack>
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.1rem">
+                                            <RadzenButton Icon="keyboard_arrow_up"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => MoveFieldUp(field.Field))"
+                                                        Disabled="@(field.Index == 0)"
+                                                        title="Mover arriba" />
+                                            <RadzenButton Icon="keyboard_arrow_down"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => MoveFieldDown(field.Field))"
+                                                        Disabled="@(field.Index == SelectedFields.Count - 1)"
+                                                        title="Mover abajo" />
+                                            <RadzenButton Icon="remove"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Click="@(() => ToggleField(field.Field))"
+                                                        title="Quitar campo" />
+                                        </RadzenStack>
+                                    </RadzenStack>
+                                </RadzenCard>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" Style="text-align: center; color: var(--rz-text-secondary-color); padding: 2rem;">
+                            No hay campos seleccionados.<br/>
+                            Selecciona campos de la lista de la izquierda.
+                        </RadzenText>
+                    }
+                </div>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.SpaceBetween" Style="margin-top: 1rem;">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+            <RadzenButton Text="Seleccionar Todo"
+                        Icon="select_all"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@SelectAllVisibleFields" />
+            <RadzenButton Text="Limpiar Todo"
+                        Icon="clear_all"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="@ClearFieldSelection" />
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+            <RadzenButton Text="Aplicar"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Icon="check"
+                        Click="@ApplyChanges" />
+            <RadzenButton Text="Cancelar"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="@Cancel" />
+        </RadzenStack>
+    </RadzenStack>
+</div>
+
+@code {
+    [Parameter] public List<EntityFieldDefinition> AvailableFields { get; set; } = new();
+    [Parameter] public List<EntityFieldDefinition> InitialSelectedFields { get; set; } = new();
+    [Parameter] public EventCallback<List<EntityFieldDefinition>> OnApply { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private List<EntityFieldDefinition> SelectedFields = new();
+
+    protected override void OnInitialized()
+    {
+        // Inicializar campos seleccionados con los campos por defecto
+        if (!InitialSelectedFields.Any())
+        {
+            SelectedFields = AvailableFields.Where(f => f.IsVisible && f.IsSelectedByDefault)
+                .Select(CreateFieldCopy).ToList();
+        }
+        else
+        {
+            SelectedFields = InitialSelectedFields.Select(CreateFieldCopy).ToList();
+        }
+    }
+
+    private EntityFieldDefinition CreateFieldCopy(EntityFieldDefinition original)
+    {
+        return new EntityFieldDefinition
+        {
+            PropertyName = original.PropertyName,
+            DisplayName = original.DisplayName,
+            PropertyType = original.PropertyType,
+            IsNullable = original.IsNullable,
+            IsSearchable = original.IsSearchable,
+            FieldCategory = original.FieldCategory,
+            Description = original.Description,
+            IsVisible = original.IsVisible,
+            IsSelectedByDefault = original.IsSelectedByDefault,
+            SortOrder = original.SortOrder
+        };
+    }
+
+    private bool IsFieldSelected(EntityFieldDefinition field)
+    {
+        return SelectedFields.Any(f => f.PropertyName == field.PropertyName);
+    }
+
+    private void ToggleField(EntityFieldDefinition field)
+    {
+        var existingIndex = SelectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+
+        if (existingIndex >= 0)
+        {
+            SelectedFields.RemoveAt(existingIndex);
+        }
+        else
+        {
+            var fieldCopy = CreateFieldCopy(field);
+            SelectedFields.Add(fieldCopy);
+        }
+
+        StateHasChanged();
+    }
+
+    private void UpdateFieldDisplayName(EntityFieldDefinition field, string newDisplayName)
+    {
+        field.DisplayName = newDisplayName;
+        StateHasChanged();
+    }
+
+    private void MoveFieldUp(EntityFieldDefinition field)
+    {
+        var index = SelectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+        if (index > 0)
+        {
+            SelectedFields.RemoveAt(index);
+            SelectedFields.Insert(index - 1, field);
+            StateHasChanged();
+        }
+    }
+
+    private void MoveFieldDown(EntityFieldDefinition field)
+    {
+        var index = SelectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+        if (index >= 0 && index < SelectedFields.Count - 1)
+        {
+            SelectedFields.RemoveAt(index);
+            SelectedFields.Insert(index + 1, field);
+            StateHasChanged();
+        }
+    }
+
+    private void SelectAllVisibleFields()
+    {
+        SelectedFields.Clear();
+        SelectedFields.AddRange(AvailableFields.Where(f => f.IsVisible).Select(CreateFieldCopy));
+        StateHasChanged();
+    }
+
+    private void ClearFieldSelection()
+    {
+        SelectedFields.Clear();
+        StateHasChanged();
+    }
+
+    private async Task ApplyChanges()
+    {
+        await OnApply.InvokeAsync(SelectedFields);
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}
