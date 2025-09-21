@@ -1111,6 +1111,7 @@ BEGIN
         Category NVARCHAR(100) NULL,                    -- Categoría (ej: "RRHH", "Core")
         AllowCustomFields BIT DEFAULT 1 NOT NULL,       -- Permite campos personalizados
         SortOrder INT DEFAULT 100 NOT NULL,             -- Orden de presentación
+        BackendApi NVARCHAR(200) NULL,                  -- API Backend (ej: "MainBackend", "FormBackend")
 
         -- Foreign Keys
         CONSTRAINT FK_system_form_entities_OrganizationId

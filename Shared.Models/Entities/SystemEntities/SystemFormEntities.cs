@@ -35,6 +35,8 @@ public partial class SystemFormEntities
 
     public int SortOrder { get; set; }
 
+    public string? BackendApi { get; set; }
+
     public virtual SystemUsers? Creador { get; set; }
 
     public virtual SystemUsers? Modificador { get; set; }

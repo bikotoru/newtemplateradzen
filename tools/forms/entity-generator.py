@@ -338,6 +338,30 @@ class EntityGenerator:
         print(f"   Connection string: {connection_string}")
         return None
 
+    def _determine_backend_api_for_entity(self, module_path):
+        """
+        Determinar automáticamente qué backend API usar basado en el módulo
+
+        Args:
+            module_path: Ruta del módulo (ej: "Core.RRHH", "Forms.Designer")
+
+        Returns:
+            str: Backend API recomendado
+        """
+        # Convertir a minúsculas para comparación
+        module_lower = module_path.lower()
+
+        # Reglas de mapeo basadas en el módulo
+        if any(keyword in module_lower for keyword in ['form', 'custom', 'designer', 'field']):
+            return "FormBackend"
+        elif any(keyword in module_lower for keyword in ['system', 'auth', 'user', 'permission', 'role']):
+            return "GlobalBackend"  # Cambiar SystemBackend por GlobalBackend
+        elif any(keyword in module_lower for keyword in ['core', 'main', 'base']):
+            return "GlobalBackend"  # Cambiar MainBackend por GlobalBackend
+        else:
+            # Default para módulos personalizados
+            return "GlobalBackend"   # Cambiar MainBackend por GlobalBackend
+
     def register_in_system_form_entity(self, config):
         """Registrar entidad en SystemFormEntity para FormDesigner"""
         import subprocess
@@ -364,6 +388,10 @@ class EntityGenerator:
             allow_custom_fields = getattr(config, 'allow_custom_fields', True)
             system_entity = getattr(config, 'system_entity', False)
 
+            # Determinar backend API automáticamente basado en el módulo
+            backend_api = self._determine_backend_api_for_entity(config.module)
+            print(f"🖥️ Backend API detectado: {backend_api} (basado en módulo: {config.module})")
+
             # Determinar OrganizationId basado en system_entity
             org_id = 'NULL' if system_entity else 'NULL'  # Por ahora siempre NULL hasta implementar org específicas
 
@@ -387,12 +415,12 @@ class EntityGenerator:
                     Id, OrganizationId, FechaCreacion, FechaModificacion,
                     CreadorId, ModificadorId, Active,
                     EntityName, DisplayName, Description, TableName,
-                    IconName, Category, AllowCustomFields, SortOrder
+                    IconName, Category, AllowCustomFields, SortOrder, BackendApi
                 ) VALUES (
                     NEWID(), {org_id}, GETUTCDATE(), GETUTCDATE(),
                     @ValidUserId, @ValidUserId, 1,
                     '{entity_name}', '{entity_plural}', '{description}', '{table_name}',
-                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999
+                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999, '{backend_api}'
                 );
                 PRINT 'Entidad {entity_name} registrada en system_form_entities';
             END

@@ -43,7 +43,8 @@ public class AdvancedQueryService
                     DisplayName = entity.DisplayName ?? entity.EntityName,
                     Description = entity.Description,
                     Category = entity.Category,
-                    IconName = entity.IconName
+                    IconName = entity.IconName,
+                    BackendApi = entity.BackendApi // Incluir el campo BackendApi
                 }).ToList();
 
                 _logger.LogInformation("Retrieved {Count} entities for advanced queries", entities.Count);
@@ -168,7 +169,7 @@ public class AdvancedQueryService
     /// <summary>
     /// Ejecutar consulta avanzada usando filtros de RadzenDataFilter
     /// </summary>
-    public async Task<AdvancedQueryResult<object>> ExecuteAdvancedQueryAsync(string entityName, AdvancedQueryRequest request)
+    public async Task<AdvancedQueryResult<object>> ExecuteAdvancedQueryAsync(string entityName, AdvancedQueryRequest request, string? backendApi = null)
     {
         try
         {
@@ -189,20 +190,99 @@ public class AdvancedQueryService
 
             _logger.LogInformation("Generated filter string: {FilterString}", filterString);
 
-            // Usar el patrón estándar del BaseQueryController
-            var response = await _api.PostAsync<PagedResult<object>>($"api/{entityName}/paged", queryRequest);
+            // Determinar endpoint y backend a usar
+            string endpoint;
+            BackendType targetBackend;
+
+            if (!string.IsNullOrEmpty(backendApi) && backendApi.StartsWith("api/"))
+            {
+                // Usar URL específica de la base de datos con /query al final
+                endpoint = $"{backendApi}/query";
+                targetBackend = BackendType.GlobalBackend; // Asumir GlobalBackend para URLs específicas
+                _logger.LogInformation("Using specific API endpoint: {Endpoint}", endpoint);
+            }
+            else
+            {
+                // Usar patrón estándar con BackendType
+                targetBackend = GetBackendType(backendApi);
+                endpoint = $"api/{entityName}/paged";
+                _logger.LogInformation("Using standard pattern: {Endpoint} (BackendType: {BackendType})", endpoint, targetBackend);
+            }
+
+            // Ejecutar consulta con endpoint dinámico
+            var response = await _api.PostAsync<object>(endpoint, queryRequest, targetBackend);
 
             if (response.Success && response.Data != null)
             {
-                return new AdvancedQueryResult<object>
+                try
                 {
-                    Success = true,
-                    Data = response.Data.Data,
-                    TotalCount = response.Data.TotalCount,
-                    Page = response.Data.Page,
-                    PageSize = response.Data.PageSize,
-                    Message = "Query executed successfully"
-                };
+                    // Convertir response.Data a JsonElement para inspeccionar su tipo
+                    var jsonString = JsonSerializer.Serialize(response.Data);
+                    var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
+
+                    // Verificar si response.Data ya es directamente un array
+                    if (jsonElement.ValueKind == JsonValueKind.Array)
+                    {
+                        // response.Data ya es el array de datos directamente
+                        var items = JsonSerializer.Deserialize<List<object>>(jsonElement.GetRawText()) ?? new List<object>();
+                        return new AdvancedQueryResult<object>
+                        {
+                            Success = true,
+                            Data = items,
+                            TotalCount = items.Count,
+                            Page = 1,
+                            PageSize = items.Count,
+                            Message = "Query executed successfully"
+                        };
+                    }
+                    // Si es un objeto, verificar si tiene la estructura PagedResult
+                    else if (jsonElement.ValueKind == JsonValueKind.Object)
+                    {
+                        // Intentar como PagedResult primero (tiene propiedades data, totalCount, etc.)
+                        if (jsonElement.TryGetProperty("data", out var dataProperty) &&
+                            jsonElement.TryGetProperty("totalCount", out _))
+                        {
+                            // Es un PagedResult
+                            var pagedResult = JsonSerializer.Deserialize<PagedResult<object>>(jsonElement.GetRawText());
+                            if (pagedResult != null)
+                            {
+                                return new AdvancedQueryResult<object>
+                                {
+                                    Success = true,
+                                    Data = pagedResult.Data,
+                                    TotalCount = pagedResult.TotalCount,
+                                    Page = pagedResult.Page,
+                                    PageSize = pagedResult.PageSize,
+                                    Message = "Query executed successfully"
+                                };
+                            }
+                        }
+                        // Si tiene una propiedad "data" que es un array
+                        else if (jsonElement.TryGetProperty("data", out var dataProp) &&
+                                 dataProp.ValueKind == JsonValueKind.Array)
+                        {
+                            // Formato envuelto: { "data": [...] }
+                            var items = JsonSerializer.Deserialize<List<object>>(dataProp.GetRawText()) ?? new List<object>();
+                            return new AdvancedQueryResult<object>
+                            {
+                                Success = true,
+                                Data = items,
+                                TotalCount = items.Count,
+                                Page = 1,
+                                PageSize = items.Count,
+                                Message = "Query executed successfully"
+                            };
+                        }
+                    }
+
+                    // Si llegamos aquí, no pudimos parsear el response
+                    _logger.LogWarning("Unexpected response format for entity {EntityName}. ValueKind: {ValueKind}",
+                                      entityName, jsonElement.ValueKind);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error parsing response data for entity {EntityName}", entityName);
+                }
             }
 
             _logger.LogWarning("Advanced query failed for entity {EntityName}: {Message}", entityName, response.Message);
@@ -278,6 +358,24 @@ public class AdvancedQueryService
     }
 
     #region Helper Methods
+
+    /// <summary>
+    /// Convertir string de backend API a BackendType enum
+    /// </summary>
+    private BackendType GetBackendType(string? backendApi)
+    {
+        if (string.IsNullOrEmpty(backendApi))
+            return BackendType.GlobalBackend; // Default
+
+        return backendApi.ToLower() switch
+        {
+            "mainbackend" => BackendType.GlobalBackend,
+            "globalbackend" => BackendType.GlobalBackend,
+            "formbackend" => BackendType.FormBackend,
+            "systembackend" => BackendType.GlobalBackend, // Mapear SystemBackend a GlobalBackend por ahora
+            _ => BackendType.GlobalBackend // Default para valores desconocidos
+        };
+    }
 
     /// <summary>
     /// Convertir filtros de RadzenDataFilter a string LINQ

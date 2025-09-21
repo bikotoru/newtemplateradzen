@@ -173,6 +173,7 @@ public class AvailableEntityDto
     public string? Description { get; set; }
     public string? Category { get; set; }
     public string? IconName { get; set; }
+    public string? BackendApi { get; set; } // Campo para especificar qué backend API usar
 }
 
 /// <summary>

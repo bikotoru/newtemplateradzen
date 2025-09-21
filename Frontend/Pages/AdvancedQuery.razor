@@ -339,7 +339,7 @@
                 Take = takeLimit
             };
 
-            queryResults = await AdvancedQueryService.ExecuteAdvancedQueryAsync(selectedEntityName!, request);
+            queryResults = await AdvancedQueryService.ExecuteAdvancedQueryAsync(selectedEntityName!, request, selectedEntity?.BackendApi);
 
             if (queryResults.Success)
             {
