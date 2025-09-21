@@ -46,7 +46,11 @@
                         <RadzenColumn Size="6">
                             @if (!string.IsNullOrEmpty(selectedEntityName))
                             {
-                                <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@($"{entityFields.Count} campos disponibles")" />
+                                <RadzenButton Text="@($"{entityFields.Count} campos disponibles - Configurar")"
+                                            Icon="settings"
+                                            ButtonStyle="ButtonStyle.Info"
+                                            Size="ButtonSize.Small"
+                                            Click="@OpenFieldSelectionDialog" />
                             }
                         </RadzenColumn>
                     </RadzenRow>
@@ -181,7 +185,7 @@
                                           GridLines="DataGridGridLines.Both"
                                           Style="height: 500px;">
                                 <Columns>
-                                    @foreach (var field in entityFields.Take(6)) // Mostrar primeras 6 columnas
+                                    @foreach (var field in GetDisplayFields())
                                     {
                                         <RadzenDataGridColumn TItem="object"
                                                             Property="@field.PropertyName"
@@ -275,6 +279,7 @@
         {
             selectedEntity = null;
             entityFields.Clear();
+            selectedFields.Clear(); // Limpiar selección de campos
             queryResults = null;
             return;
         }
@@ -286,8 +291,9 @@
             isLoading = true;
             entityFields = await AdvancedQueryService.GetEntityFieldDefinitionsAsync(selectedEntityName);
 
-            // Limpiar resultados anteriores
+            // Limpiar resultados anteriores y selección de campos
             queryResults = null;
+            selectedFields.Clear();
 
             NotificationService.Notify(new NotificationMessage
             {
@@ -625,5 +631,211 @@ POST /api/{selectedEntityName}/paged
         {
             return "";
         }
+    }
+
+    // Variables para selección de campos
+    private List<EntityFieldDefinition> selectedFields = new();
+    private bool showFieldSelectionDialog = false;
+
+    /// <summary>
+    /// Abrir diálogo de selección de campos
+    /// </summary>
+    private async Task OpenFieldSelectionDialog()
+    {
+        if (!entityFields.Any()) return;
+
+        // Configurar campos seleccionados basado en IsSelectedByDefault
+        if (!selectedFields.Any())
+        {
+            selectedFields = entityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).ToList();
+        }
+
+        var result = await DialogService.OpenAsync("Configurar Campos Visibles", ds =>
+            @<div style="max-width: 600px;">
+                <RadzenStack Gap="1rem">
+                    <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
+                        Selecciona qué campos quieres ver en los resultados. Puedes arrastrar para reordenar.
+                    </RadzenAlert>
+
+                    <RadzenText TextStyle="TextStyle.H6">Campos Disponibles:</RadzenText>
+
+                    <RadzenDataList Data="@entityFields.Where(f => f.IsVisible)"
+                                  WrapItems="false"
+                                  AllowPaging="false"
+                                  Style="max-height: 400px; overflow-y: auto;">
+                        <Template Context="field">
+                            <RadzenCard Style="margin-bottom: 0.5rem;">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                        <RadzenCheckBox Value="@GetFieldSelection(field)"
+                                                      Change="@((bool value) => ToggleFieldSelection(field))" />
+                                        <RadzenStack Gap="0.25rem">
+                                            <RadzenText TextStyle="TextStyle.Subtitle2">@field.DisplayName</RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                                @field.PropertyName (@field.FieldCategory)
+                                            </RadzenText>
+                                        </RadzenStack>
+                                    </RadzenStack>
+
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                        @if (GetFieldSelectionIndex(field) >= 0)
+                                        {
+                                            <RadzenButton Icon="keyboard_arrow_up"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => MoveFieldUp(field))"
+                                                        Disabled="@(GetFieldSelectionIndex(field) == 0)" />
+                                            <RadzenButton Icon="keyboard_arrow_down"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => MoveFieldDown(field))"
+                                                        Disabled="@(GetFieldSelectionIndex(field) == selectedFields.Count - 1)" />
+                                        }
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </RadzenCard>
+                        </Template>
+                    </RadzenDataList>
+
+                    <RadzenAlert AlertStyle="AlertStyle.Success" Icon="visibility" Visible="@selectedFields.Any()">
+                        Campos seleccionados: @string.Join(", ", selectedFields.Select(f => f.DisplayName))
+                    </RadzenAlert>
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
+                    <RadzenButton Text="Seleccionar Todo"
+                                Icon="select_all"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@SelectAllVisibleFields" />
+                    <RadzenButton Text="Limpiar Selección"
+                                Icon="clear_all"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@ClearFieldSelection" />
+                    <RadzenButton Text="Aplicar"
+                                ButtonStyle="ButtonStyle.Primary"
+                                Icon="check"
+                                Click="@(() => ds.Close(true))" />
+                    <RadzenButton Text="Cancelar"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="@(() => ds.Close(false))" />
+                </RadzenStack>
+            </div>
+        );
+
+        // Si el usuario aplicó los cambios, actualizar la UI
+        if (result == true)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Campos Configurados",
+                Detail = $"Se configuraron {selectedFields.Count} campos para mostrar",
+                Duration = 3000
+            });
+        }
+    }
+
+    /// <summary>
+    /// Verificar si un campo está seleccionado
+    /// </summary>
+    private bool GetFieldSelection(EntityFieldDefinition field)
+    {
+        return selectedFields.Any(f => f.PropertyName == field.PropertyName);
+    }
+
+    /// <summary>
+    /// Obtener índice de selección de un campo
+    /// </summary>
+    private int GetFieldSelectionIndex(EntityFieldDefinition field)
+    {
+        return selectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+    }
+
+    /// <summary>
+    /// Alternar selección de un campo
+    /// </summary>
+    private void ToggleFieldSelection(EntityFieldDefinition field)
+    {
+        var existingIndex = selectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+
+        if (existingIndex >= 0)
+        {
+            selectedFields.RemoveAt(existingIndex);
+        }
+        else
+        {
+            selectedFields.Add(field);
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Mover campo hacia arriba en el orden
+    /// </summary>
+    private void MoveFieldUp(EntityFieldDefinition field)
+    {
+        var index = selectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+        if (index > 0)
+        {
+            selectedFields.RemoveAt(index);
+            selectedFields.Insert(index - 1, field);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Mover campo hacia abajo en el orden
+    /// </summary>
+    private void MoveFieldDown(EntityFieldDefinition field)
+    {
+        var index = selectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+        if (index >= 0 && index < selectedFields.Count - 1)
+        {
+            selectedFields.RemoveAt(index);
+            selectedFields.Insert(index + 1, field);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Seleccionar todos los campos visibles
+    /// </summary>
+    private void SelectAllVisibleFields()
+    {
+        selectedFields.Clear();
+        selectedFields.AddRange(entityFields.Where(f => f.IsVisible));
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Limpiar selección de campos
+    /// </summary>
+    private void ClearFieldSelection()
+    {
+        selectedFields.Clear();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Obtener campos para mostrar en la tabla de resultados
+    /// </summary>
+    private List<EntityFieldDefinition> GetDisplayFields()
+    {
+        // Si hay campos seleccionados, usar esos en el orden especificado
+        if (selectedFields.Any())
+        {
+            return selectedFields;
+        }
+
+        // Si no hay selección, usar los campos por defecto (solo los seleccionados por defecto)
+        var defaultFields = entityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).ToList();
+        if (defaultFields.Any())
+        {
+            return defaultFields;
+        }
+
+        // Fallback: mostrar máximo 6 campos visibles
+        return entityFields.Where(f => f.IsVisible).Take(6).ToList();
     }
 }

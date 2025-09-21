@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Reflection;
 using Radzen;
 
 namespace Frontend.Services;
@@ -70,13 +71,11 @@ public class AdvancedQueryService
         {
             _logger.LogInformation("Getting field definitions for entity: {EntityName}", entityName);
 
-            // Por ahora, crear campos básicos usando reflexión del modelo
-            var fields = GetBasicFieldDefinitionsForEntity(entityName);
-
-            // TODO: En el futuro se puede integrar con endpoints de campos custom
+            // Crear campos básicos dinámicamente ejecutando una consulta de muestra
+            var fields = await GetFieldDefinitionsDynamicallyAsync(entityName);
 
             _logger.LogInformation("Retrieved {Count} field definitions for entity {EntityName}", fields.Count, entityName);
-            return await Task.FromResult(fields);
+            return fields;
         }
         catch (Exception ex)
         {
@@ -86,14 +85,405 @@ public class AdvancedQueryService
     }
 
     /// <summary>
-    /// Crear definiciones de campos básicos para entidades comunes
+    /// Obtener definiciones de campos dinámicamente usando reflexión del modelo
     /// </summary>
-    private List<EntityFieldDefinition> GetBasicFieldDefinitionsForEntity(string entityName)
+    private async Task<List<EntityFieldDefinition>> GetFieldDefinitionsDynamicallyAsync(string entityName)
+    {
+        try
+        {
+            // Primero intentar obtener campos del modelo usando reflexión
+            var modelFields = GetFieldsFromModel(entityName);
+            if (modelFields.Any())
+            {
+                _logger.LogInformation("Found {Count} fields using model reflection for entity {EntityName}", modelFields.Count, entityName);
+                return modelFields;
+            }
+
+            // Si no encuentra el modelo, intentar con datos de muestra como fallback
+            _logger.LogWarning("Could not find model for entity {EntityName}, trying sample data approach", entityName);
+            return await GetFieldsFromSampleData(entityName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting field definitions dynamically for entity {EntityName}", entityName);
+            return CreateFallbackFieldDefinitions();
+        }
+    }
+
+    /// <summary>
+    /// Obtener campos del modelo usando reflexión
+    /// </summary>
+    private List<EntityFieldDefinition> GetFieldsFromModel(string entityName)
+    {
+        try
+        {
+            // Buscar el tipo del modelo en los assemblies cargados
+            var modelType = FindModelType(entityName);
+            if (modelType == null)
+            {
+                _logger.LogWarning("Could not find model type for entity {EntityName}", entityName);
+                return new List<EntityFieldDefinition>();
+            }
+
+            var fields = new List<EntityFieldDefinition>();
+
+            // Obtener todas las propiedades públicas del modelo
+            var properties = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var property in properties)
+            {
+                // Crear definición de campo desde la propiedad
+                var fieldDefinition = CreateFieldDefinitionFromProperty(property);
+                if (fieldDefinition != null)
+                {
+                    fields.Add(fieldDefinition);
+                }
+            }
+
+            // Aplicar reglas de visibilidad
+            ApplyCommonFieldRules(fields);
+
+            return fields.OrderBy(f => f.SortOrder).ThenBy(f => f.DisplayName).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting fields from model for entity {EntityName}", entityName);
+            return new List<EntityFieldDefinition>();
+        }
+    }
+
+    /// <summary>
+    /// Buscar el tipo del modelo en el namespace específico
+    /// </summary>
+    private Type? FindModelType(string entityName)
+    {
+        try
+        {
+            // Buscar en Shared.Models assembly primero (lugar principal de los modelos)
+            var sharedModelsAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "Shared.Models");
+
+            if (sharedModelsAssembly != null)
+            {
+                // Buscar en el namespace específico: Shared.Models.Entities.{EntityName}
+                var fullTypeName = $"Shared.Models.Entities.{entityName}";
+                var modelType = sharedModelsAssembly.GetType(fullTypeName, false, true); // ignoreCase = true
+
+                if (modelType != null)
+                {
+                    _logger.LogInformation("Found model type {TypeName} for entity {EntityName}", modelType.FullName, entityName);
+                    return modelType;
+                }
+
+                // Si no se encuentra con el nombre exacto, buscar en todo el namespace Entities
+                var allTypes = sharedModelsAssembly.GetTypes()
+                    .Where(t => t.Namespace != null &&
+                               t.Namespace.StartsWith("Shared.Models.Entities") &&
+                               t.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase) &&
+                               t.IsClass && !t.IsAbstract);
+
+                var foundType = allTypes.FirstOrDefault();
+                if (foundType != null)
+                {
+                    _logger.LogInformation("Found model type {TypeName} for entity {EntityName} in Entities namespace", foundType.FullName, entityName);
+                    return foundType;
+                }
+            }
+
+            // Fallback: buscar en otros assemblies si no se encuentra en Shared.Models
+            var otherAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => a.GetName().Name != "Shared.Models" &&
+                           (a.GetName().Name?.Contains("Models") == true || a.GetName().Name?.Contains("Entities") == true));
+
+            foreach (var assembly in otherAssemblies)
+            {
+                var fallbackType = assembly.GetTypes()
+                    .FirstOrDefault(t => t.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase) &&
+                                        t.IsClass && !t.IsAbstract);
+
+                if (fallbackType != null)
+                {
+                    _logger.LogInformation("Found model type {TypeName} for entity {EntityName} in assembly {AssemblyName}",
+                                         fallbackType.FullName, entityName, assembly.GetName().Name);
+                    return fallbackType;
+                }
+            }
+
+            _logger.LogWarning("Could not find model type for entity {EntityName} in namespace Shared.Models.Entities", entityName);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding model type for entity {EntityName}", entityName);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Crear definición de campo desde propiedad del modelo
+    /// </summary>
+    private EntityFieldDefinition? CreateFieldDefinitionFromProperty(PropertyInfo property)
+    {
+        var propertyName = property.Name;
+
+        // Excluir propiedades de navegación complejas y CustomFields
+        if (propertyName.ToLower().Contains("customfield") ||
+            (property.PropertyType.IsClass && property.PropertyType != typeof(string) && !property.PropertyType.IsArray))
+        {
+            return null;
+        }
+
+        var displayName = ConvertToDisplayName(propertyName);
+        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        return new EntityFieldDefinition
+        {
+            PropertyName = propertyName,
+            DisplayName = displayName,
+            PropertyType = propertyType,
+            IsNullable = IsNullableProperty(property),
+            IsSearchable = IsSearchableProperty(property),
+            FieldCategory = GetFieldCategory(propertyName),
+            SortOrder = GetFieldSortOrder(propertyName)
+        };
+    }
+
+    /// <summary>
+    /// Verificar si una propiedad es nullable
+    /// </summary>
+    private bool IsNullableProperty(PropertyInfo property)
+    {
+        return Nullable.GetUnderlyingType(property.PropertyType) != null ||
+               !property.PropertyType.IsValueType ||
+               property.PropertyType == typeof(string);
+    }
+
+    /// <summary>
+    /// Verificar si una propiedad es searchable
+    /// </summary>
+    private bool IsSearchableProperty(PropertyInfo property)
+    {
+        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        // Los tipos básicos son searchables
+        return propertyType.IsPrimitive ||
+               propertyType == typeof(string) ||
+               propertyType == typeof(DateTime) ||
+               propertyType == typeof(decimal) ||
+               propertyType == typeof(Guid);
+    }
+
+    /// <summary>
+    /// Obtener campos de datos de muestra (método de fallback)
+    /// </summary>
+    private async Task<List<EntityFieldDefinition>> GetFieldsFromSampleData(string entityName)
+    {
+        try
+        {
+            // Obtener entidades disponibles para encontrar la configuración de la entidad
+            var entitiesResponse = await _api.GetAsync<List<AvailableEntityDto>>("api/form-designer/entities/available", BackendType.FormBackend);
+            if (!entitiesResponse.Success || entitiesResponse.Data == null)
+            {
+                return CreateFallbackFieldDefinitions();
+            }
+
+            var entity = entitiesResponse.Data.FirstOrDefault(e =>
+                string.Equals(e.EntityName, entityName, StringComparison.OrdinalIgnoreCase));
+
+            if (entity == null)
+            {
+                return CreateFallbackFieldDefinitions();
+            }
+
+            // Ejecutar una consulta para obtener un objeto de muestra
+            var sampleRequest = new AdvancedQueryRequest
+            {
+                Filters = new CompositeFilterDescriptor[0],
+                Take = 1
+            };
+
+            var sampleResponse = await ExecuteAdvancedQueryAsync(entityName, sampleRequest, entity.BackendApi);
+
+            if (sampleResponse.Success && sampleResponse.Data != null && sampleResponse.Data.Any())
+            {
+                var sampleObject = sampleResponse.Data.First();
+                return CreateFieldDefinitionsFromObject(sampleObject);
+            }
+            else
+            {
+                return CreateFallbackFieldDefinitions();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting fields from sample data for entity {EntityName}", entityName);
+            return CreateFallbackFieldDefinitions();
+        }
+    }
+
+    /// <summary>
+    /// Crear definiciones de campos analizando un objeto de muestra
+    /// </summary>
+    private List<EntityFieldDefinition> CreateFieldDefinitionsFromObject(object sampleObject)
     {
         var fields = new List<EntityFieldDefinition>();
 
-        // Campos comunes para todas las entidades
-        fields.AddRange(new[]
+        if (sampleObject is JsonElement jsonElement)
+        {
+            foreach (var property in jsonElement.EnumerateObject())
+            {
+                var fieldDefinition = CreateFieldDefinitionFromJsonProperty(property);
+                if (fieldDefinition != null)
+                {
+                    fields.Add(fieldDefinition);
+                }
+            }
+        }
+
+        // Aplicar reglas de visibilidad para campos comunes
+        ApplyCommonFieldRules(fields);
+
+        return fields.OrderBy(f => f.SortOrder).ThenBy(f => f.DisplayName).ToList();
+    }
+
+    /// <summary>
+    /// Crear definición de campo desde una propiedad JSON
+    /// </summary>
+    private EntityFieldDefinition? CreateFieldDefinitionFromJsonProperty(JsonProperty property)
+    {
+        var propertyName = property.Name;
+
+        // Excluir CustomFields por ahora como solicitó el usuario
+        if (propertyName.ToLower().Contains("customfield"))
+        {
+            return null;
+        }
+
+        var propertyType = GetPropertyTypeFromJsonValue(property.Value);
+        var displayName = ConvertToDisplayName(propertyName);
+
+        return new EntityFieldDefinition
+        {
+            PropertyName = propertyName,
+            DisplayName = displayName,
+            PropertyType = propertyType,
+            IsSearchable = true,
+            FieldCategory = GetFieldCategory(propertyName),
+            SortOrder = GetFieldSortOrder(propertyName)
+        };
+    }
+
+    /// <summary>
+    /// Aplicar reglas de visibilidad para campos comunes según especificaciones del usuario
+    /// </summary>
+    private void ApplyCommonFieldRules(List<EntityFieldDefinition> fields)
+    {
+        var commonFields = new[] { "Id", "OrganizationId", "FechaCreacion", "FechaModificacion",
+                                 "CreadorId", "ModificadorId", "Active" };
+
+        var visibleCommonFields = new[] { "Id", "FechaCreacion", "FechaModificacion" };
+
+        foreach (var field in fields)
+        {
+            if (commonFields.Contains(field.PropertyName, StringComparer.OrdinalIgnoreCase))
+            {
+                // Solo Id, FechaCreacion y FechaModificacion pueden ser visibles de los campos comunes
+                if (!visibleCommonFields.Contains(field.PropertyName, StringComparer.OrdinalIgnoreCase))
+                {
+                    field.IsVisible = false; // Campo común pero no visible
+                }
+                else
+                {
+                    field.IsVisible = true;
+                    field.IsSelectedByDefault = field.PropertyName.Equals("Id", StringComparison.OrdinalIgnoreCase); // Solo ID seleccionado por defecto
+                }
+
+                field.FieldCategory = "System";
+                field.SortOrder = GetSystemFieldSortOrder(field.PropertyName);
+            }
+            else
+            {
+                // Campos de negocio - todos visibles pero no seleccionados por defecto
+                field.IsVisible = true;
+                field.IsSelectedByDefault = false;
+                field.FieldCategory = "Business";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Obtener tipo de propiedad desde valor JSON
+    /// </summary>
+    private Type GetPropertyTypeFromJsonValue(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => typeof(string),
+            JsonValueKind.Number => typeof(decimal),
+            JsonValueKind.True or JsonValueKind.False => typeof(bool),
+            JsonValueKind.Object => typeof(object),
+            JsonValueKind.Array => typeof(Array),
+            _ => typeof(string)
+        };
+    }
+
+    /// <summary>
+    /// Convertir nombre de propiedad a nombre para mostrar
+    /// </summary>
+    private string ConvertToDisplayName(string propertyName)
+    {
+        // Convertir PascalCase a palabras separadas
+        return System.Text.RegularExpressions.Regex.Replace(propertyName,
+            "([a-z])([A-Z])", "$1 $2");
+    }
+
+    /// <summary>
+    /// Obtener categoría del campo
+    /// </summary>
+    private string GetFieldCategory(string propertyName)
+    {
+        var systemFields = new[] { "Id", "OrganizationId", "FechaCreacion", "FechaModificacion",
+                                 "CreadorId", "ModificadorId", "Active" };
+
+        return systemFields.Contains(propertyName, StringComparer.OrdinalIgnoreCase) ? "System" : "Business";
+    }
+
+    /// <summary>
+    /// Obtener orden de clasificación para campos
+    /// </summary>
+    private int GetFieldSortOrder(string propertyName)
+    {
+        // ID siempre primero
+        if (propertyName.Equals("Id", StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        return GetFieldCategory(propertyName) == "System" ? 100 : 200;
+    }
+
+    /// <summary>
+    /// Obtener orden específico para campos del sistema
+    /// </summary>
+    private int GetSystemFieldSortOrder(string propertyName)
+    {
+        return propertyName.ToLower() switch
+        {
+            "id" => 1,
+            "fechacreacion" => 2,
+            "fechamodificacion" => 3,
+            "organizationid" => 4,
+            "creadorid" => 5,
+            "modificadorid" => 6,
+            "active" => 7,
+            _ => 100
+        };
+    }
+
+    /// <summary>
+    /// Crear definiciones de campos básicas de respaldo
+    /// </summary>
+    private List<EntityFieldDefinition> CreateFallbackFieldDefinitions()
+    {
+        var fields = new List<EntityFieldDefinition>
         {
             new EntityFieldDefinition
             {
@@ -101,67 +491,34 @@ public class AdvancedQueryService
                 DisplayName = "ID",
                 PropertyType = typeof(Guid),
                 IsSearchable = true,
-                FieldCategory = "System"
+                FieldCategory = "System",
+                IsVisible = true,
+                IsSelectedByDefault = true,
+                SortOrder = 1
             },
             new EntityFieldDefinition
             {
                 PropertyName = "FechaCreacion",
-                DisplayName = "Fecha de Creación",
+                DisplayName = "Fecha Creación",
                 PropertyType = typeof(DateTime),
                 IsSearchable = true,
-                FieldCategory = "System"
+                FieldCategory = "System",
+                IsVisible = true,
+                IsSelectedByDefault = false,
+                SortOrder = 2
             },
             new EntityFieldDefinition
             {
                 PropertyName = "FechaModificacion",
-                DisplayName = "Fecha de Modificación",
+                DisplayName = "Fecha Modificación",
                 PropertyType = typeof(DateTime),
                 IsSearchable = true,
-                FieldCategory = "System"
-            },
-            new EntityFieldDefinition
-            {
-                PropertyName = "Active",
-                DisplayName = "Activo",
-                PropertyType = typeof(bool),
-                IsSearchable = true,
-                FieldCategory = "System"
+                FieldCategory = "System",
+                IsVisible = true,
+                IsSelectedByDefault = false,
+                SortOrder = 3
             }
-        });
-
-        // Agregar campos específicos según la entidad
-        switch (entityName.ToLower())
-        {
-            case "empleado":
-                fields.AddRange(new[]
-                {
-                    new EntityFieldDefinition { PropertyName = "Nombres", DisplayName = "Nombres", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Apellidos", DisplayName = "Apellidos", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Rut", DisplayName = "RUT", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Email", DisplayName = "Email", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Telefono", DisplayName = "Teléfono", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "FechaNacimiento", DisplayName = "Fecha de Nacimiento", PropertyType = typeof(DateTime), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Salario", DisplayName = "Salario", PropertyType = typeof(decimal), IsSearchable = true, FieldCategory = "Business" }
-                });
-                break;
-
-            case "systemusers":
-                fields.AddRange(new[]
-                {
-                    new EntityFieldDefinition { PropertyName = "Nombre", DisplayName = "Nombre", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Email", DisplayName = "Email", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Username", DisplayName = "Usuario", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" }
-                });
-                break;
-
-            case "region":
-                fields.AddRange(new[]
-                {
-                    new EntityFieldDefinition { PropertyName = "Nombre", DisplayName = "Nombre", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" },
-                    new EntityFieldDefinition { PropertyName = "Codigo", DisplayName = "Código", PropertyType = typeof(string), IsSearchable = true, FieldCategory = "Business" }
-                });
-                break;
-        }
+        };
 
         return fields;
     }
@@ -545,8 +902,11 @@ public class EntityFieldDefinition
     public Type PropertyType { get; set; } = typeof(string);
     public bool IsNullable { get; set; }
     public bool IsSearchable { get; set; } = true;
-    public string FieldCategory { get; set; } = ""; // "Table" or "Custom"
+    public string FieldCategory { get; set; } = ""; // "System" or "Business"
     public string? Description { get; set; }
+    public bool IsVisible { get; set; } = true; // Si el campo es visible para selección
+    public bool IsSelectedByDefault { get; set; } = false; // Si el campo viene seleccionado por defecto
+    public int SortOrder { get; set; } = 100; // Orden de clasificación
 }
 
 /// <summary>
