@@ -1,0 +1,158 @@
+@using System.Text.Json
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H6">Guardar Configuración de Consulta</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Guarda la configuración actual de filtros para poder reutilizarla posteriormente
+        </RadzenText>
+    </RadzenStack>
+
+    <RadzenStack Gap="1rem">
+        <RadzenFormField Text="Nombre de la Configuración *">
+            <RadzenTextBox @bind-Value="configName"
+                          Placeholder="Ej: Empleados Activos 2024"
+                          Style="width: 100%;" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Descripción">
+            <RadzenTextArea @bind-Value="configDescription"
+                           Placeholder="Descripción opcional de la configuración..."
+                           Rows="3"
+                           Style="width: 100%;" />
+        </RadzenFormField>
+
+        <RadzenCheckBox @bind-Value="isDefault" Name="isDefault" />
+        <RadzenLabel Text="Establecer como configuración por defecto" Component="isDefault" />
+    </RadzenStack>
+
+    <!-- Resumen de la Configuración -->
+    <RadzenFieldset Text="Resumen de la Configuración">
+        <RadzenStack Gap="0.5rem">
+            <RadzenText TextStyle="TextStyle.Body2">
+                <strong>Entidad:</strong> @EntityDisplayName
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                <strong>Filtros Configurados:</strong> @FiltersCount
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                <strong>Operador Lógico:</strong> @LogicalOperator
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">
+                <strong>Sensibilidad:</strong> @FilterCaseSensitivity
+            </RadzenText>
+        </RadzenStack>
+    </RadzenFieldset>
+
+    <!-- Botones -->
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Cancelar"
+                     ButtonStyle="ButtonStyle.Light"
+                     Click="@(() => DialogService.Close(false))" />
+        <RadzenButton Text="Guardar"
+                     ButtonStyle="ButtonStyle.Primary"
+                     Icon="save"
+                     Click="@SaveConfiguration"
+                     Disabled="@(string.IsNullOrWhiteSpace(configName) || isSaving)"
+                     IsBusy="@isSaving" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public string EntityName { get; set; } = "";
+    [Parameter] public string EntityDisplayName { get; set; } = "";
+    [Parameter] public CompositeFilterDescriptor[] Filters { get; set; } = Array.Empty<CompositeFilterDescriptor>();
+    [Parameter] public LogicalFilterOperator LogicalOperator { get; set; }
+    [Parameter] public FilterCaseSensitivity FilterCaseSensitivity { get; set; }
+    [Parameter] public string? OrderBy { get; set; }
+    [Parameter] public string[]? Include { get; set; }
+    [Parameter] public int? Take { get; set; }
+
+    [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public AdvancedQueryService AdvancedQueryService { get; set; } = default!;
+
+    private string configName = "";
+    private string configDescription = "";
+    private bool isDefault = false;
+    private bool isSaving = false;
+
+    private int FiltersCount => Filters?.Length ?? 0;
+
+    private async Task SaveConfiguration()
+    {
+        if (string.IsNullOrWhiteSpace(configName))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Campo Requerido",
+                Detail = "El nombre de la configuración es obligatorio",
+                Duration = 3000
+            });
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+
+            var config = new SavedQueryConfiguration
+            {
+                Id = Guid.NewGuid(),
+                EntityName = EntityName,
+                Name = configName.Trim(),
+                Description = string.IsNullOrWhiteSpace(configDescription) ? null : configDescription.Trim(),
+                LogicalOperator = LogicalOperator,
+                FilterCaseSensitivity = FilterCaseSensitivity,
+                OrderBy = OrderBy,
+                Include = Include,
+                IsDefault = isDefault,
+                CreatedBy = Guid.Empty, // TODO: Obtener del usuario actual
+                CreatedDate = DateTime.UtcNow
+            };
+
+            // Configurar filtros
+            config.SetFilters(Filters);
+
+            var success = await AdvancedQueryService.SaveQueryConfigurationAsync(config);
+
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Configuración Guardada",
+                    Detail = $"La configuración '{configName}' se guardó correctamente",
+                    Duration = 3000
+                });
+
+                DialogService.Close(true);
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error al Guardar",
+                    Detail = "No se pudo guardar la configuración. Intenta nuevamente.",
+                    Duration = 5000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error guardando configuración: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

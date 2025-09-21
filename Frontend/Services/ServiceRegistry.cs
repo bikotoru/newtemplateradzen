@@ -22,6 +22,7 @@ public static class ServiceRegistry
         services.AddScoped<QueryService>();
         services.AddSingleton<EntityRegistrationService>();
         services.AddScoped<AvailableEntitiesService>();
+        services.AddScoped<AdvancedQueryService>();
 
         // Module Services
         services.AddScoped<RegionService>();

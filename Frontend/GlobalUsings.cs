@@ -33,6 +33,7 @@ global using System.Linq.Expressions;
 
 // Radzen
 global using Radzen;
+global using Radzen.Blazor;
 
 // System
 global using Microsoft.Extensions.Logging;

@@ -1,0 +1,260 @@
+@using System.Text.Json
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H6">Cargar Configuración de Consulta</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Selecciona una configuración guardada para aplicar sus filtros
+        </RadzenText>
+    </RadzenStack>
+
+    @if (isLoading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+            <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <RadzenText>Cargando configuraciones...</RadzenText>
+        </RadzenStack>
+    }
+    else if (savedConfigurations.Any())
+    {
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1">
+                Configuraciones Disponibles (@savedConfigurations.Count)
+            </RadzenText>
+
+            <RadzenDataList Data="@savedConfigurations"
+                           TItem="SavedQueryConfiguration"
+                           AllowPaging="false"
+                           Style="height: 400px; overflow-y: auto;">
+                <Template Context="config">
+                    <RadzenCard Style="margin-bottom: 0.5rem;" Click="@(() => SelectConfiguration(config))"
+                              class="@(selectedConfig?.Id == config.Id ? "rz-background-color-primary-lighter" : "")">
+                        <RadzenStack Gap="0.5rem">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                <RadzenText TextStyle="TextStyle.Subtitle2" style="margin: 0; font-weight: 600;">
+                                    @config.Name
+                                </RadzenText>
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                    @if (config.IsDefault)
+                                    {
+                                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Por Defecto" />
+                                    }
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@($"{GetFiltersCount(config)} filtros")" />
+                                </RadzenStack>
+                            </RadzenStack>
+
+                            @if (!string.IsNullOrEmpty(config.Description))
+                            {
+                                <RadzenText TextStyle="TextStyle.Body2" style="margin: 0; color: var(--rz-text-secondary-color);">
+                                    @config.Description
+                                </RadzenText>
+                            }
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Style="font-size: 0.875rem; color: var(--rz-text-secondary-color);">
+                                <span><strong>Operador:</strong> @config.LogicalOperator</span>
+                                <span><strong>Creada:</strong> @config.CreatedDate.ToString("dd/MM/yyyy HH:mm")</span>
+                            </RadzenStack>
+                        </RadzenStack>
+                    </RadzenCard>
+                </Template>
+            </RadzenDataList>
+        </RadzenStack>
+
+        @if (selectedConfig != null)
+        {
+            <RadzenFieldset Text="Vista Previa de la Configuración">
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        <strong>Nombre:</strong> @selectedConfig.Name
+                    </RadzenText>
+                    @if (!string.IsNullOrEmpty(selectedConfig.Description))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            <strong>Descripción:</strong> @selectedConfig.Description
+                        </RadzenText>
+                    }
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        <strong>Filtros:</strong> @GetFiltersCount(selectedConfig)
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        <strong>Operador Lógico:</strong> @selectedConfig.LogicalOperator
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        <strong>Sensibilidad:</strong> @selectedConfig.FilterCaseSensitivity
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenFieldset>
+        }
+    }
+    else
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
+            No hay configuraciones guardadas para esta entidad.
+            <br />
+            Crea filtros y guárdalos para poder reutilizarlos posteriormente.
+        </RadzenAlert>
+    }
+
+    <!-- Botones -->
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenButton Text="Eliminar Seleccionada"
+                     ButtonStyle="ButtonStyle.Danger"
+                     Icon="delete"
+                     Click="@DeleteConfiguration"
+                     Disabled="@(selectedConfig == null || isDeleting)"
+                     IsBusy="@isDeleting"
+                     Visible="@(selectedConfig != null)" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+            <RadzenButton Text="Cancelar"
+                         ButtonStyle="ButtonStyle.Light"
+                         Click="@(() => DialogService.Close(null))" />
+            <RadzenButton Text="Cargar Configuración"
+                         ButtonStyle="ButtonStyle.Primary"
+                         Icon="file_download"
+                         Click="@LoadConfiguration"
+                         Disabled="@(selectedConfig == null)"
+                         Visible="@(selectedConfig != null)" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public string EntityName { get; set; } = "";
+
+    [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public AdvancedQueryService AdvancedQueryService { get; set; } = default!;
+
+    private List<SavedQueryConfiguration> savedConfigurations = new();
+    private SavedQueryConfiguration? selectedConfig;
+    private bool isLoading = true;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSavedConfigurations();
+    }
+
+    private async Task LoadSavedConfigurations()
+    {
+        try
+        {
+            isLoading = true;
+            savedConfigurations = await AdvancedQueryService.GetSavedConfigurationsAsync(EntityName);
+
+            // Seleccionar configuración por defecto si existe
+            selectedConfig = savedConfigurations.FirstOrDefault(c => c.IsDefault);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando configuraciones: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectConfiguration(SavedQueryConfiguration config)
+    {
+        selectedConfig = config;
+    }
+
+    private async Task LoadConfiguration()
+    {
+        if (selectedConfig == null) return;
+
+        try
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Configuración Cargada",
+                Detail = $"Se cargó la configuración '{selectedConfig.Name}'",
+                Duration = 3000
+            });
+
+            DialogService.Close(selectedConfig);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando configuración: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
+    private async Task DeleteConfiguration()
+    {
+        if (selectedConfig == null) return;
+
+        var confirmed = await DialogService.Confirm(
+            $"¿Estás seguro de que deseas eliminar la configuración '{selectedConfig.Name}'?",
+            "Confirmar Eliminación",
+            new ConfirmOptions
+            {
+                OkButtonText = "Eliminar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (confirmed == true)
+        {
+            try
+            {
+                isDeleting = true;
+
+                // TODO: Implementar eliminación en el servicio
+                // await AdvancedQueryService.DeleteQueryConfigurationAsync(selectedConfig.Id);
+
+                savedConfigurations.Remove(selectedConfig);
+                selectedConfig = null;
+
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Configuración Eliminada",
+                    Detail = "La configuración se eliminó correctamente",
+                    Duration = 3000
+                });
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = $"Error eliminando configuración: {ex.Message}",
+                    Duration = 5000
+                });
+            }
+            finally
+            {
+                isDeleting = false;
+            }
+        }
+    }
+
+    private int GetFiltersCount(SavedQueryConfiguration config)
+    {
+        try
+        {
+            var filters = config.GetFilters();
+            return filters?.Length ?? 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+}

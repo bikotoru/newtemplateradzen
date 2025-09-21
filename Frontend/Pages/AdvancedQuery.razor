@@ -1,0 +1,629 @@
+@page "/advanced-query"
+@using Radzen.Blazor
+@using System.Text.Json
+@inject AdvancedQueryService AdvancedQueryService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Consulta Avanzada</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <RadzenCard>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenIcon Icon="search" Style="font-size: 2rem; color: var(--rz-primary);" />
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.H4" style="margin: 0;">Consulta Avanzada</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" style="margin: 0; color: var(--rz-text-secondary-color);">
+                            Crea consultas complejas con filtros anidados para cualquier entidad del sistema
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <!-- Selección de Entidad -->
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <RadzenCard>
+                <RadzenStack Gap="1rem">
+                    <RadzenText TextStyle="TextStyle.H6">1. Seleccionar Entidad</RadzenText>
+
+                    <RadzenRow>
+                        <RadzenColumn Size="6">
+                            <RadzenDropDown @bind-Value="selectedEntityName"
+                                          Data="@availableEntities"
+                                          TextProperty="DisplayName"
+                                          ValueProperty="EntityName"
+                                          Placeholder="Selecciona una entidad..."
+                                          Change="@OnEntitySelected"
+                                          AllowClear="true"
+                                          Style="width: 100%;" />
+                        </RadzenColumn>
+                        <RadzenColumn Size="6">
+                            @if (!string.IsNullOrEmpty(selectedEntityName))
+                            {
+                                <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@($"{entityFields.Count} campos disponibles")" />
+                            }
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    @if (!string.IsNullOrEmpty(selectedEntity?.Description))
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
+                            @selectedEntity.Description
+                        </RadzenAlert>
+                    }
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <!-- Configuración de Filtros -->
+    @if (!string.IsNullOrEmpty(selectedEntityName) && entityFields.Any())
+    {
+        <RadzenRow>
+            <RadzenColumn Size="12">
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText TextStyle="TextStyle.H6">2. Configurar Filtros</RadzenText>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                <RadzenButton Text="Cargar Configuración"
+                                            Icon="folder_open"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@LoadConfiguration" />
+                                <RadzenButton Text="Guardar Configuración"
+                                            Icon="save"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@SaveConfiguration"
+                                            Disabled="@(!dataFilter?.Filters?.Any() ?? true)" />
+                            </RadzenStack>
+                        </RadzenStack>
+
+                        <!-- Configuración Global del Filtro -->
+                        <RadzenRow>
+                            <RadzenColumn Size="4">
+                                <RadzenLabel Text="Operador Lógico Principal:" />
+                                <RadzenSelectBar @bind-Value="logicalOperator" TValue="LogicalFilterOperator">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="Y (AND)" Value="LogicalFilterOperator.And" />
+                                        <RadzenSelectBarItem Text="O (OR)" Value="LogicalFilterOperator.Or" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </RadzenColumn>
+                            <RadzenColumn Size="4">
+                                <RadzenLabel Text="Sensibilidad a Mayúsculas:" />
+                                <RadzenSelectBar @bind-Value="filterCaseSensitivity" TValue="FilterCaseSensitivity">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="Ignorar" Value="FilterCaseSensitivity.CaseInsensitive" />
+                                        <RadzenSelectBarItem Text="Considerar" Value="FilterCaseSensitivity.Default" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </RadzenColumn>
+                            <RadzenColumn Size="4">
+                                <RadzenLabel Text="Límite de Resultados:" />
+                                <RadzenNumeric @bind-Value="takeLimit" Min="1" Max="1000" Style="width: 100%;" />
+                            </RadzenColumn>
+                        </RadzenRow>
+
+                        <!-- RadzenDataFilter -->
+                        <RadzenDataFilter @ref="dataFilter"
+                                        TItem="object"
+                                        LogicalFilterOperator="@logicalOperator"
+                                        FilterCaseSensitivity="@filterCaseSensitivity"
+                                        Auto="false">
+                            <Properties>
+                                @foreach (var field in entityFields.Where(f => f.IsSearchable))
+                                {
+                                    <RadzenDataFilterProperty Property="@field.PropertyName"
+                                                            Title="@field.DisplayName"
+                                                            Type="@field.PropertyType" />
+                                }
+                            </Properties>
+                        </RadzenDataFilter>
+
+                        <!-- Botones de Acción -->
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
+                            <RadzenButton Text="Ejecutar Consulta"
+                                        Icon="play_arrow"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Medium"
+                                        Click="@ExecuteQuery"
+                                        Disabled="@(isLoading || !dataFilter?.Filters?.Any() == true)" />
+
+                            <RadzenButton Text="Limpiar Filtros"
+                                        Icon="clear"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Medium"
+                                        Click="@ClearFilters" />
+
+                            <RadzenButton Text="Ver Query SQL"
+                                        Icon="code"
+                                        ButtonStyle="ButtonStyle.Secondary"
+                                        Size="ButtonSize.Medium"
+                                        Click="@ShowGeneratedQuery"
+                                        Disabled="@(!dataFilter?.Filters?.Any() ?? true)" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+    }
+
+    <!-- Resultados -->
+    @if (queryResults != null && queryResults.Success)
+    {
+        <RadzenRow>
+            <RadzenColumn Size="12">
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText TextStyle="TextStyle.H6">3. Resultados</RadzenText>
+                            <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@($"{queryResults.TotalCount} registros encontrados")" />
+                        </RadzenStack>
+
+                        @if (queryResults.Data.Any())
+                        {
+                            <!-- Tabla de Resultados Dinámica -->
+                            <RadzenDataGrid Data="@queryResults.Data"
+                                          TItem="object"
+                                          AllowPaging="true"
+                                          PageSize="20"
+                                          AllowSorting="true"
+                                          AllowColumnResize="true"
+                                          GridLines="DataGridGridLines.Both"
+                                          Style="height: 500px;">
+                                <Columns>
+                                    @foreach (var field in entityFields.Take(6)) // Mostrar primeras 6 columnas
+                                    {
+                                        <RadzenDataGridColumn TItem="object"
+                                                            Property="@field.PropertyName"
+                                                            Title="@field.DisplayName"
+                                                            Width="150px">
+                                            <Template Context="data">
+                                                @GetPropertyValue(data, field.PropertyName)
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                    }
+                                    <RadzenDataGridColumn TItem="object" Title="Acciones" Sortable="false" Width="100px">
+                                        <Template Context="data">
+                                            <RadzenButton Icon="visibility"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.ExtraSmall"
+                                                        Click="@(() => ViewDetails(data))"
+                                                        title="Ver detalles" />
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                        else
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Icon="warning">
+                                No se encontraron resultados para la consulta especificada.
+                            </RadzenAlert>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+    }
+
+    <!-- Loading Indicator -->
+    @if (isLoading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+            <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <RadzenText>Ejecutando consulta...</RadzenText>
+        </RadzenStack>
+    }
+</RadzenStack>
+
+@code {
+    // State variables
+    private List<AvailableEntityDto> availableEntities = new();
+    private string? selectedEntityName;
+    private AvailableEntityDto? selectedEntity;
+    private List<EntityFieldDefinition> entityFields = new();
+    private RadzenDataFilter<object>? dataFilter;
+    private AdvancedQueryResult<object>? queryResults;
+    private bool isLoading = false;
+
+    // Filter configuration
+    private LogicalFilterOperator logicalOperator = LogicalFilterOperator.And;
+    private FilterCaseSensitivity filterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive;
+    private int takeLimit = 50;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableEntities();
+    }
+
+    private async Task LoadAvailableEntities()
+    {
+        try
+        {
+            isLoading = true;
+            availableEntities = await AdvancedQueryService.GetAdvancedQueryEntitiesAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando entidades: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnEntitySelected()
+    {
+        if (string.IsNullOrEmpty(selectedEntityName))
+        {
+            selectedEntity = null;
+            entityFields.Clear();
+            queryResults = null;
+            return;
+        }
+
+        selectedEntity = availableEntities.FirstOrDefault(e => e.EntityName == selectedEntityName);
+
+        try
+        {
+            isLoading = true;
+            entityFields = await AdvancedQueryService.GetEntityFieldDefinitionsAsync(selectedEntityName);
+
+            // Limpiar resultados anteriores
+            queryResults = null;
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Entidad Cargada",
+                Detail = $"Se cargaron {entityFields.Count} campos para {selectedEntity?.DisplayName}",
+                Duration = 3000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando campos: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ExecuteQuery()
+    {
+        if (dataFilter?.Filters == null || !dataFilter.Filters.Any())
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Sin Filtros",
+                Detail = "Debe configurar al menos un filtro para ejecutar la consulta",
+                Duration = 3000
+            });
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+
+            var request = new AdvancedQueryRequest
+            {
+                Filters = dataFilter.Filters.ToArray(),
+                LogicalOperator = logicalOperator,
+                FilterCaseSensitivity = filterCaseSensitivity,
+                Take = takeLimit
+            };
+
+            queryResults = await AdvancedQueryService.ExecuteAdvancedQueryAsync(selectedEntityName!, request);
+
+            if (queryResults.Success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Consulta Exitosa",
+                    Detail = $"Se encontraron {queryResults.TotalCount} registros",
+                    Duration = 3000
+                });
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error en Consulta",
+                    Detail = queryResults.Message,
+                    Duration = 5000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error ejecutando consulta: {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        if (dataFilter != null)
+        {
+            await dataFilter.ClearFilters();
+            queryResults = null;
+        }
+    }
+
+    private async Task ShowGeneratedQuery()
+    {
+        if (dataFilter?.Filters != null && dataFilter.Filters.Any())
+        {
+            try
+            {
+                // Generar la query string usando el servicio
+                var request = new AdvancedQueryRequest
+                {
+                    Filters = dataFilter.Filters.ToArray(),
+                    LogicalOperator = logicalOperator,
+                    FilterCaseSensitivity = filterCaseSensitivity
+                };
+
+                var filterString = "Generada por AdvancedQueryService.ConvertFiltersToLinqString()";
+
+                var queryInfo = $@"
+**Filtros Configurados:** {dataFilter.Filters.Count()}
+**Operador Lógico:** {logicalOperator}
+**Sensibilidad:** {filterCaseSensitivity}
+**Límite:** {takeLimit}
+
+**Query LINQ Generada:**
+```
+{filterString}
+```
+
+**Endpoint que se llamaría:**
+POST /api/{selectedEntityName}/paged
+
+**Payload JSON:**
+```json
+{{
+  ""filter"": ""{filterString}"",
+  ""take"": {takeLimit}
+}}
+```";
+
+                await DialogService.OpenAsync("Query Generada", ds =>
+                    @<div style="max-width: 800px;">
+                        <RadzenMarkdown Value="@queryInfo" />
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
+                            <RadzenButton Text="Copiar Query" Icon="content_copy" Click="@(() => CopyToClipboard(filterString))" />
+                            <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Light" Click="@(() => ds.Close())" />
+                        </RadzenStack>
+                    </div>
+                );
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = $"Error generando query: {ex.Message}",
+                    Duration = 5000
+                });
+            }
+        }
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copiado",
+                Detail = "Query copiada al portapapeles",
+                Duration = 2000
+            });
+        }
+        catch
+        {
+            // Fallback para navegadores que no soportan clipboard API
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Información",
+                Detail = "No se pudo copiar automáticamente. Selecciona y copia manualmente.",
+                Duration = 3000
+            });
+        }
+    }
+
+    private async Task SaveConfiguration()
+    {
+        if (dataFilter?.Filters == null || !dataFilter.Filters.Any())
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Sin Filtros",
+                Detail = "No hay filtros configurados para guardar",
+                Duration = 3000
+            });
+            return;
+        }
+
+        var result = await DialogService.OpenAsync("Guardar Configuración", ds =>
+            @<Frontend.Components.AdvancedQuery.SaveConfigurationDialog EntityName="@(selectedEntityName ?? "")"
+                                                                        EntityDisplayName="@(selectedEntity?.DisplayName ?? "")"
+                                                                        Filters="@dataFilter.Filters.ToArray()"
+                                                                        LogicalOperator="@logicalOperator"
+                                                                        FilterCaseSensitivity="@filterCaseSensitivity"
+                                                                        Take="@takeLimit" />
+        );
+
+        if (result is bool success && success)
+        {
+            // Configuración guardada exitosamente
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadConfiguration()
+    {
+        if (string.IsNullOrEmpty(selectedEntityName))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Seleccionar Entidad",
+                Detail = "Primero debes seleccionar una entidad",
+                Duration = 3000
+            });
+            return;
+        }
+
+        var result = await DialogService.OpenAsync("Cargar Configuración", ds =>
+            @<Frontend.Components.AdvancedQuery.LoadConfigurationDialog EntityName="@(selectedEntityName ?? "")" />
+        );
+
+        if (result is SavedQueryConfiguration config)
+        {
+            await ApplyConfiguration(config);
+        }
+    }
+
+    private async Task ApplyConfiguration(SavedQueryConfiguration config)
+    {
+        try
+        {
+            // Aplicar configuración cargada
+            logicalOperator = config.LogicalOperator;
+            filterCaseSensitivity = config.FilterCaseSensitivity;
+            if (config.Take.HasValue)
+            {
+                takeLimit = config.Take.Value;
+            }
+
+            // Limpiar filtros actuales
+            if (dataFilter != null)
+            {
+                await dataFilter.ClearFilters();
+
+                // Aplicar filtros de la configuración
+                var filters = config.GetFilters();
+                foreach (var filter in filters)
+                {
+                    await dataFilter.AddFilter(filter);
+                }
+
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Configuración Aplicada",
+                    Detail = $"Se aplicó la configuración '{config.Name}' con {filters.Length} filtros",
+                    Duration = 3000
+                });
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error aplicando configuración: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
+    private async Task ViewDetails(object item)
+    {
+        var json = JsonSerializer.Serialize(item, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        await DialogService.OpenAsync("Detalles del Registro", ds =>
+            @<div style="max-width: 600px;">
+                <RadzenText TextStyle="TextStyle.Body1">Datos completos del registro:</RadzenText>
+                <RadzenTextArea Value="@json" Rows="15" Style="width: 100%; font-family: monospace; font-size: 12px;" ReadOnly="true" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
+                    <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Light" Click="@(() => ds.Close())" />
+                </RadzenStack>
+            </div>
+        );
+    }
+
+    private string GetPropertyValue(object item, string propertyName)
+    {
+        if (item == null) return "";
+
+        try
+        {
+            // Convertir a JsonElement para acceder a las propiedades dinámicamente
+            if (item is JsonElement jsonElement)
+            {
+                if (jsonElement.TryGetProperty(propertyName, out var property))
+                {
+                    return property.ValueKind switch
+                    {
+                        JsonValueKind.String => property.GetString() ?? "",
+                        JsonValueKind.Number => property.GetDecimal().ToString(),
+                        JsonValueKind.True or JsonValueKind.False => property.GetBoolean().ToString(),
+                        JsonValueKind.Null => "",
+                        _ => property.ToString()
+                    };
+                }
+            }
+
+            // Fallback usando reflexión
+            var propInfo = item.GetType().GetProperty(propertyName);
+            var value = propInfo?.GetValue(item);
+            return value?.ToString() ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+}
