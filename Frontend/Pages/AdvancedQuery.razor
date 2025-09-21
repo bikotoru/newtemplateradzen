@@ -647,7 +647,28 @@ POST /api/{selectedEntityName}/paged
         // Configurar campos seleccionados basado en IsSelectedByDefault
         if (!selectedFields.Any())
         {
-            selectedFields = entityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).ToList();
+            var defaultFields = entityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).ToList();
+            Console.WriteLine($"Default fields found: {defaultFields.Count}");
+            foreach (var field in defaultFields)
+            {
+                Console.WriteLine($"Default field: {field.PropertyName} (IsSelectedByDefault: {field.IsSelectedByDefault})");
+                // Crear copia para evitar modificar el original
+                var fieldCopy = new EntityFieldDefinition
+                {
+                    PropertyName = field.PropertyName,
+                    DisplayName = field.DisplayName,
+                    PropertyType = field.PropertyType,
+                    IsNullable = field.IsNullable,
+                    IsSearchable = field.IsSearchable,
+                    FieldCategory = field.FieldCategory,
+                    Description = field.Description,
+                    IsVisible = field.IsVisible,
+                    IsSelectedByDefault = field.IsSelectedByDefault,
+                    SortOrder = field.SortOrder
+                };
+                selectedFields.Add(fieldCopy);
+            }
+            Console.WriteLine($"Selected fields initialized with {selectedFields.Count} fields");
         }
 
         var result = await DialogService.OpenAsync("Configurar Campos Visibles", ds =>
@@ -663,23 +684,32 @@ POST /api/{selectedEntityName}/paged
                             <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 0.5rem;">
                                 @foreach (var field in entityFields.Where(f => f.IsVisible))
                                 {
+                                    var isSelected = GetFieldSelection(field);
                                     <div style="margin-bottom: 0.5rem;">
                                         <RadzenCard Style="padding: 0.5rem;">
                                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                                <RadzenCheckBox Value="@GetFieldSelection(field)"
-                                                              Change="@((bool value) => ToggleFieldSelection(field))" />
                                                 <RadzenStack Gap="0.1rem" Style="flex: 1;">
                                                     <RadzenText TextStyle="TextStyle.Subtitle2">@field.DisplayName</RadzenText>
                                                     <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
                                                         @field.PropertyName (@field.FieldCategory)
                                                     </RadzenText>
                                                 </RadzenStack>
-                                                <RadzenButton Icon="add"
-                                                            Size="ButtonSize.ExtraSmall"
-                                                            ButtonStyle="ButtonStyle.Success"
-                                                            Visible="@(!GetFieldSelection(field))"
-                                                            Click="@(() => ToggleFieldSelection(field))"
-                                                            title="Agregar campo" />
+                                                @if (isSelected)
+                                                {
+                                                    <RadzenButton Icon="remove_circle"
+                                                                ButtonStyle="ButtonStyle.Danger"
+                                                                Size="ButtonSize.ExtraSmall"
+                                                                Click="@(() => ToggleAndRefresh(field))"
+                                                                title="Quitar campo" />
+                                                }
+                                                else
+                                                {
+                                                    <RadzenButton Icon="add_circle"
+                                                                ButtonStyle="ButtonStyle.Success"
+                                                                Size="ButtonSize.ExtraSmall"
+                                                                Click="@(() => ToggleAndRefresh(field))"
+                                                                title="Agregar campo" />
+                                                }
                                             </RadzenStack>
                                         </RadzenCard>
                                     </div>
@@ -725,7 +755,7 @@ POST /api/{selectedEntityName}/paged
                                                         <RadzenButton Icon="remove"
                                                                     Size="ButtonSize.ExtraSmall"
                                                                     ButtonStyle="ButtonStyle.Danger"
-                                                                    Click="@(() => ToggleFieldSelection(field))"
+                                                                    Click="@(() => ToggleAndRefresh(field))"
                                                                     title="Quitar campo" />
                                                     </RadzenStack>
                                                 </RadzenStack>
@@ -805,18 +835,53 @@ POST /api/{selectedEntityName}/paged
     /// </summary>
     private void ToggleFieldSelection(EntityFieldDefinition field)
     {
+        Console.WriteLine($"ToggleFieldSelection called for field: {field.PropertyName}");
+
         var existingIndex = selectedFields.FindIndex(f => f.PropertyName == field.PropertyName);
+        Console.WriteLine($"Existing index: {existingIndex}");
 
         if (existingIndex >= 0)
         {
+            Console.WriteLine($"Removing field {field.PropertyName} from selection");
             selectedFields.RemoveAt(existingIndex);
         }
         else
         {
-            selectedFields.Add(field);
+            Console.WriteLine($"Adding field {field.PropertyName} to selection");
+            // Crear una copia del campo para evitar modificar el original
+            var fieldCopy = new EntityFieldDefinition
+            {
+                PropertyName = field.PropertyName,
+                DisplayName = field.DisplayName,
+                PropertyType = field.PropertyType,
+                IsNullable = field.IsNullable,
+                IsSearchable = field.IsSearchable,
+                FieldCategory = field.FieldCategory,
+                Description = field.Description,
+                IsVisible = field.IsVisible,
+                IsSelectedByDefault = field.IsSelectedByDefault,
+                SortOrder = field.SortOrder
+            };
+            selectedFields.Add(fieldCopy);
         }
 
+        Console.WriteLine($"Selected fields count: {selectedFields.Count}");
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Alternar selección y forzar actualización visual
+    /// </summary>
+    private async Task ToggleAndRefresh(EntityFieldDefinition field)
+    {
+        ToggleFieldSelection(field);
+
+        // Forzar actualización visual
+        await InvokeAsync(StateHasChanged);
+
+        // Pequeña pausa para asegurar que la UI se actualice
+        await Task.Delay(1);
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
