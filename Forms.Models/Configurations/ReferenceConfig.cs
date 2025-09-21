@@ -53,7 +53,7 @@ public class ReferenceConfig
     /// <summary>
     /// Usar cache para mejor performance
     /// </summary>
-    public bool EnableCache { get; set; } = true;
+    public bool EnableCache { get; set; } = false;
 
     /// <summary>
     /// Tiempo de vida del cache en minutos

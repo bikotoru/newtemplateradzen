@@ -363,22 +363,9 @@
                                                 <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowClear" Name="allowClear" />
                                                 <RadzenLabel Text="Permitir limpiar" Component="allowClear" />
                                             </RadzenColumn>
-                                            <RadzenColumn Size="6">
-                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().EnableCache" Name="enableCache" />
-                                                <RadzenLabel Text="Habilitar cache" Component="enableCache" />
-                                            </RadzenColumn>
                                         </RadzenRow>
 
-                                        @if (GetReferenceConfig().EnableCache)
-                                        {
-                                            <RadzenFormField Text="TTL Cache (minutos)" Variant="Variant.Outlined">
-                                                <RadzenNumeric @bind-Value="@GetReferenceConfig().CacheTTLMinutes"
-                                                             TValue="int"
-                                                             Min="1"
-                                                             Max="60"
-                                                             Style="width: 100%;" />
-                                            </RadzenFormField>
-                                        }
+                                       
                                     }
                                 </RadzenStack>
                             </RadzenCard>
