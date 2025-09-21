@@ -299,9 +299,18 @@ namespace Frontend.Services
         {
             try
             {
-                _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
+                _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}, Filter: '{args.Filter ?? "null"}'");
 
-                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, null);
+                // Para casos sin searchFields específicos, intentar detectar campos de búsqueda comunes
+                List<string>? defaultSearchFields = null;
+                if (!string.IsNullOrEmpty(args.Filter))
+                {
+                    // Intentar usar campos comunes para búsqueda
+                    defaultSearchFields = GetDefaultSearchFields();
+                    _logger.LogInformation($"Using default search fields for {typeof(T).Name}: [{string.Join(", ", defaultSearchFields ?? new List<string>())}]");
+                }
+
+                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, defaultSearchFields);
                 _logger.LogInformation($"Using QueryPagedAsync with Filter: '{queryRequest.Filter ?? "null"}'");
                 return await QueryPagedAsync(queryRequest, backendType);
             }
@@ -575,13 +584,38 @@ namespace Frontend.Services
 
             // Agregar filtros de columna si existen
             var allFilters = new List<string>();
-            
+
             // Si ya hay filtro del baseQuery, agregarlo
             if (!string.IsNullOrEmpty(queryRequest.Filter))
             {
                 allFilters.Add($"({queryRequest.Filter})");
             }
-            
+
+            // AGREGAR FILTRO DE BÚSQUEDA GENERAL (args.Filter) - ESTA ERA LA PARTE FALTANTE
+            if (!string.IsNullOrEmpty(args.Filter))
+            {
+                _logger.LogInformation($"Processing search filter from LoadDataArgs: '{args.Filter}'");
+
+                // Si hay searchFields específicos, crear filtro OR para cada campo
+                if (searchFields != null && searchFields.Any())
+                {
+                    var searchConditions = searchFields.Select(field =>
+                        $"{field}.Contains(\"{args.Filter}\")").ToList();
+                    var searchFilter = string.Join(" || ", searchConditions);
+                    allFilters.Add($"({searchFilter})");
+                    _logger.LogInformation($"Created search filter for fields [{string.Join(", ", searchFields)}]: {searchFilter}");
+                }
+                else
+                {
+                    // Fallback: usar un campo genérico de búsqueda
+                    // En este caso, se asume que el backend manejará la búsqueda
+                    // O podríamos usar un campo por defecto como "Name" o "DisplayName"
+                    _logger.LogWarning($"No search fields specified, filter '{args.Filter}' may not work properly");
+                    // Agregar el filtro tal como viene para que el backend lo procese
+                    allFilters.Add($"Filter(\"{args.Filter}\")");
+                }
+            }
+
             // Agregar filtros de las columnas (args.Filters)
             if (args.Filters != null && args.Filters.Any())
             {
@@ -614,6 +648,35 @@ namespace Frontend.Services
             queryRequest.Take = args.Top;
 
             return queryRequest;
+        }
+
+        /// <summary>
+        /// Obtiene campos de búsqueda por defecto para la entidad
+        /// </summary>
+        private List<string>? GetDefaultSearchFields()
+        {
+            var entityType = typeof(T);
+            var commonSearchProperties = new[] { "Nombre", "Name", "DisplayName", "Title", "Titulo", "Description", "Descripcion" };
+
+            var availableFields = new List<string>();
+
+            foreach (var propertyName in commonSearchProperties)
+            {
+                var property = entityType.GetProperty(propertyName);
+                if (property != null && property.PropertyType == typeof(string))
+                {
+                    availableFields.Add(propertyName);
+                }
+            }
+
+            if (availableFields.Any())
+            {
+                _logger.LogDebug($"Found default search fields for {entityType.Name}: [{string.Join(", ", availableFields)}]");
+                return availableFields;
+            }
+
+            _logger.LogDebug($"No default search fields found for {entityType.Name}");
+            return null;
         }
 
         private string ConvertRadzenFilterToString(FilterDescriptor filter)

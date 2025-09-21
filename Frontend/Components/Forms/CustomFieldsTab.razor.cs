@@ -5,10 +5,12 @@ using global::Forms.Models.Enums;
 using System.Text.Json;
 using Radzen.Blazor;
 using Radzen;
+using Microsoft.Extensions.DependencyInjection;
+using System.Linq.Expressions;
 
 namespace Frontend.Components.Forms;
 
-public partial class CustomFieldsTab : ComponentBase
+public partial class CustomFieldsTab : ComponentBase, IDisposable
 {
     [Inject] private IServiceProvider ServiceProvider { get; set; } = null!;
     [Inject] private Frontend.Services.EntityRegistrationService EntityRegistrationService { get; set; } = null!;
@@ -23,6 +25,10 @@ public partial class CustomFieldsTab : ComponentBase
     private bool isLoading = false;
     private bool hasCustomFields = false;
     public List<string> ValidationErrors { get; private set; } = new();
+
+    // Para mantener los scopes activos durante la vida del componente
+    private readonly Dictionary<string, IServiceScope> _entityServiceScopes = new();
+    private readonly Dictionary<string, object> _entityServices = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -454,7 +460,49 @@ public partial class CustomFieldsTab : ComponentBase
             builder.AddAttribute(206, "AllowClear", referenceConfig.AllowClear);
             builder.AddAttribute(207, "Disabled", isDisabled);
             builder.AddAttribute(208, "ShowAdd", referenceConfig.AllowCreate && !isDisabled);
-            builder.AddAttribute(209, "EnableCache", referenceConfig.EnableCache);
+
+            // TEMPORAL: Deshabilitar cache para testing de búsqueda
+            builder.AddAttribute(209, "EnableCache", false); // Cambio temporal para debugging
+            Console.WriteLine($"[CustomFieldsTab] TEMPORAL: Cache deshabilitado para testing de búsqueda");
+
+            // EntityDisplayName para mejor UX
+            var entityDisplayName = GetEntityDisplayName(referenceConfig.TargetEntity);
+            builder.AddAttribute(212, "EntityDisplayName", entityDisplayName);
+
+            // FastCreateComponentType para creación rápida
+            var fastCreateType = GetFastCreateComponentType(referenceConfig.TargetEntity);
+            if (fastCreateType != null)
+            {
+                builder.AddAttribute(213, "FastCreateComponentType", fastCreateType);
+                Console.WriteLine($"[CustomFieldsTab] FastCreate component available for entity: '{referenceConfig.TargetEntity}'");
+            }
+
+            // SearchableFields si están definidos en la entidad
+            if (entityConfig?.SearchFields != null && entityConfig.SearchFields.Length > 0)
+            {
+                Console.WriteLine($"[CustomFieldsTab] Configuring SearchableFields: [{string.Join(", ", entityConfig.SearchFields)}] for entity: '{referenceConfig.TargetEntity}'");
+
+                // Convertir string[] a Expression<Func<TEntity, object>>[] para el Lookup
+                var searchExpressions = CreateSearchFieldExpressions(referenceConfig.TargetEntity, entityConfig.SearchFields);
+                if (searchExpressions != null)
+                {
+                    builder.AddAttribute(214, "SearchableFields", searchExpressions);
+                    var arrayLength = searchExpressions is Array array ? array.Length : 0;
+                    Console.WriteLine($"[CustomFieldsTab] Successfully created {arrayLength} search expressions");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[CustomFieldsTab] WARNING: No SearchFields configured for entity: '{referenceConfig.TargetEntity}' - search may not work properly");
+
+                // Fallback: usar DisplayProperty como campo de búsqueda
+                var fallbackExpressions = CreateSearchFieldExpressions(referenceConfig.TargetEntity, new[] { displayProperty });
+                if (fallbackExpressions != null)
+                {
+                    Console.WriteLine($"[CustomFieldsTab] Using fallback search expression for: [{displayProperty}]");
+                    builder.AddAttribute(214, "SearchableFields", fallbackExpressions);
+                }
+            }
 
             // Configurar cache TTL
             if (referenceConfig.CacheTTLMinutes > 0)
@@ -462,11 +510,51 @@ public partial class CustomFieldsTab : ComponentBase
                 builder.AddAttribute(210, "CacheTTL", TimeSpan.FromMinutes(referenceConfig.CacheTTLMinutes));
             }
 
-            // Configurar Service específico según la entidad
-            var service = GetServiceForEntity(referenceConfig.TargetEntity);
+            // Configurar Service específico según la entidad manteniendo el scope activo
+            var service = GetOrCreateEntityService(referenceConfig.TargetEntity);
             if (service != null)
             {
+                Console.WriteLine($"[CustomFieldsTab] Successfully resolved and cached service for entity: '{referenceConfig.TargetEntity}'");
+                Console.WriteLine($"[CustomFieldsTab] Service type: {service.GetType().FullName}");
+
+                // Verificar que el servicio implementa los métodos necesarios
+                var hasLoadDataAsync = service.GetType().GetMethods().Any(m => m.Name == "LoadDataAsync");
+                Console.WriteLine($"[CustomFieldsTab] Service has LoadDataAsync: {hasLoadDataAsync}");
+
+                // TEMPORAL: Test de conectividad del servicio
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        Console.WriteLine($"[CustomFieldsTab] Testing service connectivity for '{referenceConfig.TargetEntity}'...");
+                        if (service is Frontend.Services.BaseApiService<Shared.Models.Entities.Region> regionService)
+                        {
+                            var testResponse = await regionService.GetAllPagedAsync(1, 5);
+                            Console.WriteLine($"[CustomFieldsTab] Service test result: Success={testResponse.Success}, Count={testResponse.Data?.Data?.Count ?? 0}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[CustomFieldsTab] Service test failed: {ex.Message}");
+                    }
+                });
+
                 builder.AddAttribute(211, "Service", service);
+            }
+            else
+            {
+                Console.WriteLine($"[CustomFieldsTab] Failed to resolve service for entity: '{referenceConfig.TargetEntity}'");
+            }
+
+            // Debugging adicional para cache y search fields
+            Console.WriteLine($"[CustomFieldsTab] EnableCache: {referenceConfig.EnableCache}");
+            if (entityConfig?.SearchFields != null)
+            {
+                Console.WriteLine($"[CustomFieldsTab] SearchFields configured: [{string.Join(", ", entityConfig.SearchFields)}]");
+            }
+            else
+            {
+                Console.WriteLine($"[CustomFieldsTab] No SearchFields configured for entity: '{referenceConfig.TargetEntity}'");
             }
 
             builder.CloseComponent();
@@ -613,6 +701,220 @@ public partial class CustomFieldsTab : ComponentBase
         {
             Console.WriteLine($"[CustomFieldsTab] Error getting service for '{targetEntity}': {ex.Message}");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene o crea un servicio para una entidad manteniendo el scope activo
+    /// </summary>
+    private object? GetOrCreateEntityService(string targetEntity)
+    {
+        try
+        {
+            // Si ya tenemos el servicio cacheado, devolverlo
+            if (_entityServices.TryGetValue(targetEntity, out var cachedService))
+            {
+                return cachedService;
+            }
+
+            // Obtener configuración de la entidad
+            var entityConfig = EntityRegistrationService?.GetEntityConfiguration(targetEntity);
+            if (entityConfig == null)
+            {
+                Console.WriteLine($"[CustomFieldsTab] No entity configuration found for: '{targetEntity}'");
+                return null;
+            }
+
+            // Crear un scope y mantenerlo activo
+            var scope = ServiceProvider.CreateScope();
+            var service = scope.ServiceProvider.GetService(entityConfig.ServiceType);
+
+            if (service != null)
+            {
+                // Cachear el scope y el servicio
+                _entityServiceScopes[targetEntity] = scope;
+                _entityServices[targetEntity] = service;
+
+                Console.WriteLine($"[CustomFieldsTab] Created and cached service for entity: '{targetEntity}'");
+                return service;
+            }
+            else
+            {
+                // Si no se pudo obtener el servicio, limpiar el scope
+                scope.Dispose();
+                Console.WriteLine($"[CustomFieldsTab] Failed to resolve service type: '{entityConfig.ServiceType.Name}' for entity: '{targetEntity}'");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error creating service for entity '{targetEntity}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el nombre de display amigable para una entidad
+    /// </summary>
+    private string GetEntityDisplayName(string targetEntity)
+    {
+        // Mapeo de nombres técnicos a nombres amigables
+        var displayNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Region"] = "región",
+            ["SystemUsers"] = "usuario",
+            ["SystemRoles"] = "rol",
+            ["Ciudad"] = "ciudad",
+            ["Comuna"] = "comuna",
+            ["Empleado"] = "empleado",
+            ["Empresa"] = "empresa"
+        };
+
+        return displayNames.TryGetValue(targetEntity, out var displayName)
+            ? displayName
+            : targetEntity.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Obtiene el tipo de componente FastCreate para una entidad
+    /// </summary>
+    private Type? GetFastCreateComponentType(string targetEntity)
+    {
+        try
+        {
+            // Buscar componentes Fast siguiendo las convenciones de naming reales
+            var assembly = typeof(CustomFieldsTab).Assembly;
+
+            var possibleFastComponentNames = new[]
+            {
+                // Patrón para Core.Localidades (RegionFast)
+                $"Frontend.Modules.Core.Localidades.{targetEntity}s.{targetEntity}Fast",
+                // Patrón para Admin (SystemUserFast, SystemRoleFast)
+                $"Frontend.Modules.Admin.{targetEntity}.{targetEntity}Fast",
+                // Patrón alternativo sin 's'
+                $"Frontend.Modules.Core.Localidades.{targetEntity}.{targetEntity}Fast"
+            };
+
+            foreach (var componentName in possibleFastComponentNames)
+            {
+                var fastComponentType = assembly.GetType(componentName);
+                if (fastComponentType != null)
+                {
+                    Console.WriteLine($"[CustomFieldsTab] Found FastCreate component: {componentName}");
+                    return fastComponentType;
+                }
+            }
+
+            Console.WriteLine($"[CustomFieldsTab] No FastCreate component found for entity: '{targetEntity}'. Tried: [{string.Join(", ", possibleFastComponentNames)}]");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error finding FastCreate component for '{targetEntity}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Crea expresiones de búsqueda para los campos especificados
+    /// </summary>
+    private object? CreateSearchFieldExpressions(string entityName, string[] fieldNames)
+    {
+        try
+        {
+            // Obtener el tipo de entidad
+            var entityConfig = EntityRegistrationService?.GetEntityConfiguration(entityName);
+            if (entityConfig?.EntityType == null)
+            {
+                Console.WriteLine($"[CustomFieldsTab] Cannot create search expressions - entity type not found for: {entityName}");
+                return null;
+            }
+
+            var entityType = entityConfig.EntityType;
+            Console.WriteLine($"[CustomFieldsTab] Creating search expressions for entity type: {entityType.Name}");
+
+            // Crear el tipo de expresión: Expression<Func<TEntity, object>>[]
+            var expressionType = typeof(Expression<>).MakeGenericType(
+                typeof(Func<,>).MakeGenericType(entityType, typeof(object)));
+            var arrayType = expressionType.MakeArrayType();
+
+            // Crear lista de expresiones
+            var expressions = new List<object>();
+
+            foreach (var fieldName in fieldNames)
+            {
+                try
+                {
+                    // Verificar que la propiedad existe en el tipo
+                    var property = entityType.GetProperty(fieldName);
+                    if (property == null)
+                    {
+                        Console.WriteLine($"[CustomFieldsTab] Property '{fieldName}' not found in type '{entityType.Name}' - skipping");
+                        continue;
+                    }
+
+                    Console.WriteLine($"[CustomFieldsTab] Creating expression for property: {fieldName} ({property.PropertyType.Name})");
+
+                    // Crear parámetro: entity =>
+                    var parameter = Expression.Parameter(entityType, "entity");
+
+                    // Crear acceso a propiedad: entity.PropertyName
+                    var propertyAccess = Expression.Property(parameter, property);
+
+                    // Convertir a object si es necesario: (object)entity.PropertyName
+                    var conversion = Expression.Convert(propertyAccess, typeof(object));
+
+                    // Crear lambda: entity => (object)entity.PropertyName
+                    var lambda = Expression.Lambda(conversion, parameter);
+
+                    expressions.Add(lambda);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[CustomFieldsTab] Error creating expression for field '{fieldName}': {ex.Message}");
+                }
+            }
+
+            if (expressions.Count == 0)
+            {
+                Console.WriteLine($"[CustomFieldsTab] No valid search expressions created for entity: {entityName}");
+                return null;
+            }
+
+            // Crear array del tipo correcto
+            var array = Array.CreateInstance(expressionType, expressions.Count);
+            for (int i = 0; i < expressions.Count; i++)
+            {
+                array.SetValue(expressions[i], i);
+            }
+
+            Console.WriteLine($"[CustomFieldsTab] Successfully created {expressions.Count} search expressions for entity: {entityName}");
+            return array;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error creating search field expressions: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Limpia todos los scopes al destruir el componente
+    /// </summary>
+    public void Dispose()
+    {
+        try
+        {
+            foreach (var scope in _entityServiceScopes.Values)
+            {
+                scope?.Dispose();
+            }
+            _entityServiceScopes.Clear();
+            _entityServices.Clear();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CustomFieldsTab] Error disposing scopes: {ex.Message}");
         }
     }
 }
