@@ -119,8 +119,8 @@ public partial class List : AuthorizedPageBase
     {
         try
         {
-            // Navigate to advanced query page with the saved query loaded
-            Navigation.NavigateTo($"/advanced-query?loadQuery={savedQuery.Id}");
+            // Navegar a Page.razor con parámetros de query para modo play
+            Navigation.NavigateTo($"/advanced-query?loadQuery={savedQuery.Id}&mode=play");
         }
         catch (Exception ex)
         {

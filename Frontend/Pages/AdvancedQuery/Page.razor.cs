@@ -62,8 +62,14 @@ public partial class Page : ComponentBase
     
     // SavedQueries state
     [Parameter, SupplyParameterFromQuery] public string? LoadQuery { get; set; }
+    [Parameter, SupplyParameterFromQuery] public string? Mode { get; set; }
     private SavedQueryDto? currentSavedQuery;
     private string queryName = "";
+    
+    // Play mode properties
+    private bool IsPlayMode => !string.IsNullOrEmpty(Mode) && Mode.ToLower() == "play";
+    private bool IsReadOnlyMode => IsPlayMode;
+    private List<SerializableFilter> readOnlyFilters = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -148,7 +154,12 @@ public partial class Page : ComponentBase
 
     private async Task ExecuteQuery()
     {
-        if (filterConfigurationRef?.DataFilter?.Filters == null || !filterConfigurationRef.DataFilter.Filters.Any())
+        // En modo play, permitir ejecutar sin filtros si no hay filtros configurados
+        var hasFilters = IsPlayMode ? 
+            (readOnlyFilters?.Any() == true) : 
+            (filterConfigurationRef?.DataFilter?.Filters?.Any() == true);
+            
+        if (!IsPlayMode && (filterConfigurationRef?.DataFilter?.Filters == null || !filterConfigurationRef.DataFilter.Filters.Any()))
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -167,9 +178,35 @@ public partial class Page : ComponentBase
             // Construir Select string con los campos seleccionados
             var selectFields = GetSelectedFieldsForQuery();
 
+            // En modo play, convertir filtros serializados a CompositeFilterDescriptor
+            CompositeFilterDescriptor[] filters;
+            if (IsPlayMode && readOnlyFilters?.Any() == true)
+            {
+                var compositeFilters = new List<CompositeFilterDescriptor>();
+                foreach (var filter in readOnlyFilters)
+                {
+                    if (Enum.TryParse<FilterOperator>(filter.Operator, out var filterOperator) &&
+                        Enum.TryParse<LogicalFilterOperator>(filter.LogicalOperator, out var logicalOperator))
+                    {
+                        compositeFilters.Add(new CompositeFilterDescriptor
+                        {
+                            Property = filter.PropertyName,
+                            FilterOperator = filterOperator,
+                            FilterValue = filter.Value,
+                            LogicalFilterOperator = logicalOperator
+                        });
+                    }
+                }
+                filters = compositeFilters.ToArray();
+            }
+            else
+            {
+                filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>();
+            }
+
             var request = new AdvancedQueryRequest
             {
-                Filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
+                Filters = filters,
                 LogicalOperator = logicalOperator,
                 FilterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive,
                 Take = takeLimit,
@@ -564,6 +601,9 @@ public partial class Page : ComponentBase
                     var filters = DeserializeFilters(currentSavedQuery.FilterConfiguration);
                     Console.WriteLine($"✅ Deserialized {filters.Count} filters");
                     
+                    // Almacenar filtros para modo play
+                    readOnlyFilters = filters;
+                    
                     foreach (var filter in filters)
                     {
                         Console.WriteLine($"  - Filter: {filter.PropertyName} {filter.Operator} {filter.Value}");
@@ -693,6 +733,18 @@ public partial class Page : ComponentBase
     private void NavigateToSavedQueries()
     {
         Navigation.NavigateTo("/advanced-query/saved-queries/list");
+    }
+
+    /// <summary>
+    /// Cambiar del modo play al modo edit
+    /// </summary>
+    private void SwitchToEditMode()
+    {
+        if (currentSavedQuery != null)
+        {
+            // Navegar a la misma página pero sin el parámetro mode=play
+            Navigation.NavigateTo($"/advanced-query?loadQuery={currentSavedQuery.Id}");
+        }
     }
 
     /// <summary>

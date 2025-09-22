@@ -2,6 +2,7 @@
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base.Tables
 @using Frontend.Pages.AdvancedQuery
+@using Frontend.Pages.AdvancedQuery.Components.Modals
 @using Radzen
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("SAVEDQUERIES.VIEW")]
@@ -40,6 +41,29 @@
                          OnEdit="@HandleEdit"
                          OnDelete="@HandleDelete">
                 
+                <CustomActions>
+                    <div class="rz-display-flex rz-gap-2">
+                        <RadzenButton Icon="play_arrow" 
+                                      ButtonStyle="ButtonStyle.Success" 
+                                      Size="ButtonSize.ExtraSmall" 
+                                      Click="@(() => HandleExecute(context))"
+                                      title="Ejecutar búsqueda (solo lectura)"
+                                      Variant="Variant.Flat" />
+                        <RadzenButton Icon="share" 
+                                      ButtonStyle="ButtonStyle.Info" 
+                                      Size="ButtonSize.ExtraSmall" 
+                                      Click="@(() => HandleShare(context))"
+                                      title="Compartir búsqueda"
+                                      Variant="Variant.Flat" />
+                        <RadzenButton Icon="content_copy" 
+                                      ButtonStyle="ButtonStyle.Secondary" 
+                                      Size="ButtonSize.ExtraSmall" 
+                                      Click="@(() => HandleDuplicate(context))"
+                                      title="Duplicar búsqueda"
+                                      Variant="Variant.Flat" />
+                    </div>
+                </CustomActions>
+                
             </EntityTable>
         </RadzenCard>
 
@@ -59,6 +83,7 @@
                              OnClose="@(() => showDuplicateModal = false)" 
                              OnDuplicated="@OnQueryDuplicated" />
     }
+
 }
 
 @code {

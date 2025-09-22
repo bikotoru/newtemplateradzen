@@ -7,27 +7,98 @@
         <RadzenColumn Size="12">
             <RadzenCard>
                 <RadzenStack Gap="1rem">
-                    <RadzenText TextStyle="TextStyle.H6">2. Configurar Filtros</RadzenText>
+                    <RadzenText TextStyle="TextStyle.H6">
+                        <RadzenIcon Icon="@(IsReadOnly ? "visibility" : "filter_alt")" class="rz-me-2" />
+                        2. @(IsReadOnly ? "Configurar Filtros (Solo Lectura)" : "Configurar Filtros")
+                    </RadzenText>
 
-                    <!-- Configuración Global del Filtro -->
-                    <RadzenRow>
-                        <RadzenColumn Size="6">
-                            <RadzenLabel Text="Operador Lógico Principal:" />
-                            <RadzenSelectBar @bind-Value="LogicalOperator" TValue="LogicalFilterOperator">
-                                <Items>
-                                    <RadzenSelectBarItem Text="Y (AND)" Value="LogicalFilterOperator.And" />
-                                    <RadzenSelectBarItem Text="O (OR)" Value="LogicalFilterOperator.Or" />
-                                </Items>
-                            </RadzenSelectBar>
-                        </RadzenColumn>
-                        <RadzenColumn Size="6">
-                            <RadzenLabel Text="Límite de Resultados:" />
-                            <RadzenNumeric @bind-Value="TakeLimit" Min="1" Max="1000" Style="width: 100%;" />
-                        </RadzenColumn>
-                    </RadzenRow>
+                    @if (IsReadOnly)
+                    {
+                        <!-- Read-only view showing filter configuration -->
+                        @if (HasConfiguredFilters())
+                        {
+                            <div class="rz-border rz-border-radius-medium rz-p-3" style="background-color: var(--rz-background-color);">
+                                <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-2">Filtros configurados:</RadzenText>
+                                @if (ReadOnlyFilters != null && ReadOnlyFilters.Any())
+                                {
+                                    @foreach (var filter in ReadOnlyFilters)
+                                    {
+                                        <div class="rz-display-flex rz-align-items-center rz-gap-2 rz-mb-2">
+                                            <RadzenBadge BadgeStyle="BadgeStyle.Secondary" Text="@filter.PropertyName" />
+                                            <RadzenText class="rz-color-secondary">@GetOperatorText(filter.Operator)</RadzenText>
+                                            @if (filter.Value != null)
+                                            {
+                                                <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@filter.Value.ToString()" />
+                                            }
+                                            @if (filter != ReadOnlyFilters.Last())
+                                            {
+                                                <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="@filter.LogicalOperator" />
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" class="rz-p-3" Style="background-color: var(--rz-primary-lighter); border-radius: 8px;">
+                                <div>
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-secondary">Operador Lógico:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1">@GetLogicalOperatorText()</RadzenText>
+                                </div>
+                                <div>
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-secondary">Límite de Registros:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1">@TakeLimit registros</RadzenText>
+                                </div>
+                            </RadzenStack>
+                            
+                            <!-- Execute Button in Read-Only mode -->
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
+                                <RadzenButton Text="Ejecutar Consulta"
+                                            Icon="play_arrow"
+                                            ButtonStyle="ButtonStyle.Success"
+                                            Size="ButtonSize.Medium"
+                                            Click="@OnExecuteQueryClick"
+                                            Disabled="@IsLoading" />
+                            </RadzenStack>
+                        }
+                        else
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" ShowIcon="true">
+                                <strong>Sin filtros:</strong> Esta búsqueda no tiene filtros configurados.
+                            </RadzenAlert>
+                            
+                            <!-- Execute Button even without filters -->
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
+                                <RadzenButton Text="Ejecutar Consulta"
+                                            Icon="play_arrow"
+                                            ButtonStyle="ButtonStyle.Success"
+                                            Size="ButtonSize.Medium"
+                                            Click="@OnExecuteQueryClick"
+                                            Disabled="@IsLoading" />
+                            </RadzenStack>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Editable view - original content -->
+                        <!-- Configuración Global del Filtro -->
+                        <RadzenRow>
+                            <RadzenColumn Size="6">
+                                <RadzenLabel Text="Operador Lógico Principal:" />
+                                <RadzenSelectBar @bind-Value="LogicalOperator" TValue="LogicalFilterOperator">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="Y (AND)" Value="LogicalFilterOperator.And" />
+                                        <RadzenSelectBarItem Text="O (OR)" Value="LogicalFilterOperator.Or" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </RadzenColumn>
+                            <RadzenColumn Size="6">
+                                <RadzenLabel Text="Límite de Resultados:" />
+                                <RadzenNumeric @bind-Value="TakeLimit" Min="1" Max="1000" Style="width: 100%;" />
+                            </RadzenColumn>
+                        </RadzenRow>
 
-                    <!-- RadzenDataFilter -->
-                    <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
+                        <!-- RadzenDataFilter -->
+                        <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
                         <RadzenDataFilter @ref="dataFilterRef"
                                         TItem="object"
                                         LogicalFilterOperator="@LogicalOperator"
@@ -62,24 +133,26 @@
                                 }
                             </Properties>
                         </RadzenDataFilter>
-                    </div>
+                        </div>
 
-                    <!-- Botones de Acción -->
-                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
-                        <RadzenButton Text="Ejecutar Consulta"
-                                    Icon="play_arrow"
-                                    ButtonStyle="ButtonStyle.Primary"
-                                    Size="ButtonSize.Medium"
-                                    Click="@OnExecuteQueryClick"
-                                    @onmouseenter="@RefreshFilterState"
-                                    Disabled="@(IsLoading || !HasFilters)" />
+                        <!-- Botones de Acción -->
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
+                            <RadzenButton Text="Ejecutar Consulta"
+                                        Icon="play_arrow"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Medium"
+                                        Click="@OnExecuteQueryClick"
+                                        @onmouseenter="@RefreshFilterState"
+                                        Disabled="@(IsLoading || !HasFilters)" />
 
-                        <RadzenButton Text="Limpiar Filtros"
-                                    Icon="clear"
-                                    ButtonStyle="ButtonStyle.Light"
-                                    Size="ButtonSize.Medium"
-                                    Click="@OnClearFiltersClick" />
-                    </RadzenStack>
+                            <RadzenButton Text="Limpiar Filtros"
+                                        Icon="clear"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Medium"
+                                        Click="@OnClearFiltersClick" />
+                        </RadzenStack>
+                    }
+                    <!-- End of IsReadOnly conditional -->
                 </RadzenStack>
             </RadzenCard>
         </RadzenColumn>
@@ -90,6 +163,7 @@
     [Parameter] public string? SelectedEntityName { get; set; }
     [Parameter] public List<EntityFieldDefinition> EntityFields { get; set; } = new();
     [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private RadzenDataFilter<object>? dataFilterRef;
     private bool hasFilters = false;
@@ -114,6 +188,9 @@
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
     [Parameter] public EventCallback OnClearFilters { get; set; }
     [Parameter] public EventCallback OnDataFilterReady { get; set; }
+    
+    // Read-only mode parameters
+    [Parameter] public List<Frontend.Pages.AdvancedQuery.SerializableFilter>? ReadOnlyFilters { get; set; }
 
     private async Task OnExecuteQueryClick()
     {
@@ -194,6 +271,56 @@
     {
         var systemFields = new[] { "OrganizationId", "CreadorId", "ModificadorId", "Active" };
         return systemFields.Contains(propertyName, StringComparer.OrdinalIgnoreCase);
+    }
+    
+    /// <summary>
+    /// Verifica si hay filtros configurados (para modo read-only)
+    /// </summary>
+    private bool HasConfiguredFilters()
+    {
+        if (IsReadOnly)
+        {
+            return ReadOnlyFilters?.Any() == true;
+        }
+        return HasFilters;
+    }
+    
+    /// <summary>
+    /// Obtiene el texto descriptivo del operador lógico
+    /// </summary>
+    private string GetLogicalOperatorText()
+    {
+        return LogicalOperator switch
+        {
+            LogicalFilterOperator.And => "Y (AND)",
+            LogicalFilterOperator.Or => "O (OR)",
+            _ => "Desconocido"
+        };
+    }
+    
+    /// <summary>
+    /// Obtiene el texto descriptivo del operador de filtro
+    /// </summary>
+    private string GetOperatorText(string operatorValue)
+    {
+        return operatorValue switch
+        {
+            "Equal" => "Igual a",
+            "NotEqual" => "Diferente de",
+            "LessThan" => "Menor que",
+            "LessThanOrEqual" => "Menor o igual",
+            "GreaterThan" => "Mayor que",
+            "GreaterThanOrEqual" => "Mayor o igual",
+            "StartsWith" => "Comienza con",
+            "EndsWith" => "Termina con",
+            "Contains" => "Contiene",
+            "DoesNotContain" => "No contiene",
+            "IsNull" => "Es nulo",
+            "IsNotNull" => "No es nulo",
+            "IsEmpty" => "Está vacío",
+            "IsNotEmpty" => "No está vacío",
+            _ => operatorValue
+        };
     }
 
     public void Dispose()
