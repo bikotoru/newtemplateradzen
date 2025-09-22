@@ -44,6 +44,22 @@ builder.Services.AddScoped<BaseQueryService<SystemFormEntities>>(provider =>
 // Register specialized SystemFormEntityService that handles organization filters correctly
 builder.Services.AddScoped<SystemFormEntityService>();
 
+// Register BaseQueryService for SystemSavedQueries with AppDbContext
+builder.Services.AddScoped<BaseQueryService<SystemSavedQueries>>(provider =>
+{
+    var appDbContext = provider.GetRequiredService<AppDbContext>();
+    var logger = provider.GetRequiredService<ILogger<BaseQueryService<SystemSavedQueries>>>();
+    return new BaseQueryService<SystemSavedQueries>(appDbContext, logger);
+});
+
+// Register BaseQueryService for SystemSavedQueryShares with AppDbContext
+builder.Services.AddScoped<BaseQueryService<SystemSavedQueryShares>>(provider =>
+{
+    var appDbContext = provider.GetRequiredService<AppDbContext>();
+    var logger = provider.GetRequiredService<ILogger<BaseQueryService<SystemSavedQueryShares>>>();
+    return new BaseQueryService<SystemSavedQueryShares>(appDbContext, logger);
+});
+
 // Register Security services and dependencies (same as Backend)
 builder.Services.AddScoped<Backend.Utils.Security.TokenCacheService>();
 builder.Services.AddScoped<Backend.Utils.Security.TokenEncryptionService>();
