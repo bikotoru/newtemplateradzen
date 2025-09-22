@@ -39,6 +39,9 @@ public partial class Page : ComponentBase
     // Variable para almacenar el último request ejecutado (para exportación)
     private AdvancedQueryRequest? lastExecutedRequest;
 
+    // Variables para PageWithCommandBar
+    private bool CanSave => false; // Por ahora no hay funcionalidad de guardado
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAvailableEntities();
@@ -225,115 +228,17 @@ public partial class Page : ComponentBase
         }
     }
 
-    private async Task SaveConfiguration()
+    private async Task SaveForm()
     {
-        if (filterConfigurationRef?.DataFilter?.Filters == null || !filterConfigurationRef.DataFilter.Filters.Any())
+        // Por ahora no hay funcionalidad de guardado específica
+        // Se puede implementar más adelante si se necesita guardar configuraciones de consulta
+        NotificationService.Notify(new NotificationMessage
         {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Warning,
-                Summary = "Sin Filtros",
-                Detail = "No hay filtros configurados para guardar",
-                Duration = 3000
-            });
-            return;
-        }
-
-        var saveDialogParameters = new Dictionary<string, object>
-        {
-            ["EntityName"] = selectedEntityName ?? "",
-            ["EntityDisplayName"] = selectedEntity?.DisplayName ?? "",
-            ["Filters"] = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
-            ["LogicalOperator"] = logicalOperator,
-            ["FilterCaseSensitivity"] = FilterCaseSensitivity.CaseInsensitive,
-            ["Take"] = takeLimit,
-            ["Select"] = GetSelectedFieldsForQuery(),
-            ["SelectedFields"] = selectedFields.ToArray() // Para poder restaurar la selección de campos
-        };
-
-        var result = await DialogService.OpenAsync<Frontend.Components.AdvancedQuery.SaveConfigurationDialog>("Guardar Configuración", saveDialogParameters);
-
-        if (result is bool success && success)
-        {
-            // Configuración guardada exitosamente
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadConfiguration()
-    {
-        if (string.IsNullOrEmpty(selectedEntityName))
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Warning,
-                Summary = "Seleccionar Entidad",
-                Detail = "Primero debes seleccionar una entidad",
-                Duration = 3000
-            });
-            return;
-        }
-
-        var loadDialogParameters = new Dictionary<string, object>
-        {
-            ["EntityName"] = selectedEntityName ?? ""
-        };
-
-        var result = await DialogService.OpenAsync<Frontend.Components.AdvancedQuery.LoadConfigurationDialog>("Cargar Configuración", loadDialogParameters);
-
-        if (result is SavedQueryConfiguration config)
-        {
-            await ApplyConfiguration(config);
-        }
-    }
-
-    private async Task ApplyConfiguration(SavedQueryConfiguration config)
-    {
-        try
-        {
-            // Aplicar configuración cargada
-            logicalOperator = config.LogicalOperator;
-            if (config.Take.HasValue)
-            {
-                takeLimit = config.Take.Value;
-            }
-
-            // Limpiar filtros actuales
-            if (filterConfigurationRef?.DataFilter != null)
-            {
-                await filterConfigurationRef.DataFilter.ClearFilters();
-
-                // Aplicar filtros de la configuración
-                var filters = config.GetFilters();
-                foreach (var filter in filters)
-                {
-                    await filterConfigurationRef.DataFilter.AddFilter(filter);
-                }
-
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Success,
-                    Summary = "Configuración Aplicada",
-                    Detail = $"Se aplicó la configuración '{config.Name}' con {filters.Length} filtros",
-                    Duration = 3000
-                });
-
-                // Refrescar el estado del componente de filtros
-                filterConfigurationRef.RefreshFilterState();
-            }
-
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Error",
-                Detail = $"Error aplicando configuración: {ex.Message}",
-                Duration = 5000
-            });
-        }
+            Severity = NotificationSeverity.Info,
+            Summary = "Información",
+            Detail = "Funcionalidad de guardado no implementada",
+            Duration = 3000
+        });
     }
 
     private async Task ViewDetails(object item)

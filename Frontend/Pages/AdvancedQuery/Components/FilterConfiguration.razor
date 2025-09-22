@@ -7,23 +7,7 @@
         <RadzenColumn Size="12">
             <RadzenCard>
                 <RadzenStack Gap="1rem">
-                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
-                        <RadzenText TextStyle="TextStyle.H6">2. Configurar Filtros</RadzenText>
-
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
-                            <RadzenButton Text="Cargar Configuración"
-                                        Icon="folder_open"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="@OnLoadConfigurationClick" />
-                            <RadzenButton Text="Guardar Configuración"
-                                        Icon="save"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="@OnSaveConfigurationClick"
-                                        Disabled="@(!HasFilters)" />
-                        </RadzenStack>
-                    </RadzenStack>
+                    <RadzenText TextStyle="TextStyle.H6">2. Configurar Filtros</RadzenText>
 
                     <!-- Configuración Global del Filtro -->
                     <RadzenRow>
@@ -129,8 +113,6 @@
 
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
     [Parameter] public EventCallback OnClearFilters { get; set; }
-    [Parameter] public EventCallback OnLoadConfiguration { get; set; }
-    [Parameter] public EventCallback OnSaveConfiguration { get; set; }
 
     private async Task OnExecuteQueryClick()
     {
@@ -144,17 +126,6 @@
         await OnClearFilters.InvokeAsync();
     }
 
-    private async Task OnLoadConfigurationClick()
-    {
-        await OnLoadConfiguration.InvokeAsync();
-    }
-
-    private async Task OnSaveConfigurationClick()
-    {
-        // Verificar estado antes de guardar
-        RefreshFilterState();
-        await OnSaveConfiguration.InvokeAsync();
-    }
 
     protected override void OnAfterRender(bool firstRender)
     {

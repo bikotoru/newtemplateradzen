@@ -87,6 +87,11 @@ public partial class MainLayout : IDisposable
         }
     }
 
+    protected void NavigateToAdvancedQuery()
+    {
+        Navigation.NavigateTo("/advanced-query");
+    }
+
     public void Dispose()
     {
         try
