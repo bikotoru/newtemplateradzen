@@ -20,7 +20,7 @@
                     <RadzenColumn Size="6">
                         @if (!string.IsNullOrEmpty(SelectedEntityName))
                         {
-                            <RadzenButton Text="@($"{EntityFields.Where(f => f.IsVisible).Count()} campos disponibles - Configurar")"
+                            <RadzenButton Text="@($"{GetSelectedFieldsCount()} campos seleccionados - Configurar")"
                                         Icon="settings"
                                         ButtonStyle="ButtonStyle.Info"
                                         Size="ButtonSize.Small"
@@ -45,6 +45,7 @@
     [Parameter] public string? SelectedEntityName { get; set; }
     [Parameter] public AvailableEntityDto? SelectedEntity { get; set; }
     [Parameter] public List<EntityFieldDefinition> EntityFields { get; set; } = new();
+    [Parameter] public List<EntityFieldDefinition> SelectedFields { get; set; } = new();
 
     [Parameter] public EventCallback<string?> SelectedEntityNameChanged { get; set; }
     [Parameter] public EventCallback OnEntitySelectionChanged { get; set; }
@@ -59,5 +60,17 @@
     private async Task OnConfigureFieldsClick()
     {
         await OnConfigureFields.InvokeAsync();
+    }
+
+    private int GetSelectedFieldsCount()
+    {
+        // Si hay campos seleccionados explícitamente, usar esos
+        if (SelectedFields.Any())
+        {
+            return SelectedFields.Count;
+        }
+
+        // Si no hay selección, usar los campos por defecto
+        return EntityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).Count();
     }
 }

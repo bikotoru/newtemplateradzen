@@ -70,7 +70,7 @@
                                         RemoveFilterText="Quitar filtro"
                                         ClearFilterText="Limpiar filtro">
                             <Properties>
-                                @foreach (var field in EntityFields.Where(f => f.IsSearchable))
+                                @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
                                 {
                                     <RadzenDataFilterProperty Property="@field.PropertyName"
                                                             Title="@field.DisplayName"
@@ -189,6 +189,15 @@
     {
         hasFilters = dataFilterRef?.Filters?.Any() == true;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Determina si un campo es un campo del sistema que debe ser excluido de los filtros
+    /// </summary>
+    private bool IsSystemField(string propertyName)
+    {
+        var systemFields = new[] { "OrganizationId", "CreadorId", "ModificadorId", "Active" };
+        return systemFields.Contains(propertyName, StringComparer.OrdinalIgnoreCase);
     }
 
     public void Dispose()
