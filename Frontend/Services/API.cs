@@ -34,7 +34,7 @@ public class API
     public async Task<string> GetStringAsync(string endpoint)
     {
         await EnsureAuthenticatedAsync();
-        var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint);
+        var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, BackendType.GlobalBackend);
         var response = await _httpClient.SendAsync(request);
         return await response.Content.ReadAsStringAsync();
     }
@@ -56,7 +56,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint);
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             var jsonString = await response.Content.ReadAsStringAsync();
             
@@ -112,7 +112,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint);
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -160,7 +160,7 @@ public class API
     public async Task<string> PostStringAsync(string endpoint, object? data = null)
     {
         await EnsureAuthenticatedAsync();
-        var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data);
+        var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, BackendType.GlobalBackend);
         var response = await _httpClient.SendAsync(request);
         return await response.Content.ReadAsStringAsync();
     }
@@ -183,7 +183,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data);
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             var jsonString = await response.Content.ReadAsStringAsync();
             
@@ -240,7 +240,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data);
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -289,7 +289,7 @@ public class API
     public async Task<string> PutStringAsync(string endpoint, object? data = null)
     {
         await EnsureAuthenticatedAsync();
-        var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data);
+        var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data, BackendType.GlobalBackend);
         var response = await _httpClient.SendAsync(request);
         return await response.Content.ReadAsStringAsync();
     }
@@ -312,7 +312,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data);
+            var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             var jsonString = await response.Content.ReadAsStringAsync();
             
@@ -398,7 +398,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data);
+            var request = CreateAuthenticatedRequest(HttpMethod.Put, endpoint, data, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -447,7 +447,7 @@ public class API
     public async Task<string> DeleteStringAsync(string endpoint)
     {
         await EnsureAuthenticatedAsync();
-        var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint);
+        var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint, null, BackendType.GlobalBackend);
         var response = await _httpClient.SendAsync(request);
         return await response.Content.ReadAsStringAsync();
     }
@@ -469,7 +469,36 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint);
+            var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint, null, BackendType.GlobalBackend);
+            var response = await _httpClient.SendAsync(request);
+            var jsonString = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonString, JsonOptions);
+                return result ?? ApiResponse<T>.ErrorResponse("Respuesta vacía del servidor");
+            }
+            else
+            {
+                var errorResponse = TryDeserializeError<T>(jsonString);
+                return errorResponse ?? ApiResponse<T>.ErrorResponse($"Error HTTP {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<T>.ErrorResponse($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// DELETE request que retorna ApiResponse&lt;T&gt; con BackendType específico
+    /// </summary>
+    public async Task<ApiResponse<T>> DeleteAsync<T>(string endpoint, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint, null, backendType);
             var response = await _httpClient.SendAsync(request);
             var jsonString = await response.Content.ReadAsStringAsync();
             
@@ -525,7 +554,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint);
+            var request = CreateAuthenticatedRequest(HttpMethod.Delete, endpoint, null, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -884,7 +913,34 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data);
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, BackendType.GlobalBackend);
+            var response = await _httpClient.SendAsync(request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error HTTP {response.StatusCode}: {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error descargando archivo: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// POST request que retorna un archivo binario con BackendType específico
+    /// </summary>
+    public async Task<byte[]> PostFileAsync(string endpoint, object? data, BackendType backendType)
+    {
+        try
+        {
+            await EnsureAuthenticatedAsync();
+            var request = CreateAuthenticatedRequest(HttpMethod.Post, endpoint, data, backendType);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -911,7 +967,7 @@ public class API
         try
         {
             await EnsureAuthenticatedAsync();
-            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint);
+            var request = CreateAuthenticatedRequest(HttpMethod.Get, endpoint, null, BackendType.GlobalBackend);
             var response = await _httpClient.SendAsync(request);
             
             if (response.IsSuccessStatusCode)

@@ -148,12 +148,16 @@ namespace Frontend.Modules.Admin.FormDesigner
         /// <summary>
         /// Override para usar FormBackend en lugar de GlobalBackend
         /// </summary>
-        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> QueryPagedAsync(QueryRequest queryRequest, BackendType? backendType = null)
+        public override async Task<ApiResponse<PagedResult<SystemFormEntities>>> QueryPagedAsync(QueryRequest queryRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
-                _logger.LogInformation($"Executing paged query for SystemFormEntities using FormBackend");
-                return await _api.PostAsync<PagedResult<SystemFormEntities>>($"{_baseUrl}/paged", queryRequest, BackendType.FormBackend);
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = BackendType.FormBackend; // Este servicio siempre usa FormBackend por defecto
+                }
+                _logger.LogInformation($"Executing paged query for SystemFormEntities using {backendType}");
+                return await _api.PostAsync<PagedResult<SystemFormEntities>>($"{_baseUrl}/paged", queryRequest, backendType);
             }
             catch (Exception ex)
             {
