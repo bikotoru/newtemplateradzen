@@ -50,6 +50,9 @@ public partial class Page : ComponentBase
 
     // Variable para almacenar el último request ejecutado (para exportación)
     private AdvancedQueryRequest? lastExecutedRequest;
+    
+    // Filtros pendientes para cargar cuando DataFilter esté listo
+    private List<SerializableFilter>? pendingFilters;
 
     // Variables para PageWithCommandBar y SavedQueries
     private bool CanSave => !string.IsNullOrEmpty(selectedEntityName) && 
@@ -484,11 +487,15 @@ public partial class Page : ComponentBase
     {
         try
         {
+            Console.WriteLine($"🔄 LoadSavedQuery started for ID: {queryId}");
             isLoading = true;
+            
+            Console.WriteLine("📡 Calling SavedQueryService.GetByIdAsync...");
             var response = await SavedQueryService.GetByIdAsync(queryId);
             
             if (!response.Success || response.Data == null)
             {
+                Console.WriteLine($"❌ Failed to load saved query: {response.Message}");
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Warning,
@@ -499,23 +506,36 @@ public partial class Page : ComponentBase
                 return;
             }
 
+            Console.WriteLine($"✅ Saved query loaded successfully: {response.Data.Name}");
             currentSavedQuery = response.Data;
             
             // Cargar nombre de la búsqueda
             queryName = currentSavedQuery.Name;
+            Console.WriteLine($"📝 Query name set: {queryName}");
             
             // Cargar la entidad
             selectedEntityName = currentSavedQuery.EntityName;
+            Console.WriteLine($"🏷️ Entity name set: {selectedEntityName}");
+            
+            Console.WriteLine("🔄 Calling OnEntitySelected...");
             await OnEntitySelected();
             
             // Esperar a que se cargue la entidad
+            Console.WriteLine("⏳ Waiting for entity to load...");
             await Task.Delay(100);
+            
+            Console.WriteLine($"📊 Entity fields loaded: {entityFields.Count} fields");
+            foreach (var field in entityFields)
+            {
+                Console.WriteLine($"  - {field.PropertyName} ({field.PropertyType?.Name})");
+            }
             
             // Cargar configuración de campos
             if (!string.IsNullOrEmpty(currentSavedQuery.SelectedFields))
             {
                 try
                 {
+                    Console.WriteLine($"🔧 Loading selected fields: {currentSavedQuery.SelectedFields}");
                     var fieldNames = JsonSerializer.Deserialize<List<string>>(currentSavedQuery.SelectedFields);
                     if (fieldNames != null)
                     {
@@ -523,40 +543,103 @@ public partial class Page : ComponentBase
                             .Where(f => fieldNames.Contains(f.PropertyName))
                             .OrderBy(f => fieldNames.IndexOf(f.PropertyName))
                             .ToList();
+                        Console.WriteLine($"✅ Selected fields loaded: {selectedFields.Count} fields");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error deserializing selected fields: {ex.Message}");
+                    Console.WriteLine($"❌ Error deserializing selected fields: {ex.Message}");
                 }
             }
             
             // Cargar configuración de filtros
+            Console.WriteLine($"🔍 Checking filter configuration...");
+            Console.WriteLine($"FilterConfiguration: {currentSavedQuery.FilterConfiguration}");
+            
             if (!string.IsNullOrEmpty(currentSavedQuery.FilterConfiguration))
             {
                 try
                 {
+                    Console.WriteLine("📋 Deserializing filters...");
                     var filters = DeserializeFilters(currentSavedQuery.FilterConfiguration);
-                    if (filters.Any() && filterConfigurationRef?.DataFilter != null)
+                    Console.WriteLine($"✅ Deserialized {filters.Count} filters");
+                    
+                    foreach (var filter in filters)
                     {
-                        await Task.Delay(200); // Dar tiempo para que se inicialice el componente
-                        // TODO: Implementar carga de filtros desde SerializableFilter - por ahora solo notificar
-                        Console.WriteLine($"Filters to load: {filters.Count}");
-                        foreach (var filter in filters)
+                        Console.WriteLine($"  - Filter: {filter.PropertyName} {filter.Operator} {filter.Value}");
+                    }
+                    
+                    if (filters.Any())
+                    {
+                        Console.WriteLine("🔄 Checking filterConfigurationRef...");
+                        if (filterConfigurationRef == null)
                         {
-                            Console.WriteLine($"Filter: {filter.PropertyName} {filter.Operator} {filter.Value}");
+                            Console.WriteLine("❌ filterConfigurationRef is null!");
                         }
+                        else
+                        {
+                            Console.WriteLine("✅ filterConfigurationRef found");
+                            
+                            // Intentar múltiples veces hasta que DataFilter esté disponible
+                            var maxAttempts = 10;
+                            var attempt = 0;
+                            var delayMs = 200;
+                            
+                            while (filterConfigurationRef.DataFilter == null && attempt < maxAttempts)
+                            {
+                                attempt++;
+                                Console.WriteLine($"⏳ Attempt {attempt}/{maxAttempts}: DataFilter is null, waiting {delayMs}ms...");
+                                await Task.Delay(delayMs);
+                                
+                                // Forzar re-render para asegurar que el componente se inicialice
+                                StateHasChanged();
+                                await Task.Delay(100);
+                                
+                                // Aumentar el delay gradualmente
+                                delayMs = Math.Min(delayMs + 100, 1000);
+                            }
+                            
+                            if (filterConfigurationRef.DataFilter != null)
+                            {
+                                Console.WriteLine($"✅ DataFilter found after {attempt} attempts!");
+                                Console.WriteLine("🚀 Starting LoadFiltersIntoDataFilter...");
+                                await LoadFiltersIntoDataFilter(filters);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"❌ DataFilter is still null after {maxAttempts} attempts");
+                                Console.WriteLine("💾 Storing filters to load when DataFilter becomes ready...");
+                                pendingFilters = filters;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("⚠️ No filters to load");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error loading filters: {ex.Message}");
+                    Console.WriteLine($"❌ Error loading filters: {ex.Message}");
+                    Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Filtros no cargados",
+                        Detail = "No se pudieron cargar los filtros guardados. Puede configurarlos manualmente.",
+                        Duration = 4000
+                    });
                 }
+            }
+            else
+            {
+                Console.WriteLine("⚠️ FilterConfiguration is empty");
             }
             
             // Cargar configuración de operador lógico y límite
             logicalOperator = (LogicalFilterOperator)currentSavedQuery.LogicalOperator;
             takeLimit = currentSavedQuery.TakeLimit;
+            Console.WriteLine($"⚙️ LogicalOperator: {logicalOperator}, TakeLimit: {takeLimit}");
             
             NotificationService.Notify(new NotificationMessage
             {
@@ -566,10 +649,14 @@ public partial class Page : ComponentBase
                 Duration = 4000
             });
             
+            Console.WriteLine("🔄 Calling StateHasChanged...");
             StateHasChanged();
+            Console.WriteLine("✅ LoadSavedQuery completed successfully");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"❌ LoadSavedQuery failed: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
             NotificationService.Notify(new NotificationMessage
             {
                 Severity = NotificationSeverity.Error,
@@ -581,6 +668,7 @@ public partial class Page : ComponentBase
         finally
         {
             isLoading = false;
+            Console.WriteLine("🏁 LoadSavedQuery finished");
         }
     }
 
@@ -656,6 +744,221 @@ public partial class Page : ComponentBase
         {
             Console.WriteLine($"Error deserializing filters: {ex.Message}");
             return new List<SerializableFilter>();
+        }
+    }
+
+    /// <summary>
+    /// Carga los filtros deserializados en el componente RadzenDataFilter
+    /// </summary>
+    private async Task LoadFiltersIntoDataFilter(List<SerializableFilter> serializableFilters)
+    {
+        try
+        {
+            Console.WriteLine($"LoadFiltersIntoDataFilter called with {serializableFilters.Count} filters");
+            
+            if (filterConfigurationRef == null)
+            {
+                Console.WriteLine("filterConfigurationRef is null");
+                return;
+            }
+
+            if (filterConfigurationRef.DataFilter == null)
+            {
+                Console.WriteLine("DataFilter is null, waiting a bit more...");
+                await Task.Delay(1000); // Esperar más tiempo
+                
+                if (filterConfigurationRef.DataFilter == null)
+                {
+                    Console.WriteLine("DataFilter is still null after waiting");
+                    return;
+                }
+            }
+
+            Console.WriteLine("DataFilter found, clearing existing filters");
+            
+            // Limpiar filtros existentes
+            await filterConfigurationRef.DataFilter.ClearFilters();
+
+            Console.WriteLine("Starting to convert and add filters");
+
+            // Convertir SerializableFilter a CompositeFilterDescriptor y agregar uno por uno
+            foreach (var serializableFilter in serializableFilters)
+            {
+                Console.WriteLine($"Processing filter: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
+                
+                var compositeFilter = ConvertToCompositeFilterDescriptor(serializableFilter);
+                if (compositeFilter != null)
+                {
+                    Console.WriteLine($"Filter converted successfully, adding to DataFilter");
+                    
+                    // Agregar filtro al DataFilter usando diferentes enfoques
+                    try 
+                    {
+                        // Método 1: Agregar directamente
+                        ((IList<CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
+                        Console.WriteLine($"✓ Added filter using direct method: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
+                    }
+                    catch (Exception addEx)
+                    {
+                        Console.WriteLine($"✗ Failed to add filter directly: {addEx.Message}");
+                        
+                        // Método 2: Crear nueva lista
+                        try
+                        {
+                            var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<CompositeFilterDescriptor>();
+                            currentFilters.Add(compositeFilter);
+                            filterConfigurationRef.DataFilter.Filters = currentFilters;
+                            Console.WriteLine($"✓ Added filter using new list method: {serializableFilter.PropertyName}");
+                        }
+                        catch (Exception listEx)
+                        {
+                            Console.WriteLine($"✗ Failed to add filter using list method: {listEx.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"✗ Failed to convert filter: {serializableFilter.PropertyName}");
+                }
+            }
+
+            Console.WriteLine("Refreshing filter state and forcing re-render");
+            
+            // Forzar actualización del componente con múltiples enfoques
+            filterConfigurationRef.RefreshFilterState();
+            await InvokeAsync(StateHasChanged);
+            
+            // Esperar un poco y volver a actualizar
+            await Task.Delay(100);
+            await InvokeAsync(StateHasChanged);
+            
+            // Verificar si los filtros se agregaron correctamente
+            var filterCount = filterConfigurationRef.DataFilter.Filters?.Count() ?? 0;
+            Console.WriteLine($"Current filter count in DataFilter: {filterCount}");
+
+            Console.WriteLine($"✓ Successfully loaded {serializableFilters.Count} filters into DataFilter");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Error loading filters into DataFilter: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Convierte un SerializableFilter a CompositeFilterDescriptor
+    /// </summary>
+    private CompositeFilterDescriptor? ConvertToCompositeFilterDescriptor(SerializableFilter serializableFilter)
+    {
+        try
+        {
+            Console.WriteLine($"Converting filter - Property: {serializableFilter.PropertyName}, Operator: {serializableFilter.Operator}");
+            
+            // Buscar el campo correspondiente en entityFields
+            var field = entityFields.FirstOrDefault(f => f.PropertyName == serializableFilter.PropertyName);
+            if (field == null)
+            {
+                Console.WriteLine($"✗ Field not found: {serializableFilter.PropertyName}");
+                Console.WriteLine($"Available fields: {string.Join(", ", entityFields.Select(f => f.PropertyName))}");
+                return null;
+            }
+
+            Console.WriteLine($"✓ Field found: {field.PropertyName} (Type: {field.PropertyType?.Name})");
+
+            // Convertir el operador string a FilterOperator enum
+            if (!Enum.TryParse<FilterOperator>(serializableFilter.Operator, out var filterOperator))
+            {
+                Console.WriteLine($"✗ Invalid filter operator: {serializableFilter.Operator}");
+                Console.WriteLine($"Available operators: {string.Join(", ", Enum.GetNames<FilterOperator>())}");
+                return null;
+            }
+
+            Console.WriteLine($"✓ Filter operator parsed: {filterOperator}");
+
+            // Convertir el operador lógico string a LogicalFilterOperator enum
+            if (!Enum.TryParse<LogicalFilterOperator>(serializableFilter.LogicalOperator, out var logicalOperator))
+            {
+                logicalOperator = LogicalFilterOperator.And; // Default
+                Console.WriteLine($"Using default logical operator: {logicalOperator}");
+            }
+            else
+            {
+                Console.WriteLine($"✓ Logical operator parsed: {logicalOperator}");
+            }
+
+            // Convertir el valor
+            var convertedValue = ConvertFilterValue(serializableFilter.Value, field.PropertyType?.Name ?? "string");
+            Console.WriteLine($"✓ Filter value converted: {convertedValue} (original: {serializableFilter.Value})");
+
+            // Crear el CompositeFilterDescriptor
+            var compositeFilter = new CompositeFilterDescriptor
+            {
+                Property = serializableFilter.PropertyName,
+                FilterOperator = filterOperator,
+                FilterValue = convertedValue,
+                LogicalFilterOperator = logicalOperator
+            };
+
+            Console.WriteLine($"✓ CompositeFilterDescriptor created successfully");
+            return compositeFilter;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Error converting SerializableFilter to CompositeFilterDescriptor: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Se ejecuta cuando el DataFilter del componente FilterConfiguration está listo
+    /// </summary>
+    private async Task OnDataFilterReady()
+    {
+        Console.WriteLine("🎯 OnDataFilterReady called");
+        
+        if (pendingFilters != null && pendingFilters.Any())
+        {
+            Console.WriteLine($"🔄 Loading {pendingFilters.Count} pending filters...");
+            await LoadFiltersIntoDataFilter(pendingFilters);
+            pendingFilters = null; // Limpiar filtros pendientes
+        }
+        else
+        {
+            Console.WriteLine("📭 No pending filters to load");
+        }
+    }
+
+    /// <summary>
+    /// Convierte el valor del filtro al tipo correcto basado en el tipo de propiedad
+    /// </summary>
+    private object? ConvertFilterValue(object? value, string propertyType)
+    {
+        try
+        {
+            if (value == null) return null;
+
+            var valueString = value.ToString();
+            if (string.IsNullOrEmpty(valueString)) return null;
+
+            return propertyType.ToLower() switch
+            {
+                "int" or "int32" => int.TryParse(valueString, out var intVal) ? intVal : null,
+                "long" or "int64" => long.TryParse(valueString, out var longVal) ? longVal : null,
+                "decimal" => decimal.TryParse(valueString, out var decVal) ? decVal : null,
+                "double" => double.TryParse(valueString, out var doubleVal) ? doubleVal : null,
+                "float" => float.TryParse(valueString, out var floatVal) ? floatVal : null,
+                "bool" or "boolean" => bool.TryParse(valueString, out var boolVal) ? boolVal : null,
+                "datetime" => DateTime.TryParse(valueString, out var dateVal) ? dateVal : null,
+                "guid" => Guid.TryParse(valueString, out var guidVal) ? guidVal : null,
+                _ => valueString // Default to string
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error converting filter value: {ex.Message}");
+            return value; // Return original value if conversion fails
         }
     }
 }

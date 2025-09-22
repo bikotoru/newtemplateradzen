@@ -47,7 +47,8 @@
                             @bind-LogicalOperator="@logicalOperator"
                             @bind-TakeLimit="@takeLimit"
                             OnExecuteQuery="@ExecuteQuery"
-                            OnClearFilters="@ClearFilters" />
+                            OnClearFilters="@ClearFilters"
+                            OnDataFilterReady="@OnDataFilterReady" />
 
         <!-- Query Results -->
         <QueryResults Results="@queryResults"

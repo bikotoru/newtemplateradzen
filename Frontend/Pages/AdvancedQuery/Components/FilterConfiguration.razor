@@ -113,6 +113,7 @@
 
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
     [Parameter] public EventCallback OnClearFilters { get; set; }
+    [Parameter] public EventCallback OnDataFilterReady { get; set; }
 
     private async Task OnExecuteQueryClick()
     {
@@ -127,12 +128,36 @@
     }
 
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             // Iniciar timer para verificar cambios en filtros cada 500ms
             filterCheckTimer = new Timer(CheckFiltersState, null, 500, 500);
+            
+            // Notificar cuando DataFilter esté listo
+            if (dataFilterRef != null)
+            {
+                Console.WriteLine("🎯 FilterConfiguration: DataFilter is ready on first render");
+                await OnDataFilterReady.InvokeAsync();
+            }
+            else
+            {
+                Console.WriteLine("⚠️ FilterConfiguration: DataFilter is null on first render");
+                // Intentar notificar después de un pequeño delay
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(100);
+                    await InvokeAsync(async () =>
+                    {
+                        if (dataFilterRef != null)
+                        {
+                            Console.WriteLine("🎯 FilterConfiguration: DataFilter ready after delay");
+                            await OnDataFilterReady.InvokeAsync();
+                        }
+                    });
+                });
+            }
         }
     }
 
