@@ -182,6 +182,8 @@ public partial class Page : ComponentBase
         {
             await filterConfigurationRef.DataFilter.ClearFilters();
             queryResults = null;
+            // Refrescar el estado del componente de filtros
+            filterConfigurationRef.RefreshFilterState();
         }
     }
 
@@ -363,6 +365,9 @@ POST /api/{selectedEntityName}/paged
                     Detail = $"Se aplicó la configuración '{config.Name}' con {filters.Length} filtros",
                     Duration = 3000
                 });
+
+                // Refrescar el estado del componente de filtros
+                filterConfigurationRef.RefreshFilterState();
             }
 
             StateHasChanged();

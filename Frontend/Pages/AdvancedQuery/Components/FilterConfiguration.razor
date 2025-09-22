@@ -1,4 +1,5 @@
 @using Radzen.Blazor
+@implements IDisposable
 
 @if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
 {
@@ -20,7 +21,7 @@
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Click="@OnSaveConfigurationClick"
-                                        Disabled="@(!dataFilterRef?.Filters?.Any() ?? true)" />
+                                        Disabled="@(!HasFilters)" />
                         </RadzenStack>
                     </RadzenStack>
 
@@ -51,20 +52,22 @@
                     </RadzenRow>
 
                     <!-- RadzenDataFilter -->
-                    <RadzenDataFilter @ref="dataFilterRef"
-                                    TItem="object"
-                                    LogicalFilterOperator="@LogicalOperator"
-                                    FilterCaseSensitivity="@FilterCaseSensitivity"
-                                    Auto="false">
-                        <Properties>
-                            @foreach (var field in EntityFields.Where(f => f.IsSearchable))
-                            {
-                                <RadzenDataFilterProperty Property="@field.PropertyName"
-                                                        Title="@field.DisplayName"
-                                                        Type="@field.PropertyType" />
-                            }
-                        </Properties>
-                    </RadzenDataFilter>
+                    <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
+                        <RadzenDataFilter @ref="dataFilterRef"
+                                        TItem="object"
+                                        LogicalFilterOperator="@LogicalOperator"
+                                        FilterCaseSensitivity="@FilterCaseSensitivity"
+                                        Auto="false">
+                            <Properties>
+                                @foreach (var field in EntityFields.Where(f => f.IsSearchable))
+                                {
+                                    <RadzenDataFilterProperty Property="@field.PropertyName"
+                                                            Title="@field.DisplayName"
+                                                            Type="@field.PropertyType" />
+                                }
+                            </Properties>
+                        </RadzenDataFilter>
+                    </div>
 
                     <!-- Botones de Acción -->
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
@@ -73,7 +76,8 @@
                                     ButtonStyle="ButtonStyle.Primary"
                                     Size="ButtonSize.Medium"
                                     Click="@OnExecuteQueryClick"
-                                    Disabled="@(IsLoading || !dataFilterRef?.Filters?.Any() == true)" />
+                                    @onmouseenter="@RefreshFilterState"
+                                    Disabled="@(IsLoading || !HasFilters)" />
 
                         <RadzenButton Text="Limpiar Filtros"
                                     Icon="clear"
@@ -86,7 +90,7 @@
                                     ButtonStyle="ButtonStyle.Secondary"
                                     Size="ButtonSize.Medium"
                                     Click="@OnShowQueryClick"
-                                    Disabled="@(!dataFilterRef?.Filters?.Any() ?? true)" />
+                                    Disabled="@(!HasFilters)" />
                     </RadzenStack>
                 </RadzenStack>
             </RadzenCard>
@@ -100,11 +104,18 @@
     [Parameter] public bool IsLoading { get; set; }
 
     private RadzenDataFilter<object>? dataFilterRef;
+    private bool hasFilters = false;
+    private Timer? filterCheckTimer;
 
     /// <summary>
     /// Expone la referencia del DataFilter para uso del componente padre
     /// </summary>
     public RadzenDataFilter<object>? DataFilter => dataFilterRef;
+
+    /// <summary>
+    /// Indica si hay filtros configurados
+    /// </summary>
+    private bool HasFilters => hasFilters;
 
     [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
     [Parameter] public FilterCaseSensitivity FilterCaseSensitivity { get; set; } = FilterCaseSensitivity.CaseInsensitive;
@@ -122,6 +133,8 @@
 
     private async Task OnExecuteQueryClick()
     {
+        // Verificar estado antes de ejecutar
+        RefreshFilterState();
         await OnExecuteQuery.InvokeAsync();
     }
 
@@ -132,6 +145,8 @@
 
     private async Task OnShowQueryClick()
     {
+        // Verificar estado antes de mostrar query
+        RefreshFilterState();
         await OnShowQuery.InvokeAsync();
     }
 
@@ -142,6 +157,48 @@
 
     private async Task OnSaveConfigurationClick()
     {
+        // Verificar estado antes de guardar
+        RefreshFilterState();
         await OnSaveConfiguration.InvokeAsync();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Iniciar timer para verificar cambios en filtros cada 500ms
+            filterCheckTimer = new Timer(CheckFiltersState, null, 500, 500);
+        }
+    }
+
+    private void CheckFiltersState(object? state)
+    {
+        try
+        {
+            var currentHasFilters = dataFilterRef?.Filters?.Any() == true;
+            if (currentHasFilters != hasFilters)
+            {
+                hasFilters = currentHasFilters;
+                InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Ignorar errores del timer
+        }
+    }
+
+    /// <summary>
+    /// Método público para refrescar el estado de los filtros desde el componente padre
+    /// </summary>
+    public void RefreshFilterState()
+    {
+        hasFilters = dataFilterRef?.Filters?.Any() == true;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        filterCheckTimer?.Dispose();
     }
 }
