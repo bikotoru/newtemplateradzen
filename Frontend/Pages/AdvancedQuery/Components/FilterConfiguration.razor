@@ -1,0 +1,147 @@
+@using Radzen.Blazor
+
+@if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
+{
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <RadzenCard>
+                <RadzenStack Gap="1rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText TextStyle="TextStyle.H6">2. Configurar Filtros</RadzenText>
+
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                            <RadzenButton Text="Cargar Configuración"
+                                        Icon="folder_open"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@OnLoadConfigurationClick" />
+                            <RadzenButton Text="Guardar Configuración"
+                                        Icon="save"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@OnSaveConfigurationClick"
+                                        Disabled="@(!dataFilterRef?.Filters?.Any() ?? true)" />
+                        </RadzenStack>
+                    </RadzenStack>
+
+                    <!-- Configuración Global del Filtro -->
+                    <RadzenRow>
+                        <RadzenColumn Size="4">
+                            <RadzenLabel Text="Operador Lógico Principal:" />
+                            <RadzenSelectBar @bind-Value="LogicalOperator" TValue="LogicalFilterOperator">
+                                <Items>
+                                    <RadzenSelectBarItem Text="Y (AND)" Value="LogicalFilterOperator.And" />
+                                    <RadzenSelectBarItem Text="O (OR)" Value="LogicalFilterOperator.Or" />
+                                </Items>
+                            </RadzenSelectBar>
+                        </RadzenColumn>
+                        <RadzenColumn Size="4">
+                            <RadzenLabel Text="Sensibilidad a Mayúsculas:" />
+                            <RadzenSelectBar @bind-Value="FilterCaseSensitivity" TValue="FilterCaseSensitivity">
+                                <Items>
+                                    <RadzenSelectBarItem Text="Ignorar" Value="FilterCaseSensitivity.CaseInsensitive" />
+                                    <RadzenSelectBarItem Text="Considerar" Value="FilterCaseSensitivity.Default" />
+                                </Items>
+                            </RadzenSelectBar>
+                        </RadzenColumn>
+                        <RadzenColumn Size="4">
+                            <RadzenLabel Text="Límite de Resultados:" />
+                            <RadzenNumeric @bind-Value="TakeLimit" Min="1" Max="1000" Style="width: 100%;" />
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <!-- RadzenDataFilter -->
+                    <RadzenDataFilter @ref="dataFilterRef"
+                                    TItem="object"
+                                    LogicalFilterOperator="@LogicalOperator"
+                                    FilterCaseSensitivity="@FilterCaseSensitivity"
+                                    Auto="false">
+                        <Properties>
+                            @foreach (var field in EntityFields.Where(f => f.IsSearchable))
+                            {
+                                <RadzenDataFilterProperty Property="@field.PropertyName"
+                                                        Title="@field.DisplayName"
+                                                        Type="@field.PropertyType" />
+                            }
+                        </Properties>
+                    </RadzenDataFilter>
+
+                    <!-- Botones de Acción -->
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
+                        <RadzenButton Text="Ejecutar Consulta"
+                                    Icon="play_arrow"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Size="ButtonSize.Medium"
+                                    Click="@OnExecuteQueryClick"
+                                    Disabled="@(IsLoading || !dataFilterRef?.Filters?.Any() == true)" />
+
+                        <RadzenButton Text="Limpiar Filtros"
+                                    Icon="clear"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Medium"
+                                    Click="@OnClearFiltersClick" />
+
+                        <RadzenButton Text="Ver Query SQL"
+                                    Icon="code"
+                                    ButtonStyle="ButtonStyle.Secondary"
+                                    Size="ButtonSize.Medium"
+                                    Click="@OnShowQueryClick"
+                                    Disabled="@(!dataFilterRef?.Filters?.Any() ?? true)" />
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+}
+
+@code {
+    [Parameter] public string? SelectedEntityName { get; set; }
+    [Parameter] public List<EntityFieldDefinition> EntityFields { get; set; } = new();
+    [Parameter] public bool IsLoading { get; set; }
+
+    private RadzenDataFilter<object>? dataFilterRef;
+
+    /// <summary>
+    /// Expone la referencia del DataFilter para uso del componente padre
+    /// </summary>
+    public RadzenDataFilter<object>? DataFilter => dataFilterRef;
+
+    [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
+    [Parameter] public FilterCaseSensitivity FilterCaseSensitivity { get; set; } = FilterCaseSensitivity.CaseInsensitive;
+    [Parameter] public int TakeLimit { get; set; } = 50;
+
+    [Parameter] public EventCallback<LogicalFilterOperator> LogicalOperatorChanged { get; set; }
+    [Parameter] public EventCallback<FilterCaseSensitivity> FilterCaseSensitivityChanged { get; set; }
+    [Parameter] public EventCallback<int> TakeLimitChanged { get; set; }
+
+    [Parameter] public EventCallback OnExecuteQuery { get; set; }
+    [Parameter] public EventCallback OnClearFilters { get; set; }
+    [Parameter] public EventCallback OnShowQuery { get; set; }
+    [Parameter] public EventCallback OnLoadConfiguration { get; set; }
+    [Parameter] public EventCallback OnSaveConfiguration { get; set; }
+
+    private async Task OnExecuteQueryClick()
+    {
+        await OnExecuteQuery.InvokeAsync();
+    }
+
+    private async Task OnClearFiltersClick()
+    {
+        await OnClearFilters.InvokeAsync();
+    }
+
+    private async Task OnShowQueryClick()
+    {
+        await OnShowQuery.InvokeAsync();
+    }
+
+    private async Task OnLoadConfigurationClick()
+    {
+        await OnLoadConfiguration.InvokeAsync();
+    }
+
+    private async Task OnSaveConfigurationClick()
+    {
+        await OnSaveConfiguration.InvokeAsync();
+    }
+}

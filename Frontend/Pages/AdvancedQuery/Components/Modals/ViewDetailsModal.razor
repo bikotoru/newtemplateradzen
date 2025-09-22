@@ -1,0 +1,21 @@
+@using Radzen.Blazor
+@using System.Text.Json
+
+<div style="max-width: 600px;">
+    <RadzenText TextStyle="TextStyle.Body1">Datos completos del registro:</RadzenText>
+    <RadzenTextArea Value="@JsonData" Rows="15" Style="width: 100%; font-family: monospace; font-size: 12px;" ReadOnly="true" />
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
+        <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Light" Click="@OnClose" />
+    </RadzenStack>
+</div>
+
+@code {
+    [Parameter] public object Item { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string JsonData => JsonSerializer.Serialize(Item, new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+}

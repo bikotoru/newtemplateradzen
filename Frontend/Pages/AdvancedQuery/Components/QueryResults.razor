@@ -1,0 +1,126 @@
+@using Radzen.Blazor
+@using System.Text.Json
+@using System.Reflection
+
+@if (Results != null && Results.Success)
+{
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <RadzenCard>
+                <RadzenStack Gap="1rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText TextStyle="TextStyle.H6">3. Resultados</RadzenText>
+                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@($"{Results.TotalCount} registros encontrados")" />
+                    </RadzenStack>
+
+                    @if (Results.Data.Any())
+                    {
+                        <!-- Tabla de Resultados Dinámica -->
+                        <RadzenDataGrid Data="@Results.Data"
+                                      TItem="object"
+                                      AllowPaging="true"
+                                      PageSize="20"
+                                      AllowSorting="true"
+                                      AllowColumnResize="true"
+                                      GridLines="DataGridGridLines.Both"
+                                      Style="height: 500px;">
+                            <Columns>
+                                @foreach (var field in DisplayFields)
+                                {
+                                    <RadzenDataGridColumn TItem="object"
+                                                        Property="@field.PropertyName"
+                                                        Title="@field.DisplayName"
+                                                        Width="150px">
+                                        <Template Context="data">
+                                            @GetPropertyValue(data, field.PropertyName)
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                }
+                                <RadzenDataGridColumn TItem="object" Title="Acciones" Sortable="false" Width="100px">
+                                    <Template Context="data">
+                                        <RadzenButton Icon="visibility"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.ExtraSmall"
+                                                    Click="@(() => OnViewDetailsClick(data))"
+                                                    title="Ver detalles" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning" Icon="warning">
+                            No se encontraron resultados para la consulta especificada.
+                        </RadzenAlert>
+                    }
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+}
+
+@code {
+    [Parameter] public AdvancedQueryResult<object>? Results { get; set; }
+    [Parameter] public List<EntityFieldDefinition> DisplayFields { get; set; } = new();
+    [Parameter] public EventCallback<object> OnViewDetails { get; set; }
+
+    private async Task OnViewDetailsClick(object item)
+    {
+        await OnViewDetails.InvokeAsync(item);
+    }
+
+    private string GetPropertyValue(object item, string propertyName)
+    {
+        if (item == null) return "";
+
+        try
+        {
+            // Convertir a JsonElement para acceder a las propiedades dinámicamente
+            if (item is JsonElement jsonElement)
+            {
+                // Intentar primero con el nombre exacto
+                if (jsonElement.TryGetProperty(propertyName, out var property))
+                {
+                    return FormatPropertyValue(property);
+                }
+
+                // Si no lo encuentra, buscar de forma case-insensitive
+                foreach (var jsonProperty in jsonElement.EnumerateObject())
+                {
+                    if (string.Equals(jsonProperty.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return FormatPropertyValue(jsonProperty.Value);
+                    }
+                }
+            }
+
+            // Fallback usando reflexión con búsqueda case-insensitive
+            var propInfo = item.GetType().GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            if (propInfo == null)
+            {
+                // Buscar manualmente si no encuentra con BindingFlags
+                propInfo = item.GetType().GetProperties()
+                    .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
+            }
+            var value = propInfo?.GetValue(item);
+            return value?.ToString() ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private string FormatPropertyValue(JsonElement property)
+    {
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => property.GetString() ?? "",
+            JsonValueKind.Number => property.TryGetDecimal(out var decimalValue) ? decimalValue.ToString() : property.ToString(),
+            JsonValueKind.True or JsonValueKind.False => property.GetBoolean().ToString(),
+            JsonValueKind.Null => "",
+            _ => property.ToString()
+        };
+    }
+}

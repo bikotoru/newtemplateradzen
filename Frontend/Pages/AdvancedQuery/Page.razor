@@ -1,0 +1,41 @@
+@page "/advanced-query"
+@using Radzen.Blazor
+@using System.Text.Json
+@using Frontend.Pages.AdvancedQuery.Components
+
+<PageTitle>Consulta Avanzada</PageTitle>
+
+<RadzenStack Gap="1rem">
+    <!-- Header Section -->
+    <HeaderSection />
+
+    <!-- Entity Selector -->
+    <EntitySelector AvailableEntities="@availableEntities"
+                   @bind-SelectedEntityName="@selectedEntityName"
+                   SelectedEntity="@selectedEntity"
+                   EntityFields="@entityFields"
+                   OnEntitySelectionChanged="@OnEntitySelected"
+                   OnConfigureFields="@OpenFieldSelectionDialog" />
+
+    <!-- Filter Configuration -->
+    <FilterConfiguration @ref="filterConfigurationRef"
+                        SelectedEntityName="@selectedEntityName"
+                        EntityFields="@entityFields"
+                        IsLoading="@isLoading"
+                        @bind-LogicalOperator="@logicalOperator"
+                        @bind-FilterCaseSensitivity="@filterCaseSensitivity"
+                        @bind-TakeLimit="@takeLimit"
+                        OnExecuteQuery="@ExecuteQuery"
+                        OnClearFilters="@ClearFilters"
+                        OnShowQuery="@ShowGeneratedQuery"
+                        OnLoadConfiguration="@LoadConfiguration"
+                        OnSaveConfiguration="@SaveConfiguration" />
+
+    <!-- Query Results -->
+    <QueryResults Results="@queryResults"
+                  DisplayFields="@GetDisplayFields()"
+                  OnViewDetails="@ViewDetails" />
+
+    <!-- Loading Indicator -->
+    <LoadingIndicator IsLoading="@isLoading" LoadingText="Ejecutando consulta..." />
+</RadzenStack>
