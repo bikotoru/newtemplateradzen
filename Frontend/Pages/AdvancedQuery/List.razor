@@ -1,0 +1,64 @@
+@page "/advanced-query/saved-queries/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Frontend.Pages.AdvancedQuery
+@using Radzen
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("SAVEDQUERIES.VIEW")]
+
+<PageTitle>Búsquedas Guardadas</PageTitle>
+
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/"
+                        ShowNew="@CanCreate"
+                        NewPath="/advanced-query/saved-queries/formulario"
+                        >
+
+        <RadzenCard>
+            <EntityTable T="SavedQueryDto" 
+                         @ref="entityTable"
+                         @key="@GetGridKey()"
+                         ShowSearchBar="true"
+                         ShowExcelExport="true"
+                         ShowRefreshButton="true"
+                         ShowAutoRefresh="true"
+                         ShowColumnConfig="true"
+                         ShowActions="true"
+                         SearchPlaceholder="Buscar búsquedas guardadas..."
+                         BaseQuery="@(currentView?.QueryBuilder)"
+                         ColumnConfigs="@(currentView?.ColumnConfigs)"
+                         ForceOrderByIndex="true"
+                         EnableSelectOptimization="true"
+                         SelectOnlyVisibleColumns="true"
+                         ViewConfigurations="@ViewConfigurationsTyped"
+                         CurrentView="@currentView"
+                         OnViewChanged="@OnViewChanged"
+                         ViewDisplayNameProperty="DisplayName"
+                         OnEdit="@HandleEdit"
+                         OnDelete="@HandleDelete">
+                
+            </EntityTable>
+        </RadzenCard>
+
+    </PageWithCommandBar>
+
+    <!-- Modals -->
+    @if (showShareModal && selectedQuery != null)
+    {
+        <ShareQueryModal SavedQuery="@selectedQuery" 
+                         OnClose="@(() => showShareModal = false)" 
+                         OnShared="@OnQueryShared" />
+    }
+
+    @if (showDuplicateModal && selectedQuery != null)
+    {
+        <DuplicateQueryModal SavedQuery="@selectedQuery" 
+                             OnClose="@(() => showDuplicateModal = false)" 
+                             OnDuplicated="@OnQueryDuplicated" />
+    }
+}
+
+@code {
+    // Component logic will be in List.razor.cs
+}

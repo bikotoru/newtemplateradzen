@@ -6,6 +6,8 @@ using System.Text.Json;
 using Backend.Utils.Security;
 using Shared.Models.DTOs.Auth;
 using Shared.Models.Responses;
+using Shared.Models.Requests;
+using Shared.Models.QueryModels;
 
 namespace CustomFields.API.Controllers;
 
@@ -34,7 +36,137 @@ public class SavedQueriesController : ControllerBase
     }
 
     /// <summary>
-    /// Obtener todas las búsquedas guardadas del usuario actual
+    /// Obtener todas las búsquedas guardadas del usuario actual (compatible con BaseApiService)
+    /// </summary>
+    [HttpGet("all")]
+    public async Task<ActionResult<ApiResponse<PagedResponse<SavedQueryDto>>>> GetAllPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] bool all = false,
+        [FromQuery] string? entityName = null,
+        [FromQuery] bool includePublic = true,
+        [FromQuery] bool includeShared = true)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+            {
+                return Unauthorized(ApiResponse<PagedResponse<SavedQueryDto>>.ErrorResponse("Usuario no autenticado"));
+            }
+
+            var hasPermission = user.Permisos.Contains("SAVEDQUERIES.VIEW");
+            if (!hasPermission)
+            {
+                return StatusCode(403, ApiResponse<PagedResponse<SavedQueryDto>>.ErrorResponse("No tienes permisos para ver búsquedas guardadas"));
+            }
+
+            var userId = user.Id;
+            var organizationId = user.OrganizationId;
+
+            _logger.LogInformation("Obteniendo búsquedas guardadas para usuario {UserId}, página: {Page}, tamaño: {PageSize}",
+                userId, page, pageSize);
+
+            var query = _context.Set<SystemSavedQueries>()
+                .Where(sq => sq.Active);
+
+            // Filtrar por entidad si se especifica
+            if (!string.IsNullOrEmpty(entityName))
+            {
+                query = query.Where(sq => sq.EntityName == entityName);
+            }
+
+            // Crear query para búsquedas del usuario
+            var userQueries = query.Where(sq => sq.CreadorId == userId);
+
+            // Crear query para búsquedas públicas
+            var publicQueries = includePublic
+                ? query.Where(sq => sq.IsPublic && sq.OrganizationId == organizationId)
+                : query.Where(sq => false);
+
+            // Crear query para búsquedas compartidas
+            var sharedQueries = includeShared
+                ? query.Where(sq => sq.SystemSavedQueryShares.Any(share =>
+                    share.Active &&
+                    (share.SharedWithUserId == userId ||
+                     share.SharedWithOrganizationId == organizationId)))
+                : query.Where(sq => false);
+
+            // Combinar todas las queries
+            var combinedQuery = userQueries
+                .Union(publicQueries)
+                .Union(sharedQueries)
+                .Distinct()
+                .OrderByDescending(sq => sq.FechaCreacion);
+
+            var totalCount = await combinedQuery.CountAsync();
+
+            List<SavedQueryDto> savedQueries;
+            
+            if (all)
+            {
+                savedQueries = await combinedQuery
+                    .Select(sq => new SavedQueryDto
+                    {
+                        Id = sq.Id,
+                        Name = sq.Name,
+                        Description = sq.Description,
+                        EntityName = sq.EntityName,
+                        SelectedFields = sq.SelectedFields,
+                        FilterConfiguration = sq.FilterConfiguration,
+                        LogicalOperator = sq.LogicalOperator,
+                        TakeLimit = sq.TakeLimit,
+                        IsPublic = sq.IsPublic,
+                        IsTemplate = sq.IsTemplate,
+                        CreadorId = sq.CreadorId,
+                        FechaCreacion = sq.FechaCreacion,
+                        FechaModificacion = sq.FechaModificacion,
+                        CanEdit = sq.CreadorId == userId,
+                        CanShare = sq.CreadorId == userId,
+                        SharedCount = sq.SystemSavedQueryShares.Count(s => s.Active)
+                    })
+                    .ToListAsync();
+            }
+            else
+            {
+                var skip = (page - 1) * pageSize;
+                savedQueries = await combinedQuery
+                    .Skip(skip)
+                    .Take(pageSize)
+                    .Select(sq => new SavedQueryDto
+                    {
+                        Id = sq.Id,
+                        Name = sq.Name,
+                        Description = sq.Description,
+                        EntityName = sq.EntityName,
+                        SelectedFields = sq.SelectedFields,
+                        FilterConfiguration = sq.FilterConfiguration,
+                        LogicalOperator = sq.LogicalOperator,
+                        TakeLimit = sq.TakeLimit,
+                        IsPublic = sq.IsPublic,
+                        IsTemplate = sq.IsTemplate,
+                        CreadorId = sq.CreadorId,
+                        FechaCreacion = sq.FechaCreacion,
+                        FechaModificacion = sq.FechaModificacion,
+                        CanEdit = sq.CreadorId == userId,
+                        CanShare = sq.CreadorId == userId,
+                        SharedCount = sq.SystemSavedQueryShares.Count(s => s.Active)
+                    })
+                    .ToListAsync();
+            }
+
+            var pagedData = PagedResponse<SavedQueryDto>.Create(savedQueries, page, pageSize, totalCount);
+            return Ok(ApiResponse<PagedResponse<SavedQueryDto>>.SuccessResponse(pagedData, $"Se encontraron {savedQueries.Count} búsquedas guardadas"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error obteniendo búsquedas guardadas");
+            return StatusCode(500, ApiResponse<PagedResponse<SavedQueryDto>>.ErrorResponse($"Error obteniendo búsquedas guardadas: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Obtener todas las búsquedas guardadas del usuario actual (método original)
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<SavedQueriesListResponse>> GetSavedQueries(
@@ -233,7 +365,334 @@ public class SavedQueriesController : ControllerBase
     }
 
     /// <summary>
-    /// Crear una nueva búsqueda guardada
+    /// Crear una nueva búsqueda guardada (compatible con BaseApiService)
+    /// </summary>
+    [HttpPost("create")]
+    public async Task<ActionResult<ApiResponse<SavedQueryDto>>> Create([FromBody] CreateRequest<SavedQueryDto> request)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+            {
+                return Unauthorized(new ApiResponse<SavedQueryDto> { Success = false, Message = "Usuario no autenticado", Data = null });
+            }
+
+            var hasPermission = user.Permisos.Contains("SAVEDQUERIES.CREATE");
+            if (!hasPermission)
+            {
+                return StatusCode(403, new ApiResponse<SavedQueryDto> { Success = false, Message = "No tienes permisos para crear búsquedas guardadas", Data = null });
+            }
+
+            if (request?.Entity == null)
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto> { Success = false, Message = "Datos de la búsqueda guardada requeridos", Data = null });
+            }
+
+            var userId = user.Id;
+            var organizationId = user.OrganizationId;
+
+            _logger.LogInformation("Creando búsqueda guardada: {Name} para entidad {EntityName}",
+                request.Entity.Name, request.Entity.EntityName);
+
+            // Validar que no exista una búsqueda con el mismo nombre para el usuario
+            var existingQuery = await _context.Set<SystemSavedQueries>()
+                .Where(sq => sq.Name == request.Entity.Name &&
+                            sq.CreadorId == userId &&
+                            sq.Active)
+                .FirstOrDefaultAsync();
+
+            if (existingQuery != null)
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = $"Ya tienes una búsqueda guardada con el nombre '{request.Entity.Name}'",
+                    Data = null
+                });
+            }
+
+            // Validar JSON
+            if (!IsValidJson(request.Entity.SelectedFields))
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "El campo SelectedFields debe ser un JSON válido",
+                    Data = null
+                });
+            }
+
+            if (!string.IsNullOrEmpty(request.Entity.FilterConfiguration) && !IsValidJson(request.Entity.FilterConfiguration))
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "El campo FilterConfiguration debe ser un JSON válido",
+                    Data = null
+                });
+            }
+
+            var savedQuery = new SystemSavedQueries
+            {
+                Id = Guid.NewGuid(),
+                Name = request.Entity.Name,
+                Description = request.Entity.Description,
+                EntityName = request.Entity.EntityName,
+                SelectedFields = request.Entity.SelectedFields,
+                FilterConfiguration = request.Entity.FilterConfiguration,
+                LogicalOperator = request.Entity.LogicalOperator,
+                TakeLimit = request.Entity.TakeLimit,
+                IsPublic = request.Entity.IsPublic,
+                IsTemplate = request.Entity.IsTemplate,
+                OrganizationId = organizationId,
+                CreadorId = userId,
+                ModificadorId = userId,
+                FechaCreacion = DateTime.UtcNow,
+                FechaModificacion = DateTime.UtcNow,
+                Active = true
+            };
+
+            _context.Set<SystemSavedQueries>().Add(savedQuery);
+            await _context.SaveChangesAsync();
+
+            var savedQueryDto = new SavedQueryDto
+            {
+                Id = savedQuery.Id,
+                Name = savedQuery.Name,
+                Description = savedQuery.Description,
+                EntityName = savedQuery.EntityName,
+                SelectedFields = savedQuery.SelectedFields,
+                FilterConfiguration = savedQuery.FilterConfiguration,
+                LogicalOperator = savedQuery.LogicalOperator,
+                TakeLimit = savedQuery.TakeLimit,
+                IsPublic = savedQuery.IsPublic,
+                IsTemplate = savedQuery.IsTemplate,
+                CreadorId = savedQuery.CreadorId,
+                FechaCreacion = savedQuery.FechaCreacion,
+                FechaModificacion = savedQuery.FechaModificacion,
+                CanEdit = true,
+                CanShare = true,
+                SharedCount = 0
+            };
+
+            return Ok(new ApiResponse<SavedQueryDto>
+            {
+                Success = true,
+                Message = "Búsqueda guardada creada exitosamente",
+                Data = savedQueryDto
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creando búsqueda guardada");
+            return StatusCode(500, new ApiResponse<SavedQueryDto>
+            {
+                Success = false,
+                Message = $"Error creando búsqueda guardada: {ex.Message}",
+                Data = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Actualizar una búsqueda guardada (compatible con BaseApiService)
+    /// </summary>
+    [HttpPut("update")]
+    public async Task<ActionResult<ApiResponse<SavedQueryDto>>> Update([FromBody] UpdateRequest<SavedQueryDto> request)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+            {
+                return Unauthorized(new ApiResponse<SavedQueryDto> { Success = false, Message = "Usuario no autenticado", Data = null });
+            }
+
+            if (request?.Entity?.Id == null)
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto> { Success = false, Message = "ID de la búsqueda guardada requerido", Data = null });
+            }
+
+            var userId = user.Id;
+
+            _logger.LogInformation("Actualizando búsqueda guardada {SavedQueryId}", request.Entity.Id);
+
+            var savedQuery = await _context.Set<SystemSavedQueries>()
+                .Include(sq => sq.SystemSavedQueryShares)
+                .Where(sq => sq.Id == request.Entity.Id && sq.Active)
+                .FirstOrDefaultAsync();
+
+            if (savedQuery == null)
+            {
+                return NotFound(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "Búsqueda guardada no encontrada",
+                    Data = null
+                });
+            }
+
+            // Verificar permisos de edición
+            var canEdit = savedQuery.CreadorId == userId ||
+                         savedQuery.SystemSavedQueryShares.Any(s =>
+                             s.Active && s.SharedWithUserId == userId && s.CanEdit);
+
+            if (!canEdit)
+            {
+                return StatusCode(403, new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "No tienes permisos para editar esta búsqueda guardada",
+                    Data = null
+                });
+            }
+
+            // Validar JSON
+            if (!IsValidJson(request.Entity.SelectedFields))
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "El campo SelectedFields debe ser un JSON válido",
+                    Data = null
+                });
+            }
+
+            if (!string.IsNullOrEmpty(request.Entity.FilterConfiguration) && !IsValidJson(request.Entity.FilterConfiguration))
+            {
+                return BadRequest(new ApiResponse<SavedQueryDto>
+                {
+                    Success = false,
+                    Message = "El campo FilterConfiguration debe ser un JSON válido",
+                    Data = null
+                });
+            }
+
+            // Actualizar campos
+            savedQuery.Name = request.Entity.Name;
+            savedQuery.Description = request.Entity.Description;
+            savedQuery.SelectedFields = request.Entity.SelectedFields;
+            savedQuery.FilterConfiguration = request.Entity.FilterConfiguration;
+            savedQuery.LogicalOperator = request.Entity.LogicalOperator;
+            savedQuery.TakeLimit = request.Entity.TakeLimit;
+            savedQuery.IsPublic = request.Entity.IsPublic;
+            savedQuery.IsTemplate = request.Entity.IsTemplate;
+            savedQuery.ModificadorId = userId;
+            savedQuery.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var savedQueryDto = new SavedQueryDto
+            {
+                Id = savedQuery.Id,
+                Name = savedQuery.Name,
+                Description = savedQuery.Description,
+                EntityName = savedQuery.EntityName,
+                SelectedFields = savedQuery.SelectedFields,
+                FilterConfiguration = savedQuery.FilterConfiguration,
+                LogicalOperator = savedQuery.LogicalOperator,
+                TakeLimit = savedQuery.TakeLimit,
+                IsPublic = savedQuery.IsPublic,
+                IsTemplate = savedQuery.IsTemplate,
+                CreadorId = savedQuery.CreadorId,
+                FechaCreacion = savedQuery.FechaCreacion,
+                FechaModificacion = savedQuery.FechaModificacion,
+                CanEdit = canEdit,
+                CanShare = savedQuery.CreadorId == userId,
+                SharedCount = savedQuery.SystemSavedQueryShares.Count(s => s.Active)
+            };
+
+            return Ok(new ApiResponse<SavedQueryDto>
+            {
+                Success = true,
+                Message = "Búsqueda guardada actualizada exitosamente",
+                Data = savedQueryDto
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error actualizando búsqueda guardada");
+            return StatusCode(500, new ApiResponse<SavedQueryDto>
+            {
+                Success = false,
+                Message = $"Error actualizando búsqueda guardada: {ex.Message}",
+                Data = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Eliminar una búsqueda guardada (compatible con BaseApiService)
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+            {
+                return Unauthorized(new ApiResponse<bool> { Success = false, Message = "Usuario no autenticado", Data = false });
+            }
+
+            var userId = user.Id;
+
+            _logger.LogInformation("Eliminando búsqueda guardada {SavedQueryId}", id);
+
+            var savedQuery = await _context.Set<SystemSavedQueries>()
+                .Where(sq => sq.Id == id && sq.Active)
+                .FirstOrDefaultAsync();
+
+            if (savedQuery == null)
+            {
+                return NotFound(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Búsqueda guardada no encontrada",
+                    Data = false
+                });
+            }
+
+            // Solo el creador puede eliminar
+            if (savedQuery.CreadorId != userId)
+            {
+                return StatusCode(403, new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Solo el propietario puede eliminar esta búsqueda guardada",
+                    Data = false
+                });
+            }
+
+            // Soft delete
+            savedQuery.Active = false;
+            savedQuery.ModificadorId = userId;
+            savedQuery.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Búsqueda guardada eliminada exitosamente",
+                Data = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error eliminando búsqueda guardada {SavedQueryId}", id);
+            return StatusCode(500, new ApiResponse<bool>
+            {
+                Success = false,
+                Message = $"Error eliminando búsqueda guardada: {ex.Message}",
+                Data = false
+            });
+        }
+    }
+
+    /// <summary>
+    /// Crear una nueva búsqueda guardada (método original)
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<SavedQueryResponse>> CreateSavedQuery([FromBody] CreateSavedQueryRequest request)
