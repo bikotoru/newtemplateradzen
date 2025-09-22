@@ -13,13 +13,15 @@ namespace Frontend.Services
         protected readonly ILogger<BaseApiService<T>> _logger;
         protected readonly string _baseUrl;
         private readonly QueryService _queryService;
+        private readonly BackendType _backendType;
 
-        protected BaseApiService(API api, ILogger<BaseApiService<T>> logger, string baseUrl)
+        protected BaseApiService(API api, ILogger<BaseApiService<T>> logger, string baseUrl, BackendType backendType = BackendType.GlobalBackend)
         {
             _api = api;
             _logger = logger;
             _baseUrl = baseUrl.TrimEnd('/');
             _queryService = new QueryService(_api);
+            _backendType = backendType;
         }
 
         #region Individual Operations
@@ -27,8 +29,12 @@ namespace Frontend.Services
         /// <summary>
         /// Crear una entidad individual
         /// </summary>
-        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request, BackendType backendType = BackendType.GlobalBackend)
+        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Creating {typeof(T).Name}");
             return await _api.PostAsync<T>($"{_baseUrl}/create", request, backendType);
         }

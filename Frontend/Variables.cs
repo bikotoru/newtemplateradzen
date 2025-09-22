@@ -3,7 +3,8 @@
     public enum BackendType
     {
         GlobalBackend,
-        FormBackend
+        FormBackend,
+        NotSet
     }
 
     public class Variables
