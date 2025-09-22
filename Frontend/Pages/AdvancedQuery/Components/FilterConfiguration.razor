@@ -27,7 +27,7 @@
 
                     <!-- Configuración Global del Filtro -->
                     <RadzenRow>
-                        <RadzenColumn Size="4">
+                        <RadzenColumn Size="6">
                             <RadzenLabel Text="Operador Lógico Principal:" />
                             <RadzenSelectBar @bind-Value="LogicalOperator" TValue="LogicalFilterOperator">
                                 <Items>
@@ -36,16 +36,7 @@
                                 </Items>
                             </RadzenSelectBar>
                         </RadzenColumn>
-                        <RadzenColumn Size="4">
-                            <RadzenLabel Text="Sensibilidad a Mayúsculas:" />
-                            <RadzenSelectBar @bind-Value="FilterCaseSensitivity" TValue="FilterCaseSensitivity">
-                                <Items>
-                                    <RadzenSelectBarItem Text="Ignorar" Value="FilterCaseSensitivity.CaseInsensitive" />
-                                    <RadzenSelectBarItem Text="Considerar" Value="FilterCaseSensitivity.Default" />
-                                </Items>
-                            </RadzenSelectBar>
-                        </RadzenColumn>
-                        <RadzenColumn Size="4">
+                        <RadzenColumn Size="6">
                             <RadzenLabel Text="Límite de Resultados:" />
                             <RadzenNumeric @bind-Value="TakeLimit" Min="1" Max="1000" Style="width: 100%;" />
                         </RadzenColumn>
@@ -56,8 +47,26 @@
                         <RadzenDataFilter @ref="dataFilterRef"
                                         TItem="object"
                                         LogicalFilterOperator="@LogicalOperator"
-                                        FilterCaseSensitivity="@FilterCaseSensitivity"
-                                        Auto="false">
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Auto="false"
+                                        ContainsText="Contiene"
+                                        StartsWithText="Comienza con"
+                                        EndsWithText="Termina con"
+                                        EqualsText="Igual a"
+                                        NotEqualsText="Diferente de"
+                                        LessThanText="Menor que"
+                                        DoesNotContainText="No Contiene"
+                                        GreaterThanText="Mayor que"
+                                        IsNullText="Es nulo"
+                                        AddFilterGroupText="Agregar Grupo de Filtro"
+                                        IsNotNullText="No es nulo"
+                                        IsEmptyText="Está vacío"
+                                        IsNotEmptyText="No está vacío"
+                                        AndOperatorText="Y"
+                                        OrOperatorText="O"
+                                        AddFilterText="Agregar filtro"
+                                        RemoveFilterText="Quitar filtro"
+                                        ClearFilterText="Limpiar filtro">
                             <Properties>
                                 @foreach (var field in EntityFields.Where(f => f.IsSearchable))
                                 {
@@ -84,13 +93,6 @@
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Medium"
                                     Click="@OnClearFiltersClick" />
-
-                        <RadzenButton Text="Ver Query SQL"
-                                    Icon="code"
-                                    ButtonStyle="ButtonStyle.Secondary"
-                                    Size="ButtonSize.Medium"
-                                    Click="@OnShowQueryClick"
-                                    Disabled="@(!HasFilters)" />
                     </RadzenStack>
                 </RadzenStack>
             </RadzenCard>
@@ -118,16 +120,13 @@
     private bool HasFilters => hasFilters;
 
     [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
-    [Parameter] public FilterCaseSensitivity FilterCaseSensitivity { get; set; } = FilterCaseSensitivity.CaseInsensitive;
     [Parameter] public int TakeLimit { get; set; } = 50;
 
     [Parameter] public EventCallback<LogicalFilterOperator> LogicalOperatorChanged { get; set; }
-    [Parameter] public EventCallback<FilterCaseSensitivity> FilterCaseSensitivityChanged { get; set; }
     [Parameter] public EventCallback<int> TakeLimitChanged { get; set; }
 
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
     [Parameter] public EventCallback OnClearFilters { get; set; }
-    [Parameter] public EventCallback OnShowQuery { get; set; }
     [Parameter] public EventCallback OnLoadConfiguration { get; set; }
     [Parameter] public EventCallback OnSaveConfiguration { get; set; }
 
@@ -141,13 +140,6 @@
     private async Task OnClearFiltersClick()
     {
         await OnClearFilters.InvokeAsync();
-    }
-
-    private async Task OnShowQueryClick()
-    {
-        // Verificar estado antes de mostrar query
-        RefreshFilterState();
-        await OnShowQuery.InvokeAsync();
     }
 
     private async Task OnLoadConfigurationClick()

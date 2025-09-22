@@ -29,7 +29,6 @@ public partial class Page : ComponentBase
 
     // Filter configuration
     private LogicalFilterOperator logicalOperator = LogicalFilterOperator.And;
-    private FilterCaseSensitivity filterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive;
     private int takeLimit = 50;
 
     // Variables para selección de campos
@@ -133,7 +132,7 @@ public partial class Page : ComponentBase
             {
                 Filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
                 LogicalOperator = logicalOperator,
-                FilterCaseSensitivity = filterCaseSensitivity,
+                FilterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive,
                 Take = takeLimit
             };
 
@@ -187,66 +186,6 @@ public partial class Page : ComponentBase
         }
     }
 
-    private async Task ShowGeneratedQuery()
-    {
-        if (filterConfigurationRef?.DataFilter?.Filters != null && filterConfigurationRef.DataFilter.Filters.Any())
-        {
-            try
-            {
-                // Generar la query string usando el servicio
-                var request = new AdvancedQueryRequest
-                {
-                    Filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
-                    LogicalOperator = logicalOperator,
-                    FilterCaseSensitivity = filterCaseSensitivity
-                };
-
-                var filterString = "Generada por AdvancedQueryService.ConvertFiltersToLinqString()";
-
-                var queryInfo = $@"
-**Filtros Configurados:** {filterConfigurationRef?.DataFilter.Filters.Count()}
-**Operador Lógico:** {logicalOperator}
-**Sensibilidad:** {filterCaseSensitivity}
-**Límite:** {takeLimit}
-
-**Query LINQ Generada:**
-```
-{filterString}
-```
-
-**Endpoint que se llamaría:**
-POST /api/{selectedEntityName}/paged
-
-**Payload JSON:**
-```json
-{{
-  ""filter"": ""{filterString}"",
-  ""take"": {takeLimit}
-}}
-```";
-
-                var dialogParameters = new Dictionary<string, object>
-                {
-                    ["QueryInfo"] = queryInfo,
-                    ["FilterString"] = filterString,
-                    ["OnCopyQuery"] = EventCallback.Factory.Create<string>(this, CopyToClipboard),
-                    ["OnClose"] = EventCallback.Factory.Create(this, () => DialogService.Close())
-                };
-
-                await DialogService.OpenAsync<QueryDetailsModal>("Query Generada", dialogParameters);
-            }
-            catch (Exception ex)
-            {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Error,
-                    Summary = "Error",
-                    Detail = $"Error generando query: {ex.Message}",
-                    Duration = 5000
-                });
-            }
-        }
-    }
 
     private async Task CopyToClipboard(string text)
     {
@@ -294,7 +233,7 @@ POST /api/{selectedEntityName}/paged
             ["EntityDisplayName"] = selectedEntity?.DisplayName ?? "",
             ["Filters"] = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
             ["LogicalOperator"] = logicalOperator,
-            ["FilterCaseSensitivity"] = filterCaseSensitivity,
+            ["FilterCaseSensitivity"] = FilterCaseSensitivity.CaseInsensitive,
             ["Take"] = takeLimit
         };
 
@@ -340,7 +279,6 @@ POST /api/{selectedEntityName}/paged
         {
             // Aplicar configuración cargada
             logicalOperator = config.LogicalOperator;
-            filterCaseSensitivity = config.FilterCaseSensitivity;
             if (config.Take.HasValue)
             {
                 takeLimit = config.Take.Value;
