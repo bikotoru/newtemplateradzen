@@ -13,22 +13,7 @@
         <!-- Header Section -->
         <HeaderSection />
         
-        <!-- Saved Query Indicator -->
-        @if (currentSavedQuery != null)
-        {
-            <RadzenAlert AlertStyle="AlertStyle.Info" 
-                         Style="margin-bottom: 1rem;"
-                         AllowClose="true"
-                         Close="@(() => currentSavedQuery = null)">
-                <RadzenIcon Icon="bookmark" Style="margin-right: 0.5rem;" />
-                <strong>Búsqueda Guardada:</strong> @currentSavedQuery.Name
-                @if (!string.IsNullOrEmpty(currentSavedQuery.Description))
-                {
-                    <br />
-                    <small>@currentSavedQuery.Description</small>
-                }
-            </RadzenAlert>
-        }
+      
 
         <!-- Entity Selector -->
         <EntitySelector AvailableEntities="@availableEntities"

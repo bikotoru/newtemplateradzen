@@ -29,12 +29,6 @@
                     </RadzenColumn>
                 </RadzenRow>
 
-                @if (!string.IsNullOrEmpty(SelectedEntity?.Description))
-                {
-                    <RadzenAlert AlertStyle="AlertStyle.Info" Icon="info">
-                        @SelectedEntity.Description
-                    </RadzenAlert>
-                }
             </RadzenStack>
         </RadzenCard>
     </RadzenColumn>

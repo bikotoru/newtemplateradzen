@@ -365,6 +365,100 @@ public class SavedQueriesController : ControllerBase
     }
 
     /// <summary>
+    /// Ejecutar query dinámica con paginación (compatible con BaseApiService)
+    /// </summary>
+    [HttpPost("paged")]
+    public async Task<ActionResult<ApiResponse<PagedResult<SavedQueryDto>>>> QueryPaged([FromBody] QueryRequest queryRequest)
+    {
+        try
+        {
+            var user = await ValidarUsuario();
+            if (user == null)
+            {
+                return Unauthorized(ApiResponse<PagedResult<SavedQueryDto>>.ErrorResponse("Usuario no autenticado"));
+            }
+
+            var hasPermission = user.Permisos.Contains("SAVEDQUERIES.VIEW");
+            if (!hasPermission)
+            {
+                return StatusCode(403, ApiResponse<PagedResult<SavedQueryDto>>.ErrorResponse("No tienes permisos para ver búsquedas guardadas"));
+            }
+
+            var userId = user.Id;
+            var organizationId = user.OrganizationId;
+
+            _logger.LogInformation("Ejecutando query paginada para SavedQueries del usuario {UserId}", userId);
+
+            // Crear la query base con filtros de seguridad
+            var query = _context.Set<SystemSavedQueries>()
+                .Where(sq => sq.Active);
+
+            // Aplicar filtros de acceso del usuario
+            var userQueries = query.Where(sq => sq.CreadorId == userId);
+            var publicQueries = query.Where(sq => sq.IsPublic && sq.OrganizationId == organizationId);
+            var sharedQueries = query.Where(sq => sq.SystemSavedQueryShares.Any(share =>
+                share.Active &&
+                (share.SharedWithUserId == userId ||
+                 share.SharedWithOrganizationId == organizationId)));
+
+            var combinedQuery = userQueries
+                .Union(publicQueries)
+                .Union(sharedQueries)
+                .Distinct();
+
+            // Aplicar filtros dinámicos del QueryRequest si existen
+            // Nota: Aquí podrías implementar la lógica de filtros dinámicos
+            // Por ahora solo ordenamos por fecha de creación
+            var finalQuery = combinedQuery.OrderByDescending(sq => sq.FechaCreacion);
+
+            // Calcular paginación
+            var totalCount = await finalQuery.CountAsync();
+            var skip = queryRequest.Skip ?? 0;
+            var take = queryRequest.Take ?? 10;
+            var page = (skip / take) + 1;
+
+            var savedQueries = await finalQuery
+                .Skip(skip)
+                .Take(take)
+                .Select(sq => new SavedQueryDto
+                {
+                    Id = sq.Id,
+                    Name = sq.Name,
+                    Description = sq.Description,
+                    EntityName = sq.EntityName,
+                    SelectedFields = sq.SelectedFields,
+                    FilterConfiguration = sq.FilterConfiguration,
+                    LogicalOperator = sq.LogicalOperator,
+                    TakeLimit = sq.TakeLimit,
+                    IsPublic = sq.IsPublic,
+                    IsTemplate = sq.IsTemplate,
+                    CreadorId = sq.CreadorId,
+                    FechaCreacion = sq.FechaCreacion,
+                    FechaModificacion = sq.FechaModificacion,
+                    CanEdit = sq.CreadorId == userId,
+                    CanShare = sq.CreadorId == userId,
+                    SharedCount = sq.SystemSavedQueryShares.Count(s => s.Active)
+                })
+                .ToListAsync();
+
+            var pagedResult = new PagedResult<SavedQueryDto>
+            {
+                Data = savedQueries,
+                Page = page,
+                PageSize = take,
+                TotalCount = totalCount
+            };
+
+            return Ok(ApiResponse<PagedResult<SavedQueryDto>>.SuccessResponse(pagedResult, $"Query paginada ejecutada exitosamente"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ejecutando query paginada para SavedQueries");
+            return StatusCode(500, ApiResponse<PagedResult<SavedQueryDto>>.ErrorResponse($"Error ejecutando query paginada: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
     /// Crear una nueva búsqueda guardada (compatible con BaseApiService)
     /// </summary>
     [HttpPost("create")]

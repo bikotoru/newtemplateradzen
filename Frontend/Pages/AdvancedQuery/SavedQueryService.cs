@@ -9,7 +9,7 @@ namespace Frontend.Pages.AdvancedQuery
     public class SavedQueryService : BaseApiService<SavedQueryDto>
     {
         public SavedQueryService(API api, ILogger<SavedQueryService> logger) 
-            : base(api, logger, "api/saved-queries")
+            : base(api, logger, "api/saved-queries", BackendType.FormBackend)
         {
         }
 
