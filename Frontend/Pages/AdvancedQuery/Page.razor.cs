@@ -128,12 +128,16 @@ public partial class Page : ComponentBase
         {
             isLoading = true;
 
+            // Construir Select string con los campos seleccionados
+            var selectFields = GetSelectedFieldsForQuery();
+
             var request = new AdvancedQueryRequest
             {
                 Filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
                 LogicalOperator = logicalOperator,
                 FilterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive,
-                Take = takeLimit
+                Take = takeLimit,
+                Select = selectFields
             };
 
             queryResults = await AdvancedQueryService.ExecuteAdvancedQueryAsync(selectedEntityName!, request, selectedEntity?.BackendApi);
@@ -234,7 +238,9 @@ public partial class Page : ComponentBase
             ["Filters"] = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>(),
             ["LogicalOperator"] = logicalOperator,
             ["FilterCaseSensitivity"] = FilterCaseSensitivity.CaseInsensitive,
-            ["Take"] = takeLimit
+            ["Take"] = takeLimit,
+            ["Select"] = GetSelectedFieldsForQuery(),
+            ["SelectedFields"] = selectedFields.ToArray() // Para poder restaurar la selección de campos
         };
 
         var result = await DialogService.OpenAsync<Frontend.Components.AdvancedQuery.SaveConfigurationDialog>("Guardar Configuración", saveDialogParameters);
@@ -430,5 +436,27 @@ public partial class Page : ComponentBase
 
         // Fallback: mostrar máximo 6 campos visibles
         return entityFields.Where(f => f.IsVisible).Take(6).ToList();
+    }
+
+    /// <summary>
+    /// Obtener string de campos seleccionados para el Select de la query
+    /// </summary>
+    private string? GetSelectedFieldsForQuery()
+    {
+        var fieldsToSelect = GetDisplayFields();
+
+        if (!fieldsToSelect.Any())
+        {
+            // Si no hay campos seleccionados, no usar Select (traer todo)
+            return null;
+        }
+
+        // Construir string con sintaxis para System.Linq.Dynamic.Core
+        // Formato: "new (Id, Nombre)" en lugar de "Id, Nombre"
+        var fieldNames = string.Join(", ", fieldsToSelect.Select(f => f.PropertyName));
+        var selectString = $"new ({fieldNames})";
+
+        Console.WriteLine($"Generated Select string: {selectString}");
+        return selectString;
     }
 }

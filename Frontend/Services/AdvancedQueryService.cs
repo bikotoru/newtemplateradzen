@@ -553,8 +553,10 @@ public class AdvancedQueryService
 
             if (!string.IsNullOrEmpty(backendApi) && backendApi.StartsWith("api/"))
             {
-                // Usar URL específica de la base de datos con /query al final
-                endpoint = $"{backendApi}/query";
+                // Usar URL específica de la base de datos
+                var baseEndpoint = $"{backendApi}/query";
+                // Si hay Select, usar endpoint de select
+                endpoint = !string.IsNullOrEmpty(request.Select) ? $"{backendApi}/select-paged" : baseEndpoint;
                 targetBackend = BackendType.GlobalBackend; // Asumir GlobalBackend para URLs específicas
                 _logger.LogInformation("Using specific API endpoint: {Endpoint}", endpoint);
             }
@@ -562,8 +564,9 @@ public class AdvancedQueryService
             {
                 // Usar patrón estándar con BackendType
                 targetBackend = GetBackendType(backendApi);
-                endpoint = $"api/{entityName}/paged";
-                _logger.LogInformation("Using standard pattern: {Endpoint} (BackendType: {BackendType})", endpoint, targetBackend);
+                // Si hay Select, usar endpoint de select-paged
+                endpoint = !string.IsNullOrEmpty(request.Select) ? $"api/{entityName}/select-paged" : $"api/{entityName}/paged";
+                _logger.LogInformation("Using standard pattern: {Endpoint} (BackendType: {BackendType}) - Select: {HasSelect}", endpoint, targetBackend, !string.IsNullOrEmpty(request.Select));
             }
 
             // Ejecutar consulta con endpoint dinámico
@@ -581,7 +584,12 @@ public class AdvancedQueryService
                     if (jsonElement.ValueKind == JsonValueKind.Array)
                     {
                         // response.Data ya es el array de datos directamente
-                        var items = JsonSerializer.Deserialize<List<object>>(jsonElement.GetRawText()) ?? new List<object>();
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                            PropertyNameCaseInsensitive = true
+                        };
+                        var items = JsonSerializer.Deserialize<List<object>>(jsonElement.GetRawText(), options) ?? new List<object>();
                         return new AdvancedQueryResult<object>
                         {
                             Success = true,
@@ -600,7 +608,12 @@ public class AdvancedQueryService
                             jsonElement.TryGetProperty("totalCount", out _))
                         {
                             // Es un PagedResult
-                            var pagedResult = JsonSerializer.Deserialize<PagedResult<object>>(jsonElement.GetRawText());
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                PropertyNameCaseInsensitive = true
+                            };
+                            var pagedResult = JsonSerializer.Deserialize<PagedResult<object>>(jsonElement.GetRawText(), options);
                             if (pagedResult != null)
                             {
                                 return new AdvancedQueryResult<object>
@@ -619,7 +632,12 @@ public class AdvancedQueryService
                                  dataProp.ValueKind == JsonValueKind.Array)
                         {
                             // Formato envuelto: { "data": [...] }
-                            var items = JsonSerializer.Deserialize<List<object>>(dataProp.GetRawText()) ?? new List<object>();
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                PropertyNameCaseInsensitive = true
+                            };
+                            var items = JsonSerializer.Deserialize<List<object>>(dataProp.GetRawText(), options) ?? new List<object>();
                             return new AdvancedQueryResult<object>
                             {
                                 Success = true,
