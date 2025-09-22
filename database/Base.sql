@@ -1506,12 +1506,199 @@ GO
 PRINT '✅ Función fn_ValidateCustomFieldConfig creada';
 
 PRINT '✅ Sistema de campos personalizados implementado exitosamente';
+
+-- ========================================
+-- 🔍 SISTEMA DE BÚSQUEDAS AVANZADAS GUARDADAS
+-- ========================================
+
+PRINT '🚀 Iniciando creación del sistema de búsquedas avanzadas guardadas...';
+
+-- ========================================
+-- 📋 TABLA: system_saved_queries
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_saved_queries' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_saved_queries...';
+
+    CREATE TABLE system_saved_queries (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Información básica de la búsqueda guardada
+        Name NVARCHAR(200) NOT NULL,                     -- "Empleados Activos Región Norte"
+        Description NVARCHAR(500) NULL,                  -- Descripción de la búsqueda
+        EntityName NVARCHAR(100) NOT NULL,               -- "Empleado", "Region", etc.
+
+        -- Configuración JSON optimizada
+        SelectedFields NVARCHAR(MAX) NOT NULL,           -- JSON array de field configurations
+        FilterConfiguration NVARCHAR(MAX) NULL,         -- JSON object con filtros completos
+
+        -- Configuración de consulta
+        LogicalOperator TINYINT NOT NULL DEFAULT 0,      -- 0=And, 1=Or
+        TakeLimit INT NOT NULL DEFAULT 50,               -- Límite de resultados
+
+        -- Control de visibilidad y plantillas
+        IsPublic BIT NOT NULL DEFAULT 0,                 -- Visible para toda la organización
+        IsTemplate BIT NOT NULL DEFAULT 0,               -- Es una plantilla reutilizable
+
+        -- Auditoría estándar (BaseEntity pattern)
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_saved_queries_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_saved_queries_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_saved_queries_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id),
+
+        -- Constraints de negocio
+        CONSTRAINT CHK_system_saved_queries_Name
+            CHECK (Name IS NOT NULL AND LEN(LTRIM(RTRIM(Name))) > 0),
+        CONSTRAINT CHK_system_saved_queries_EntityName
+            CHECK (EntityName IS NOT NULL AND LEN(LTRIM(RTRIM(EntityName))) > 0),
+        CONSTRAINT CHK_system_saved_queries_SelectedFields
+            CHECK (SelectedFields IS NOT NULL AND LEN(LTRIM(RTRIM(SelectedFields))) > 0),
+        CONSTRAINT CHK_system_saved_queries_TakeLimit
+            CHECK (TakeLimit > 0 AND TakeLimit <= 1000),
+        CONSTRAINT CHK_system_saved_queries_LogicalOperator
+            CHECK (LogicalOperator IN (0, 1))
+    );
+
+    -- Índices para system_saved_queries
+    CREATE NONCLUSTERED INDEX IX_system_saved_queries_EntityName_Org_Active
+        ON system_saved_queries(EntityName, OrganizationId, Active)
+        INCLUDE (Id, Name, Description, IsPublic, IsTemplate);
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_queries_CreadorId_Active
+        ON system_saved_queries(CreadorId, Active, OrganizationId)
+        INCLUDE (Name, EntityName, FechaCreacion);
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_queries_Public_Active
+        ON system_saved_queries(IsPublic, Active, OrganizationId, EntityName)
+        WHERE IsPublic = 1;
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_queries_Template_Active
+        ON system_saved_queries(IsTemplate, Active, EntityName)
+        WHERE IsTemplate = 1;
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_queries_FechaCreacion
+        ON system_saved_queries(FechaCreacion DESC)
+        INCLUDE (Name, EntityName, CreadorId);
+
+    -- Validación de JSON (SQL Server 2016+)
+    ALTER TABLE system_saved_queries
+        ADD CONSTRAINT CHK_system_saved_queries_ValidSelectedFieldsJSON
+        CHECK (ISJSON(SelectedFields) = 1);
+
+    ALTER TABLE system_saved_queries
+        ADD CONSTRAINT CHK_system_saved_queries_ValidFilterJSON
+        CHECK (FilterConfiguration IS NULL OR ISJSON(FilterConfiguration) = 1);
+
+    PRINT '✅ Tabla system_saved_queries creada con índices, FK y constraints';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_saved_queries ya existe';
+END
+
+-- ========================================
+-- 📋 TABLA: system_saved_query_shares
+-- ========================================
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='system_saved_query_shares' AND xtype='U')
+BEGIN
+    PRINT '📋 Creando tabla system_saved_query_shares...';
+
+    CREATE TABLE system_saved_query_shares (
+        Id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+
+        -- Referencia a la búsqueda guardada
+        SavedQueryId UNIQUEIDENTIFIER NOT NULL,
+
+        -- Destinatarios flexibles del compartido
+        SharedWithUserId UNIQUEIDENTIFIER NULL,          -- Usuario específico
+        SharedWithRoleId UNIQUEIDENTIFIER NULL,          -- Rol completo
+        SharedWithOrganizationId UNIQUEIDENTIFIER NULL,  -- Organización cruzada (admin)
+
+        -- Niveles de permisos granulares
+        CanView BIT NOT NULL DEFAULT 1,                  -- Puede ver y ejecutar
+        CanEdit BIT NOT NULL DEFAULT 0,                  -- Puede modificar
+        CanExecute BIT NOT NULL DEFAULT 1,               -- Puede ejecutar consulta
+        CanShare BIT NOT NULL DEFAULT 0,                 -- Puede compartir con otros
+
+        -- Auditoría estándar (BaseEntity pattern)
+        OrganizationId UNIQUEIDENTIFIER NULL,
+        FechaCreacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        FechaModificacion DATETIME2 DEFAULT GETUTCDATE() NOT NULL,
+        CreadorId UNIQUEIDENTIFIER NULL,
+        ModificadorId UNIQUEIDENTIFIER NULL,
+        Active BIT DEFAULT 1 NOT NULL,
+
+        -- Foreign Keys
+        CONSTRAINT FK_system_saved_query_shares_SavedQueryId
+            FOREIGN KEY (SavedQueryId) REFERENCES system_saved_queries(Id) ON DELETE CASCADE,
+        CONSTRAINT FK_system_saved_query_shares_SharedWithUserId
+            FOREIGN KEY (SharedWithUserId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_saved_query_shares_SharedWithRoleId
+            FOREIGN KEY (SharedWithRoleId) REFERENCES system_roles(Id),
+        CONSTRAINT FK_system_saved_query_shares_SharedWithOrganizationId
+            FOREIGN KEY (SharedWithOrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_saved_query_shares_OrganizationId
+            FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
+        CONSTRAINT FK_system_saved_query_shares_CreadorId
+            FOREIGN KEY (CreadorId) REFERENCES system_users(Id),
+        CONSTRAINT FK_system_saved_query_shares_ModificadorId
+            FOREIGN KEY (ModificadorId) REFERENCES system_users(Id),
+
+        -- Constraints de negocio
+        CONSTRAINT CHK_system_saved_query_shares_OneTarget
+            CHECK (
+                (SharedWithUserId IS NOT NULL AND SharedWithRoleId IS NULL AND SharedWithOrganizationId IS NULL) OR
+                (SharedWithUserId IS NULL AND SharedWithRoleId IS NOT NULL AND SharedWithOrganizationId IS NULL) OR
+                (SharedWithUserId IS NULL AND SharedWithRoleId IS NULL AND SharedWithOrganizationId IS NOT NULL)
+            )
+    );
+
+    -- Índices para system_saved_query_shares
+    CREATE NONCLUSTERED INDEX IX_system_saved_query_shares_SavedQueryId_Active
+        ON system_saved_query_shares(SavedQueryId, Active)
+        INCLUDE (SharedWithUserId, SharedWithRoleId, CanView, CanEdit, CanExecute, CanShare);
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_query_shares_SharedWithUserId
+        ON system_saved_query_shares(SharedWithUserId, Active)
+        WHERE SharedWithUserId IS NOT NULL;
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_query_shares_SharedWithRoleId
+        ON system_saved_query_shares(SharedWithRoleId, Active)
+        WHERE SharedWithRoleId IS NOT NULL;
+
+    CREATE NONCLUSTERED INDEX IX_system_saved_query_shares_CreadorId
+        ON system_saved_query_shares(CreadorId, Active);
+
+    -- Constraint único para evitar compartidos duplicados
+    CREATE UNIQUE NONCLUSTERED INDEX UX_system_saved_query_shares_Unique
+        ON system_saved_query_shares(SavedQueryId, SharedWithUserId, SharedWithRoleId, SharedWithOrganizationId)
+        WHERE Active = 1;
+
+    PRINT '✅ Tabla system_saved_query_shares creada con índices, FK y constraints';
+END
+ELSE
+BEGIN
+    PRINT '📄 Tabla system_saved_query_shares ya existe';
+END
+
+PRINT '✅ Sistema de búsquedas avanzadas guardadas implementado exitosamente';
 PRINT '';
 PRINT '🎯 SISTEMA COMPLETO CONSOLIDADO:';
 PRINT '   • Sistema de usuarios, roles y permisos completo';
 PRINT '   • Sistema de auditoría dinámico';
 PRINT '   • Sistema de campos personalizados completo';
 PRINT '   • FormDesigner con entidades base';
+PRINT '   • Sistema de búsquedas avanzadas guardadas';
 PRINT '   • Configuración completa de tokens y autenticación';
 PRINT '   • Todos los permisos de gestión avanzada incluidos';
 PRINT '';

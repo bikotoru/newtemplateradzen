@@ -42,6 +42,10 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<SystemRolesPermissions> SystemRolesPermissions { get; set; }
 
+    public virtual DbSet<SystemSavedQueries> SystemSavedQueries { get; set; }
+
+    public virtual DbSet<SystemSavedQueryShares> SystemSavedQueryShares { get; set; }
+
     public virtual DbSet<SystemTablasAuditables> SystemTablasAuditables { get; set; }
 
     public virtual DbSet<SystemUsers> SystemUsers { get; set; }
@@ -367,6 +371,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.AllowCustomFields).HasDefaultValue(true);
+            entity.Property(e => e.BackendApi).HasMaxLength(200);
             entity.Property(e => e.Category).HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.DisplayName).HasMaxLength(200);
@@ -556,6 +561,41 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.SystemRoles).WithMany(p => p.SystemRolesPermissions)
                 .HasForeignKey(d => d.SystemRolesId)
                 .HasConstraintName("FK_system_roles_permissions_RoleId");
+        });
+
+        modelBuilder.Entity<SystemSavedQueries>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC0708E124FF");
+
+            entity.ToTable("system_saved_queries");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.EntityName).HasMaxLength(100);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.TakeLimit).HasDefaultValue(50);
+        });
+
+        modelBuilder.Entity<SystemSavedQueryShares>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC0709A50420");
+
+            entity.ToTable("system_saved_query_shares");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.CanExecute).HasDefaultValue(true);
+            entity.Property(e => e.CanView).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.SavedQuery).WithMany(p => p.SystemSavedQueryShares)
+                .HasForeignKey(d => d.SavedQueryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__system_sa__Saved__15DA3E5D");
         });
 
         modelBuilder.Entity<SystemTablasAuditables>(entity =>
