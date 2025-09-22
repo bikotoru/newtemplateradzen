@@ -36,6 +36,9 @@ public partial class Page : ComponentBase
     private bool showFieldSelectionDialog = false;
     private int selectedFieldsKey = 0; // Clave para forzar re-render
 
+    // Variable para almacenar el último request ejecutado (para exportación)
+    private AdvancedQueryRequest? lastExecutedRequest;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAvailableEntities();
@@ -85,6 +88,7 @@ public partial class Page : ComponentBase
             // Limpiar resultados anteriores y selección de campos
             queryResults = null;
             selectedFields.Clear();
+            lastExecutedRequest = null;
 
             NotificationService.Notify(new NotificationMessage
             {
@@ -140,6 +144,9 @@ public partial class Page : ComponentBase
                 Select = selectFields
             };
 
+            // Almacenar el request para uso en exportación
+            lastExecutedRequest = request;
+
             queryResults = await AdvancedQueryService.ExecuteAdvancedQueryAsync(selectedEntityName!, request, selectedEntity?.BackendApi);
 
             if (queryResults.Success)
@@ -185,6 +192,7 @@ public partial class Page : ComponentBase
         {
             await filterConfigurationRef.DataFilter.ClearFilters();
             queryResults = null;
+            lastExecutedRequest = null;
             // Refrescar el estado del componente de filtros
             filterConfigurationRef.RefreshFilterState();
         }

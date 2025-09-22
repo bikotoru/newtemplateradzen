@@ -33,6 +33,8 @@
     <!-- Query Results -->
     <QueryResults Results="@queryResults"
                   DisplayFields="@GetDisplayFields()"
+                  EntityName="@selectedEntityName"
+                  LastQueryRequest="@lastExecutedRequest"
                   OnViewDetails="@ViewDetails" />
 
     <!-- Loading Indicator -->

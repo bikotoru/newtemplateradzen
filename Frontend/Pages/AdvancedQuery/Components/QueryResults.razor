@@ -1,6 +1,14 @@
 @using Radzen.Blazor
 @using System.Text.Json
 @using System.Reflection
+@using Frontend.Services
+@using Shared.Models.Export
+@using Shared.Models.QueryModels
+@using Radzen
+
+@inject FileDownloadService FileDownloadService
+@inject NotificationService NotificationService
+@inject API ApiService
 
 @if (Results != null && Results.Success)
 {
@@ -10,7 +18,19 @@
                 <RadzenStack Gap="1rem">
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                         <RadzenText TextStyle="TextStyle.H6">3. Resultados</RadzenText>
-                        <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@($"{Results.TotalCount} registros encontrados")" />
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="@($"{Results.TotalCount} registros encontrados")" />
+                            @if (Results.Data.Any())
+                            {
+                                <RadzenButton Click="@ExportToExcel"
+                                            ButtonStyle="ButtonStyle.Base"
+                                            Size="ButtonSize.Small"
+                                            Icon="download"
+                                            IconColor="green"
+                                            Text="Exportar Excel"
+                                            title="Exportar resultados a Excel" />
+                            }
+                        </RadzenStack>
                     </RadzenStack>
 
                     @if (Results.Data.Any())
@@ -64,6 +84,8 @@
     [Parameter] public AdvancedQueryResult<object>? Results { get; set; }
     [Parameter] public List<EntityFieldDefinition> DisplayFields { get; set; } = new();
     [Parameter] public EventCallback<object> OnViewDetails { get; set; }
+    [Parameter] public string? EntityName { get; set; }
+    [Parameter] public AdvancedQueryRequest? LastQueryRequest { get; set; }
 
     private async Task OnViewDetailsClick(object item)
     {
@@ -123,4 +145,108 @@
             _ => property.ToString()
         };
     }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            if (Results?.Data == null || !Results.Data.Any())
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Sin datos",
+                    Detail = "No hay datos para exportar",
+                    Duration = 3000
+                });
+                return;
+            }
+
+            if (LastQueryRequest == null || string.IsNullOrEmpty(EntityName))
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "No se puede exportar: información de consulta no disponible",
+                    Duration = 5000
+                });
+                return;
+            }
+
+            // Mostrar notificación de inicio
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Exportando",
+                Detail = "Generando archivo Excel...",
+                Duration = 2000
+            });
+
+            // Crear columnas de Excel basadas en DisplayFields
+            var excelColumns = DisplayFields.Select(field => new ExcelColumnConfig
+            {
+                PropertyPath = field.PropertyName,
+                DisplayName = field.DisplayName,
+                Visible = true,
+                Order = DisplayFields.IndexOf(field),
+                Width = 15 // Ancho por defecto
+            }).ToList();
+
+            // Crear QueryRequest para la exportación (sin filtros por simplicidad)
+            // En la exportación usaremos los mismos datos que ya se han consultado
+            var exportQueryRequest = new QueryRequest
+            {
+                Filter = "", // Exportar sin filtros para obtener todos los datos
+                OrderBy = LastQueryRequest.OrderBy,
+                Include = LastQueryRequest.Include,
+                Select = LastQueryRequest.Select,
+                // Sin Skip/Take para exportar todos los resultados
+                Skip = null,
+                Take = null
+            };
+
+            // Crear ExcelExportRequest
+            var exportRequest = new ExcelExportRequest
+            {
+                Query = exportQueryRequest,
+                Columns = excelColumns,
+                SheetName = EntityName,
+                Title = $"Exportación de {EntityName}",
+                Subtitle = $"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}",
+                IncludeHeaders = true,
+                AutoFilter = true,
+                FreezeHeaders = true
+            };
+
+            // Llamar al endpoint de exportación
+            var endpoint = $"api/{EntityName}/export/excel";
+            var excelBytes = await ApiService.PostFileAsync(endpoint, exportRequest);
+
+            // Generar nombre de archivo
+            var fileName = $"{EntityName}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            // Descargar archivo
+            await FileDownloadService.DownloadExcelAsync(excelBytes, fileName);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Exportación completada",
+                Detail = $"Archivo Excel {fileName} descargado exitosamente",
+                Duration = 3000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error en exportación",
+                Detail = $"Error al exportar a Excel: {ex.Message}",
+                Duration = 5000
+            });
+        }
+    }
+
 }
