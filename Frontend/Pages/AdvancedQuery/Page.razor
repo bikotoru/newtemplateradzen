@@ -6,12 +6,29 @@
 
 <PageTitle>Consulta Avanzada</PageTitle>
 
-<PageWithCommandBar BackPath="/"
+<PageWithCommandBar BackPath="/advanced-query/saved-queries/list"
                      ShowSave="@CanSave"
                      OnSaveClick="@SaveForm">
     <RadzenStack Gap="1rem">
         <!-- Header Section -->
         <HeaderSection />
+        
+        <!-- Saved Query Indicator -->
+        @if (currentSavedQuery != null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" 
+                         Style="margin-bottom: 1rem;"
+                         AllowClose="true"
+                         Close="@(() => currentSavedQuery = null)">
+                <RadzenIcon Icon="bookmark" Style="margin-right: 0.5rem;" />
+                <strong>Búsqueda Guardada:</strong> @currentSavedQuery.Name
+                @if (!string.IsNullOrEmpty(currentSavedQuery.Description))
+                {
+                    <br />
+                    <small>@currentSavedQuery.Description</small>
+                }
+            </RadzenAlert>
+        }
 
         <!-- Entity Selector -->
         <EntitySelector AvailableEntities="@availableEntities"
@@ -21,6 +38,21 @@
                        SelectedFields="@selectedFields"
                        OnEntitySelectionChanged="@OnEntitySelected"
                        OnConfigureFields="@OpenFieldSelectionDialog" />
+
+        <!-- Query Name Input -->
+        @if (!string.IsNullOrEmpty(selectedEntityName))
+        {
+            <RadzenCard Style="margin-bottom: 1rem;">
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-bottom: 0.5rem;">
+                        Nombre de la Búsqueda
+                    </RadzenText>
+                    <RadzenTextBox @bind-Value="@queryName" 
+                                   Placeholder="Ingrese un nombre para guardar esta búsqueda..." 
+                                   Style="width: 100%;" />
+                </RadzenStack>
+            </RadzenCard>
+        }
 
         <!-- Filter Configuration -->
         <FilterConfiguration @ref="filterConfigurationRef"

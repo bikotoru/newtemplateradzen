@@ -27,19 +27,19 @@ namespace Frontend.Services
         /// <summary>
         /// Crear una entidad individual
         /// </summary>
-        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request)
+        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request, BackendType backendType = BackendType.GlobalBackend)
         {
             _logger.LogInformation($"Creating {typeof(T).Name}");
-            return await _api.PostAsync<T>($"{_baseUrl}/create", request);
+            return await _api.PostAsync<T>($"{_baseUrl}/create", request, backendType);
         }
 
         /// <summary>
         /// Actualizar una entidad individual
         /// </summary>
-        public virtual async Task<ApiResponse<T>> UpdateAsync(UpdateRequest<T> request)
+        public virtual async Task<ApiResponse<T>> UpdateAsync(UpdateRequest<T> request, BackendType backendType = BackendType.GlobalBackend)
         {
             _logger.LogInformation($"Updating {typeof(T).Name}");
-            return await _api.PutAsync<T>($"{_baseUrl}/update", request);
+            return await _api.PutAsync<T>($"{_baseUrl}/update", request, backendType);
         }
 
         /// <summary>

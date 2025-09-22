@@ -89,7 +89,7 @@ public partial class MainLayout : IDisposable
 
     protected void NavigateToAdvancedQuery()
     {
-        Navigation.NavigateTo("/advanced-query");
+        Navigation.NavigateTo("/advanced-query/saved-queries/list");
     }
 
     public void Dispose()

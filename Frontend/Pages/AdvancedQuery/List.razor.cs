@@ -47,7 +47,7 @@ public partial class List : AuthorizedPageBase
 
     private async Task HandleEdit(SavedQueryDto savedQuery)
     {
-        Navigation.NavigateTo($"/advanced-query/saved-queries/formulario/{savedQuery.Id}");
+        Navigation.NavigateTo($"/advanced-query?loadQuery={savedQuery.Id}");
     }
 
     private async Task HandleDelete(SavedQueryDto savedQuery)
