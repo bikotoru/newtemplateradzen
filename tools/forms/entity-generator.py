@@ -418,14 +418,14 @@ class EntityGenerator:
                     Id, OrganizationId, FechaCreacion, FechaModificacion,
                     CreadorId, ModificadorId, Active,
                     EntityName, DisplayName, Description, TableName,
-                    IconName, Category, AllowCustomFields, SortOrder, BackendApi
+                    IconName, Category, AllowCustomFields, SortOrder, BackendApi, Module
                 ) VALUES (
                     NEWID(), {org_id}, GETUTCDATE(), GETUTCDATE(),
                     @ValidUserId, @ValidUserId, 1,
                     '{entity_name}', '{entity_plural}', '{description}', '{table_name}',
-                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999, '{backend_api}'
+                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999, '{backend_api}', '{config.module}'
                 );
-                PRINT 'Entidad {entity_name} registrada en system_form_entities';
+                PRINT 'Entidad {entity_name} registrada en system_form_entities con módulo {config.module}';
             END
             ELSE
             BEGIN
