@@ -809,6 +809,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Validar que la tabla existe
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = @tabla)
+    BEGIN
+        PRINT 'Error: La tabla ' + @tabla + ' no existe.';
+        RETURN;
+    END
+
+    -- Validar que la tabla tenga un campo Id
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(@tabla) AND name = 'Id')
+    BEGIN
+        PRINT 'Error: La tabla ' + @tabla + ' debe tener un campo Id para ser auditable.';
+        RETURN;
+    END
+
     DECLARE @trigger_name NVARCHAR(200);
     DECLARE @sql NVARCHAR(MAX);
 
@@ -848,16 +862,33 @@ BEGIN
         DECLARE @org_id UNIQUEIDENTIFIER;
         DECLARE @modificador_id UNIQUEIDENTIFIER;
 
+        -- Cursor para procesar registros modificados
         DECLARE cursor_registros CURSOR FOR
-        SELECT i.Id, i.OrganizationId, i.ModificadorId
+        SELECT i.Id
         FROM inserted i
         INNER JOIN deleted d ON i.Id = d.Id;
 
         OPEN cursor_registros;
-        FETCH NEXT FROM cursor_registros INTO @registro_id, @org_id, @modificador_id;
+        FETCH NEXT FROM cursor_registros INTO @registro_id;
 
         WHILE @@FETCH_STATUS = 0
         BEGIN
+            -- Obtener OrganizationId y ModificadorId si existen en la tabla
+            SET @org_id = NULL;
+            SET @modificador_id = NULL;
+
+            IF EXISTS(SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(''' + @tabla + ''') AND name = ''OrganizationId'')
+            BEGIN
+                DECLARE @sql_org NVARCHAR(MAX) = ''SELECT @org_id_out = OrganizationId FROM inserted WHERE Id = @registro_id_param'';
+                EXEC sp_executesql @sql_org, N''@org_id_out UNIQUEIDENTIFIER OUTPUT, @registro_id_param UNIQUEIDENTIFIER'', @org_id_out = @org_id OUTPUT, @registro_id_param = @registro_id;
+            END
+
+            IF EXISTS(SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(''' + @tabla + ''') AND name = ''ModificadorId'')
+            BEGIN
+                DECLARE @sql_mod NVARCHAR(MAX) = ''SELECT @modificador_id_out = ModificadorId FROM inserted WHERE Id = @registro_id_param'';
+                EXEC sp_executesql @sql_mod, N''@modificador_id_out UNIQUEIDENTIFIER OUTPUT, @registro_id_param UNIQUEIDENTIFIER'', @modificador_id_out = @modificador_id OUTPUT, @registro_id_param = @registro_id;
+            END
+
             -- Crear registro principal de auditoría
             DECLARE @auditoria_id UNIQUEIDENTIFIER = NEWID();
 
@@ -967,7 +998,7 @@ BEGIN
             CLOSE campos_cursor;
             DEALLOCATE campos_cursor;
 
-            FETCH NEXT FROM cursor_registros INTO @registro_id, @org_id, @modificador_id;
+            FETCH NEXT FROM cursor_registros INTO @registro_id;
         END
 
         CLOSE cursor_registros;
@@ -1124,7 +1155,6 @@ BEGIN
 
     -- Índices para system_form_entities
     CREATE NONCLUSTERED INDEX IX_system_form_entities_OrganizationId ON system_form_entities(OrganizationId);
-    CREATE NONCLUSTERED INDEX IX_system_form_entities_Active ON system_form_entities(Active);
     CREATE NONCLUSTERED INDEX IX_system_form_entities_EntityName ON system_form_entities(EntityName);
     CREATE NONCLUSTERED INDEX IX_system_form_entities_TableName ON system_form_entities(TableName);
     CREATE NONCLUSTERED INDEX IX_system_form_entities_Category ON system_form_entities(Category);
@@ -1197,6 +1227,7 @@ BEGIN
         IsDefault BIT DEFAULT 0 NOT NULL,            -- Si es el layout por defecto
         IsActive BIT DEFAULT 1 NOT NULL,             -- Si está activo
         Version INT DEFAULT 1 NOT NULL,              -- Control de versiones
+        Active BIT DEFAULT 1 NOT NULL,             -- Si está activo
 
         -- Configuración completa del layout (JSON)
         LayoutConfig NVARCHAR(MAX) NOT NULL,         -- JSON con secciones y campos
