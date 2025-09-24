@@ -25,13 +25,25 @@
                         </RadzenStack>
                     </RadzenStack>
                     
-                    <!-- Botón Editar -->
-                    <RadzenButton Text="Editar Búsqueda" 
-                                  Icon="edit" 
-                                  ButtonStyle="ButtonStyle.Primary" 
-                                  Size="ButtonSize.Medium"
-                                  Click="@SwitchToEditMode"
-                                  title="Cambiar a modo edición" />
+                    <!-- Botones de Acción -->
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Text="Editar Búsqueda" 
+                                      Icon="edit" 
+                                      ButtonStyle="ButtonStyle.Primary" 
+                                      Size="ButtonSize.Medium"
+                                      Click="@SwitchToEditMode"
+                                      title="Cambiar a modo edición" />
+                        
+                        @if (currentSavedQuery?.CanShare == true)
+                        {
+                            <RadzenButton Text="Compartir" 
+                                          Icon="share" 
+                                          ButtonStyle="ButtonStyle.Secondary" 
+                                          Size="ButtonSize.Medium"
+                                          Click="@OpenShareModal"
+                                          title="Compartir esta búsqueda" />
+                        }
+                    </RadzenStack>
                 </RadzenStack>
             </RadzenCard>
         }
@@ -55,9 +67,22 @@
         {
             <RadzenCard Style="margin-bottom: 1rem;">
                 <RadzenStack Gap="0.5rem">
-                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-bottom: 0.5rem;">
-                        Nombre de la Búsqueda
-                    </RadzenText>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                            Nombre de la Búsqueda
+                        </RadzenText>
+                        
+                        @if (currentSavedQuery?.CanShare == true)
+                        {
+                            <RadzenButton Text="Compartir" 
+                                          Icon="share" 
+                                          ButtonStyle="ButtonStyle.Secondary" 
+                                          Size="ButtonSize.Small"
+                                          Click="@OpenShareModal"
+                                          title="Compartir esta búsqueda" />
+                        }
+                    </RadzenStack>
+                    
                     <RadzenTextBox @bind-Value="@queryName" 
                                    Placeholder="Ingrese un nombre para guardar esta búsqueda..." 
                                    Style="width: 100%;" />
@@ -90,3 +115,11 @@
         <LoadingIndicator IsLoading="@isLoading" LoadingText="Ejecutando consulta..." />
     </RadzenStack>
 </PageWithCommandBar>
+
+<!-- Share Modal -->
+@if (showShareModal && currentSavedQuery != null)
+{
+    <ShareQueryModal SavedQuery="@currentSavedQuery" 
+                     OnClose="@OnShareModalClosed" 
+                     OnShared="@OnQueryShared" />
+}

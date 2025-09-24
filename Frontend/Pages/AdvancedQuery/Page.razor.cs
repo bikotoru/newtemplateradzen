@@ -53,6 +53,9 @@ public partial class Page : ComponentBase
     
     // Filtros pendientes para cargar cuando DataFilter esté listo
     private List<SerializableFilter>? pendingFilters;
+    
+    // Modal states for sharing
+    private bool showShareModal = false;
 
     // Variables para PageWithCommandBar y SavedQueries
     private bool CanSave => !string.IsNullOrEmpty(selectedEntityName) && 
@@ -745,6 +748,45 @@ public partial class Page : ComponentBase
             // Navegar a la misma página pero sin el parámetro mode=play
             Navigation.NavigateTo($"/advanced-query?loadQuery={currentSavedQuery.Id}");
         }
+    }
+    
+    /// <summary>
+    /// Abrir modal de compartir
+    /// </summary>
+    private async Task OpenShareModal()
+    {
+        if (currentSavedQuery != null)
+        {
+            showShareModal = true;
+            StateHasChanged();
+        }
+    }
+    
+    /// <summary>
+    /// Cerrar modal de compartir
+    /// </summary>
+    private async Task OnShareModalClosed()
+    {
+        showShareModal = false;
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Callback cuando se comparte la búsqueda
+    /// </summary>
+    private async Task OnQueryShared()
+    {
+        showShareModal = false;
+        
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "¡Éxito!",
+            Detail = "Búsqueda guardada compartida exitosamente",
+            Duration = 4000
+        });
+        
+        StateHasChanged();
     }
 
     /// <summary>
