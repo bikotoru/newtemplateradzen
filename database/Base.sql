@@ -1158,7 +1158,7 @@ BEGIN
         AllowCustomFields BIT DEFAULT 1 NOT NULL,       -- Permite campos personalizados
         SortOrder INT DEFAULT 100 NOT NULL,             -- Orden de presentación
         BackendApi NVARCHAR(200) NULL,                  -- API Backend (ej: "MainBackend", "FormBackend")
-
+        Module NVARCHAR(255) NULL,                     -- Módulo asociado (ej: "Recursos Humanos")
         -- Foreign Keys
         CONSTRAINT FK_system_form_entities_OrganizationId
             FOREIGN KEY (OrganizationId) REFERENCES system_organization(Id),
@@ -1736,6 +1736,7 @@ ELSE
 BEGIN
     PRINT '📄 Tabla system_saved_query_shares ya existe';
 END
+
 
 PRINT '✅ Sistema de búsquedas avanzadas guardadas implementado exitosamente';
 PRINT '';

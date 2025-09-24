@@ -35,5 +35,17 @@ public partial class SystemSavedQueryShares
 
     public bool Active { get; set; }
 
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
+
     public virtual SystemSavedQueries SavedQuery { get; set; } = null!;
+
+    public virtual SystemOrganization? SharedWithOrganization { get; set; }
+
+    public virtual SystemRoles? SharedWithRole { get; set; }
+
+    public virtual SystemUsers? SharedWithUser { get; set; }
 }

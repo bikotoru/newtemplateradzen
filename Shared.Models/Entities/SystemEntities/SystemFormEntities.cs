@@ -37,6 +37,8 @@ public partial class SystemFormEntities
 
     public string? BackendApi { get; set; }
 
+    public string? Module { get; set; }
+
     public virtual SystemUsers? Creador { get; set; }
 
     public virtual SystemUsers? Modificador { get; set; }

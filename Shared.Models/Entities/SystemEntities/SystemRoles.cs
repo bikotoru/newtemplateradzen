@@ -33,5 +33,7 @@ public partial class SystemRoles
 
     public virtual ICollection<SystemRolesPermissions> SystemRolesPermissions { get; set; } = new List<SystemRolesPermissions>();
 
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQueryShares { get; set; } = new List<SystemSavedQueryShares>();
+
     public virtual ICollection<SystemUsersRoles> SystemUsersRoles { get; set; } = new List<SystemUsersRoles>();
 }

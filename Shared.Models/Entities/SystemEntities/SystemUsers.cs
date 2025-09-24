@@ -37,6 +37,10 @@ public partial class SystemUsers
 
     public virtual SystemOrganization? Organization { get; set; }
 
+    public virtual ICollection<Region> RegionCreador { get; set; } = new List<Region>();
+
+    public virtual ICollection<Region> RegionModificador { get; set; } = new List<Region>();
+
     public virtual ICollection<SystemAuditoria> SystemAuditoriaCreador { get; set; } = new List<SystemAuditoria>();
 
     public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalleCreador { get; set; } = new List<SystemAuditoriaDetalle>();
@@ -59,6 +63,10 @@ public partial class SystemUsers
 
     public virtual ICollection<SystemFormEntities> SystemFormEntitiesModificador { get; set; } = new List<SystemFormEntities>();
 
+    public virtual ICollection<SystemFormLayouts> SystemFormLayoutsCreador { get; set; } = new List<SystemFormLayouts>();
+
+    public virtual ICollection<SystemFormLayouts> SystemFormLayoutsModificador { get; set; } = new List<SystemFormLayouts>();
+
     public virtual ICollection<SystemPermissions> SystemPermissionsCreador { get; set; } = new List<SystemPermissions>();
 
     public virtual ICollection<SystemPermissions> SystemPermissionsModificador { get; set; } = new List<SystemPermissions>();
@@ -70,6 +78,16 @@ public partial class SystemUsers
     public virtual ICollection<SystemRolesPermissions> SystemRolesPermissionsCreador { get; set; } = new List<SystemRolesPermissions>();
 
     public virtual ICollection<SystemRolesPermissions> SystemRolesPermissionsModificador { get; set; } = new List<SystemRolesPermissions>();
+
+    public virtual ICollection<SystemSavedQueries> SystemSavedQueriesCreador { get; set; } = new List<SystemSavedQueries>();
+
+    public virtual ICollection<SystemSavedQueries> SystemSavedQueriesModificador { get; set; } = new List<SystemSavedQueries>();
+
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQuerySharesCreador { get; set; } = new List<SystemSavedQueryShares>();
+
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQuerySharesModificador { get; set; } = new List<SystemSavedQueryShares>();
+
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQuerySharesSharedWithUser { get; set; } = new List<SystemSavedQueryShares>();
 
     public virtual ICollection<SystemUsersPermissions> SystemUsersPermissionsCreador { get; set; } = new List<SystemUsersPermissions>();
 

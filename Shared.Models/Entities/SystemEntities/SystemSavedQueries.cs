@@ -37,5 +37,11 @@ public partial class SystemSavedQueries
 
     public bool Active { get; set; }
 
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
+
     public virtual ICollection<SystemSavedQueryShares> SystemSavedQueryShares { get; set; } = new List<SystemSavedQueryShares>();
 }

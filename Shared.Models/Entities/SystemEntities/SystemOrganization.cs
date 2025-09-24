@@ -19,6 +19,8 @@ public partial class SystemOrganization
 
     public bool Active { get; set; }
 
+    public virtual ICollection<Region> Region { get; set; } = new List<Region>();
+
     public virtual ICollection<SystemAuditoria> SystemAuditoria { get; set; } = new List<SystemAuditoria>();
 
     public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; } = new List<SystemAuditoriaDetalle>();
@@ -31,11 +33,19 @@ public partial class SystemOrganization
 
     public virtual ICollection<SystemFormEntities> SystemFormEntities { get; set; } = new List<SystemFormEntities>();
 
+    public virtual ICollection<SystemFormLayouts> SystemFormLayouts { get; set; } = new List<SystemFormLayouts>();
+
     public virtual ICollection<SystemPermissions> SystemPermissions { get; set; } = new List<SystemPermissions>();
 
     public virtual ICollection<SystemRoles> SystemRoles { get; set; } = new List<SystemRoles>();
 
     public virtual ICollection<SystemRolesPermissions> SystemRolesPermissions { get; set; } = new List<SystemRolesPermissions>();
+
+    public virtual ICollection<SystemSavedQueries> SystemSavedQueries { get; set; } = new List<SystemSavedQueries>();
+
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQuerySharesOrganization { get; set; } = new List<SystemSavedQueryShares>();
+
+    public virtual ICollection<SystemSavedQueryShares> SystemSavedQuerySharesSharedWithOrganization { get; set; } = new List<SystemSavedQueryShares>();
 
     public virtual ICollection<SystemUsers> SystemUsers { get; set; } = new List<SystemUsers>();
 

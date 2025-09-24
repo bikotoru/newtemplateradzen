@@ -19,6 +19,8 @@ public partial class SystemFormLayouts
 
     public int Version { get; set; }
 
+    public bool Active { get; set; }
+
     public string LayoutConfig { get; set; } = null!;
 
     public Guid? OrganizationId { get; set; }
@@ -30,4 +32,10 @@ public partial class SystemFormLayouts
     public DateTime FechaCreacion { get; set; }
 
     public DateTime FechaModificacion { get; set; }
+
+    public virtual SystemUsers? Creador { get; set; }
+
+    public virtual SystemUsers? Modificador { get; set; }
+
+    public virtual SystemOrganization? Organization { get; set; }
 }
