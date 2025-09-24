@@ -557,6 +557,21 @@ BEGIN
     PRINT '📄 Permisos SYSTEMUSER ya existen';
 END
 
+-- 2.5. Insertar Permisos del Sistema - SAVEDQUERIES
+PRINT '📊 Insertando permisos SAVEDQUERIES...';
+IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SAVEDQUERIES.CREATE')
+BEGIN
+    INSERT INTO system_permissions (Nombre, Descripcion, OrganizationId, Active, ActionKey, GroupKey, GrupoNombre, CreadorId, ModificadorId)
+    VALUES
+    ('SAVEDQUERIES.CREATE', 'Crear búsquedas guardadas', NULL, 1, 'SAVEDQUERIES.CREATE', 'SAVEDQUERIES', 'Búsquedas Guardadas', NULL, NULL),
+    ('SAVEDQUERIES.VIEW', 'Ver búsquedas guardadas', NULL, 1, 'SAVEDQUERIES.VIEW', 'SAVEDQUERIES', 'Búsquedas Guardadas', NULL, NULL);
+    PRINT '✅ Permisos SAVEDQUERIES creados (2)';
+END
+ELSE
+BEGIN
+    PRINT '📄 Permisos SAVEDQUERIES ya existen';
+END
+
 -- 2.3. Insertar Permisos del Sistema - SYSTEMROLE
 PRINT '📊 Insertando permisos SYSTEMROLE...';
 IF NOT EXISTS (SELECT 1 FROM system_permissions WHERE ActionKey = 'SYSTEMROLE.CREATE')
@@ -1743,3 +1758,4 @@ SELECT
     'Organización Base' as Organizacion,
     'Administrador' as Rol,
     'SuperAdmin' as Permiso;
+
