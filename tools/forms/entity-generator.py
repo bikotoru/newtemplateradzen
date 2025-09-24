@@ -123,16 +123,19 @@ class EntityGenerator:
         # Paso 2: Generar permisos con verificación
         print("🔐 PASO 2: Verificando y generando permisos...")
         permissions_success = self.generate_permissions_smart(
-            config.entity_name, 
-            config.entity_plural, 
+            config.entity_name,
+            config.entity_plural,
             is_nn_relation=getattr(config, 'is_nn_relation', False)
         )
-        
+
+        if not permissions_success:
+            print("⚠️ ADVERTENCIA: Error en permisos, pero continuando con la creación")
+
         # Paso 3: Si es relación NN, verificar y actualizar GlobalUsings
         if getattr(config, 'is_nn_relation', False):
             print("🔗 PASO 3: Verificando GlobalUsings para entidades NN...")
             self.ensure_nn_global_usings()
-        
+
         print()
         print("🎉 TARGET DB COMPLETADO EXITOSAMENTE!")
         if not getattr(config, 'is_nn_relation', False):
@@ -140,8 +143,8 @@ class EntityGenerator:
             print(f"   python tools/forms/entity-generator.py --entity \"{config.entity_name}\" --module \"{config.module}\" --target interfaz")
         else:
             print("📁 Modelo NN se organizará automáticamente en Shared.Models/Entities/NN/ al ejecutar sync")
-        
-        return success and permissions_success
+
+        return success  # Solo fallar si la tabla no se creó, no por permisos
     
     def generate_permissions_smart(self, entity_name, entity_plural=None, is_nn_relation=False):
         """Generar permisos con verificación inteligente"""
@@ -382,7 +385,7 @@ class EntityGenerator:
             # Obtener valores de configuración con defaults
             entity_name = config.entity_name
             entity_plural = getattr(config, 'entity_plural', entity_name + 's')
-            table_name = entity_plural  # Usar el plural como nombre de tabla
+            table_name = entity_name.lower()  # Usar el singular en minúscula como nombre de tabla (convención del sistema)
             icon = getattr(config, 'icon', 'table_chart')  # Default icon
             category = getattr(config, 'category', 'Custom')  # Default category
             allow_custom_fields = getattr(config, 'allow_custom_fields', True)
@@ -634,14 +637,13 @@ class EntityGenerator:
         # Actualizar archivo JSON con URLs
         self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
 
-        # Auto-registrar en SystemFormEntity si está habilitado
-        if hasattr(config, 'auto_register') and config.auto_register:
-            print()
-            print("📝 ETAPA 3: Auto-registro en SystemFormEntity...")
-            if not self.register_in_system_form_entity(config):
-                print("⚠️  ADVERTENCIA: Error en auto-registro, pero la entidad fue creada exitosamente")
-            else:
-                print("✅ Entidad registrada exitosamente en SystemFormEntity")
+        # Auto-registrar en SystemFormEntity (siempre cuando target=todo)
+        print()
+        print("📝 ETAPA 3: Auto-registro en SystemFormEntity...")
+        if not self.register_in_system_form_entity(config):
+            print("⚠️  ADVERTENCIA: Error en auto-registro, pero la entidad fue creada exitosamente")
+        else:
+            print("✅ Entidad registrada exitosamente en SystemFormEntity")
         
         return True
 
