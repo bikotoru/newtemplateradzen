@@ -18,3 +18,4 @@ global using Microsoft.EntityFrameworkCore.Metadata.Builders;
 // System
 global using System.ComponentModel.DataAnnotations;
 global using System.ComponentModel.DataAnnotations.Schema;
+global using Shared.Models.Entities.Views;

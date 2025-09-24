@@ -282,6 +282,179 @@ class EntityGenerator:
             print(f"⚠️ Error actualizando GlobalUsings: {e}")
             print("💡 Puedes agregar manualmente: global using Shared.Models.Entities.NN;")
     
+    def read_connection_string(self):
+        """Lee la connection string desde Backend/Properties/launchSettings.json"""
+        import json
+
+        launch_settings_path = self.root_path / "Backend" / "Properties" / "launchSettings.json"
+
+        if not launch_settings_path.exists():
+            print(f"❌ ERROR: No se encontró launchSettings.json en {launch_settings_path}")
+            return None
+
+        try:
+            with open(launch_settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+
+            # Buscar en los profiles la variable SQL
+            for profile_name, profile_data in settings.get("profiles", {}).items():
+                env_vars = profile_data.get("environmentVariables", {})
+                sql_connection = env_vars.get("SQL")
+
+                if sql_connection:
+                    print(f"✅ Connection string encontrado en profile: {profile_name}")
+                    return sql_connection
+
+            print(f"❌ ERROR: No se encontró variable 'SQL' en environmentVariables")
+            return None
+
+        except json.JSONDecodeError as e:
+            print(f"❌ ERROR: El archivo launchSettings.json no es válido: {e}")
+            return None
+        except Exception as e:
+            print(f"❌ ERROR leyendo launchSettings.json: {e}")
+            return None
+
+    def extract_database_name(self, connection_string):
+        """Extrae el nombre de la base de datos del connection string"""
+        import re
+
+        # Buscar patterns comunes: Database=nombre; o Initial Catalog=nombre;
+        patterns = [
+            r'Database=([^;]+)',
+            r'Initial Catalog=([^;]+)',
+            r'database=([^;]+)',
+            r'initial catalog=([^;]+)'
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, connection_string, re.IGNORECASE)
+            if match:
+                db_name = match.group(1).strip()
+                print(f"🗄️ Base de datos detectada: {db_name}")
+                return db_name
+
+        print(f"⚠️ No se pudo extraer el nombre de la base de datos del connection string")
+        print(f"   Connection string: {connection_string}")
+        return None
+
+    def _determine_backend_api_for_entity(self, module_path):
+        """
+        Determinar automáticamente qué backend API usar basado en el módulo
+
+        Args:
+            module_path: Ruta del módulo (ej: "Core.RRHH", "Forms.Designer")
+
+        Returns:
+            str: Backend API recomendado
+        """
+        # Convertir a minúsculas para comparación
+        module_lower = module_path.lower()
+
+        # Reglas de mapeo basadas en el módulo
+        if any(keyword in module_lower for keyword in ['form', 'custom', 'designer', 'field']):
+            return "FormBackend"
+        elif any(keyword in module_lower for keyword in ['system', 'auth', 'user', 'permission', 'role']):
+            return "GlobalBackend"  # Cambiar SystemBackend por GlobalBackend
+        elif any(keyword in module_lower for keyword in ['core', 'main', 'base']):
+            return "GlobalBackend"  # Cambiar MainBackend por GlobalBackend
+        else:
+            # Default para módulos personalizados
+            return "GlobalBackend"   # Cambiar MainBackend por GlobalBackend
+
+    def register_in_system_form_entity(self, config):
+        """Registrar entidad en SystemFormEntity para FormDesigner"""
+        import subprocess
+
+        try:
+            # Leer connection string dinámico
+            connection_string = self.read_connection_string()
+            if not connection_string:
+                print("❌ No se pudo obtener connection string para auto-registro")
+                return False
+
+            # Extraer nombre de base de datos
+            database_name = self.extract_database_name(connection_string)
+            if not database_name:
+                print("❌ No se pudo extraer nombre de base de datos para auto-registro")
+                return False
+
+            # Obtener valores de configuración con defaults
+            entity_name = config.entity_name
+            entity_plural = getattr(config, 'entity_plural', entity_name + 's')
+            table_name = entity_plural  # Usar el plural como nombre de tabla
+            icon = getattr(config, 'icon', 'table_chart')  # Default icon
+            category = getattr(config, 'category', 'Custom')  # Default category
+            allow_custom_fields = getattr(config, 'allow_custom_fields', True)
+            system_entity = getattr(config, 'system_entity', False)
+
+            # Determinar backend API automáticamente basado en el módulo
+            backend_api = self._determine_backend_api_for_entity(config.module)
+            print(f"🖥️ Backend API detectado: {backend_api} (basado en módulo: {config.module})")
+
+            # Determinar OrganizationId basado en system_entity
+            org_id = 'NULL' if system_entity else 'NULL'  # Por ahora siempre NULL hasta implementar org específicas
+
+            # Preparar descripción
+            description = f"Gestión de {entity_plural.lower()}"
+
+            # Construir SQL de inserción con usuario válido
+            sql_command = f"""
+            DECLARE @ValidUserId UNIQUEIDENTIFIER;
+            SELECT TOP 1 @ValidUserId = Id FROM system_users WHERE Active = 1;
+
+            IF @ValidUserId IS NULL
+            BEGIN
+                PRINT 'ERROR: No se encontró usuario activo válido';
+                RETURN;
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM system_form_entities WHERE EntityName = '{entity_name}')
+            BEGIN
+                INSERT INTO system_form_entities (
+                    Id, OrganizationId, FechaCreacion, FechaModificacion,
+                    CreadorId, ModificadorId, Active,
+                    EntityName, DisplayName, Description, TableName,
+                    IconName, Category, AllowCustomFields, SortOrder, BackendApi
+                ) VALUES (
+                    NEWID(), {org_id}, GETUTCDATE(), GETUTCDATE(),
+                    @ValidUserId, @ValidUserId, 1,
+                    '{entity_name}', '{entity_plural}', '{description}', '{table_name}',
+                    '{icon}', '{category}', {1 if allow_custom_fields else 0}, 999, '{backend_api}'
+                );
+                PRINT 'Entidad {entity_name} registrada en system_form_entities';
+            END
+            ELSE
+            BEGIN
+                PRINT 'Entidad {entity_name} ya existe en system_form_entities';
+            END
+            """
+
+            # Ejecutar SQL usando sqlcmd con base de datos dinámica
+            cmd = [
+                'sqlcmd', '-S', 'localhost,1333', '-U', 'sa', '-P', 'Soporte.2019',
+                '-d', database_name, '-C', '-Q', sql_command
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode == 0:
+                print(f"✅ Entidad '{entity_name}' registrada exitosamente")
+                if result.stdout:
+                    print(f"   📄 SQL: {result.stdout.strip()}")
+                return True
+            else:
+                print(f"❌ Error registrando entidad '{entity_name}':")
+                if result.stderr:
+                    print(f"   Error: {result.stderr.strip()}")
+                if result.stdout:
+                    print(f"   Output: {result.stdout.strip()}")
+                return False
+
+        except Exception as e:
+            print(f"❌ Exception registrando entidad: {str(e)}")
+            return False
+
     def update_entities_urls_json(self, entity_name, module, entity_plural):
         """Actualizar archivo JSON con URLs de entidades generadas"""
         try:
@@ -458,8 +631,17 @@ class EntityGenerator:
         print("🔗 Con soporte automático para lookups")
         print("⚡ Incluye creación rápida como componente independiente")
         
-        # Actualizar archivo JSON con URLs  
+        # Actualizar archivo JSON con URLs
         self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
+
+        # Auto-registrar en SystemFormEntity si está habilitado
+        if hasattr(config, 'auto_register') and config.auto_register:
+            print()
+            print("📝 ETAPA 3: Auto-registro en SystemFormEntity...")
+            if not self.register_in_system_form_entity(config):
+                print("⚠️  ADVERTENCIA: Error en auto-registro, pero la entidad fue creada exitosamente")
+            else:
+                print("✅ Entidad registrada exitosamente en SystemFormEntity")
         
         return True
 
@@ -750,9 +932,21 @@ Ejemplo completo:
                        help='Lookups: "campo:tabla:campo_display:opciones"')
     
     # Configuración adicional
-    parser.add_argument('--search-fields', 
+    parser.add_argument('--search-fields',
                        help='Campos de búsqueda: "campo1,campo2,campo3"')
-    
+
+    # Configuración FormDesigner - Auto registro en SystemFormEntity
+    parser.add_argument('--auto-register', action='store_true',
+                       help='Auto-registrar en SystemFormEntity cuando target=todo')
+    parser.add_argument('--system-entity', action='store_true',
+                       help='Marcar como entidad del sistema (OrganizationId=NULL, global)')
+    parser.add_argument('--icon',
+                       help='Icono Material para la entidad (ej: person, business)')
+    parser.add_argument('--category',
+                       help='Categoría de la entidad (ej: RRHH, Core, Ventas)')
+    parser.add_argument('--allow-custom-fields', action='store_true', default=True,
+                       help='Permitir campos personalizados (default: True)')
+
     # Parámetros legacy (mantenidos por compatibilidad)
     parser.add_argument('--nn-relation-entity', action='store_true',
                        help='[DEPRECATED] Usa --source --to en su lugar')

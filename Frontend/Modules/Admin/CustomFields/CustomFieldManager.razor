@@ -1,0 +1,218 @@
+@page "/admin/custom-fields/manager"
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+
+<PageTitle>Gestor de Campos Personalizados</PageTitle>
+
+<RadzenCard class="rz-mx-auto" style="max-width: 1600px;">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" class="rz-mb-4">
+        <div>
+            <RadzenText TextStyle="TextStyle.H3" class="rz-mb-2">
+                <RadzenIcon Icon="view_list" class="rz-mr-2" />
+                Gestor de Campos Personalizados
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1">
+                Administra todos los campos personalizados creados en el sistema
+            </RadzenText>
+        </div>
+
+        <RadzenButton Text="Crear Nuevo Campo"
+                    Icon="add"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Click="CreateNewField" />
+    </RadzenStack>
+
+    <!-- Filtros -->
+    <RadzenCard class="rz-mb-4">
+        <RadzenRow Gap="1rem" AlignItems="AlignItems.End">
+            <RadzenColumn Size="3">
+                <RadzenFormField Text="Entidad" Variant="Variant.Outlined">
+                    <RadzenDropDown @bind-Value="selectedEntity"
+                                  Data="availableEntities"
+                                  AllowClear="true"
+                                  Placeholder="Todas las entidades"
+                                  Change="LoadFields"
+                                  Style="width: 100%;" />
+                </RadzenFormField>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenFormField Text="Tipo de Campo" Variant="Variant.Outlined">
+                    <RadzenDropDown @bind-Value="selectedFieldType"
+                                  Data="availableFieldTypes"
+                                  AllowClear="true"
+                                  Placeholder="Todos los tipos"
+                                  Change="LoadFields"
+                                  Style="width: 100%;" />
+                </RadzenFormField>
+            </RadzenColumn>
+
+            <RadzenColumn Size="4">
+                <RadzenFormField Text="Buscar" Variant="Variant.Outlined">
+                    <RadzenTextBox @bind-Value="searchText"
+                                 Placeholder="Buscar por nombre o descripción..."
+                                 @oninput="OnSearchInput"
+                                 Style="width: 100%;" />
+                </RadzenFormField>
+            </RadzenColumn>
+
+            <RadzenColumn Size="2">
+                <RadzenButton Text="Limpiar"
+                            Icon="clear"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="ClearFilters" />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+
+    <!-- Lista de campos -->
+    <RadzenDataGrid @ref="fieldsGrid"
+                    Data="@filteredFields"
+                    TItem="CustomFieldDefinitionDto"
+                    AllowSorting="true"
+                    AllowPaging="true"
+                    PageSize="10"
+                    PagerHorizontalAlign="HorizontalAlign.Center"
+                    EmptyText="No se encontraron campos personalizados">
+
+        <Columns>
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="DisplayName" Title="Nombre" Width="200px">
+                <Template Context="field">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0.2rem">
+                        <RadzenText TextStyle="TextStyle.Body1">
+                            <strong>@field.DisplayName</strong>
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption">
+                            @field.FieldName
+                        </RadzenText>
+                    </RadzenStack>
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="EntityName" Title="Entidad" Width="120px">
+                <Template Context="field">
+                    <RadzenBadge Text="@field.EntityName" IsPill="true" />
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="FieldTypeDisplay" Title="Tipo" Width="150px">
+                <Template Context="field">
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                        <RadzenIcon Icon="@GetFieldTypeIcon(field.FieldType)" />
+                        <RadzenText>@field.FieldTypeDisplay</RadzenText>
+                    </RadzenStack>
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="Description" Title="Descripción" Width="300px">
+                <Template Context="field">
+                    @if (!string.IsNullOrEmpty(field.Description))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            @field.Description
+                        </RadzenText>
+                    }
+                    else
+                    {
+                        <RadzenText TextStyle="TextStyle.Caption" Style="font-style: italic;">
+                            Sin descripción
+                        </RadzenText>
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="IsRequired" Title="Requerido" Width="100px">
+                <Template Context="field">
+                    @if (field.IsRequired)
+                    {
+                        <RadzenBadge Text="Requerido" BadgeStyle="BadgeStyle.Danger" IsPill="true" />
+                    }
+                    else
+                    {
+                        <RadzenBadge Text="Opcional" BadgeStyle="BadgeStyle.Secondary" IsPill="true" />
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="SortOrder" Title="Orden" Width="80px" />
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Property="IsEnabled" Title="Estado" Width="100px">
+                <Template Context="field">
+                    @if (field.IsEnabled)
+                    {
+                        <RadzenBadge Text="Activo" BadgeStyle="BadgeStyle.Success" IsPill="true" />
+                    }
+                    else
+                    {
+                        <RadzenBadge Text="Inactivo" BadgeStyle="BadgeStyle.Warning" IsPill="true" />
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="CustomFieldDefinitionDto" Title="Acciones" Width="120px" Sortable="false">
+                <Template Context="field">
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Icon="visibility"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Click="() => PreviewField(field)"
+                                    title="Vista previa" />
+
+                        <RadzenButton Icon="edit"
+                                    ButtonStyle="ButtonStyle.Secondary"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Click="() => EditField(field)"
+                                    title="Editar" />
+
+                        <RadzenButton Icon="@(field.IsEnabled ? "visibility_off" : "visibility")"
+                                    ButtonStyle="ButtonStyle.Warning"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Click="() => ToggleFieldStatus(field)"
+                                    title="@(field.IsEnabled ? "Desactivar" : "Activar")" />
+
+                        <RadzenButton Icon="delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Variant="Variant.Text"
+                                    Size="ButtonSize.Small"
+                                    Click="() => DeleteField(field)"
+                                    title="Eliminar" />
+                    </RadzenStack>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+
+    <!-- Información de permisos -->
+    @if (selectedFieldForPermissions != null)
+    {
+        <RadzenCard class="rz-mt-4">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                Permisos para: @selectedFieldForPermissions.DisplayName
+            </RadzenText>
+
+            <RadzenRow Gap="1rem">
+                @foreach (var permission in GetFieldPermissions(selectedFieldForPermissions))
+                {
+                    <RadzenColumn Size="4">
+                        <RadzenCard class="rz-p-3">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                                <RadzenIcon Icon="@permission.Icon" />
+                                <div>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @permission.Action
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                        @permission.Permission
+                                    </RadzenText>
+                                </div>
+                            </RadzenStack>
+                        </RadzenCard>
+                    </RadzenColumn>
+                }
+            </RadzenRow>
+        </RadzenCard>
+    }
+</RadzenCard>

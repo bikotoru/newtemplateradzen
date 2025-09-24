@@ -1,0 +1,14 @@
+@using Radzen.Blazor
+
+@if (IsLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" Gap="1rem" Style="padding: 2rem;">
+        <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        <RadzenText>@LoadingText</RadzenText>
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string LoadingText { get; set; } = "Ejecutando consulta...";
+}

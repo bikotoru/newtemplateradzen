@@ -1,0 +1,69 @@
+@using Frontend.Pages.AdvancedQuery
+@using Radzen
+
+<RadzenDialog @bind-Visible="@isVisible" 
+              Title="Editar Permisos de Compartido" 
+              Style="width: 500px;"
+              Resizable="false">
+    
+    <div style="padding: 1rem;">
+        
+        <RadzenAlert AlertStyle="AlertStyle.Info" Style="margin-bottom: 1rem;">
+            <RadzenIcon Icon="info" />
+            Editando permisos para: <strong>@Share?.SharedWithName</strong>
+        </RadzenAlert>
+
+        <RadzenFieldset Text="Permisos">
+            <RadzenStack Gap="0.5rem">
+                <div>
+                    <RadzenCheckBox @bind-Value="@permissions.CanView" TValue="bool" Name="CanView" />
+                    <RadzenLabel Text="Puede Ver" For="CanView" />
+                </div>
+                <div>
+                    <RadzenCheckBox @bind-Value="@permissions.CanEdit" TValue="bool" Name="CanEdit" />
+                    <RadzenLabel Text="Puede Editar" For="CanEdit" />
+                </div>
+                <div>
+                    <RadzenCheckBox @bind-Value="@permissions.CanExecute" TValue="bool" Name="CanExecute" />
+                    <RadzenLabel Text="Puede Ejecutar" For="CanExecute" />
+                </div>
+                <div>
+                    <RadzenCheckBox @bind-Value="@permissions.CanShare" TValue="bool" Name="CanShare" />
+                    <RadzenLabel Text="Puede Compartir" For="CanShare" />
+                </div>
+            </RadzenStack>
+        </RadzenFieldset>
+
+        @if (!string.IsNullOrEmpty(validationMessage))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Style="margin-top: 1rem;">
+                @validationMessage
+            </RadzenAlert>
+        }
+
+    </div>
+
+    <div style="text-align: right; padding: 1rem; border-top: 1px solid #ddd; background-color: #f8f9fa;">
+        <RadzenButton Click="@Close" 
+                      Text="Cancelar" 
+                      ButtonStyle="ButtonStyle.Secondary" 
+                      Style="margin-right: 0.5rem;" />
+        <RadzenButton Click="@UpdatePermissions" 
+                      Text="Actualizar" 
+                      ButtonStyle="ButtonStyle.Primary"
+                      Icon="save"
+                      Disabled="@(isProcessing)" />
+    </div>
+
+    @if (isProcessing)
+    {
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center;">
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+        </div>
+    }
+
+</RadzenDialog>
+
+@code {
+    // Component logic will be in EditShareModal.razor.cs
+}

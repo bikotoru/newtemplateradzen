@@ -9,6 +9,7 @@ namespace Frontend.Services
         private readonly API _api;
         private readonly string _entityName;
         private readonly string? _baseUrl;
+        private readonly BackendType? _backendType;
         private readonly List<Expression<Func<T, bool>>> _filters;
         private readonly LambdaExpression? _orderByExpression;
         private readonly bool _orderByDescending;
@@ -16,7 +17,7 @@ namespace Frontend.Services
         private readonly List<string> _includeExpressions;
         private int? _skip;
         private int? _take;
-        
+
         // Search properties
         private string? _searchTerm;
         private readonly List<Expression<Func<T, object>>> _searchFields = new();
@@ -33,11 +34,13 @@ namespace Frontend.Services
             int? skip,
             int? take,
             string? searchTerm = null,
-            List<Expression<Func<T, object>>>? searchFields = null)
+            List<Expression<Func<T, object>>>? searchFields = null,
+            BackendType? backendType = null)
         {
             _api = api;
             _entityName = entityName;
             _baseUrl = baseUrl?.TrimEnd('/');
+            _backendType = backendType;
             _filters = filters;
             _orderByExpression = orderByExpression;
             _orderByDescending = orderByDescending;
@@ -58,8 +61,8 @@ namespace Frontend.Services
 
         public SelectQueryBuilder<T, TResult> OrderBy<TProperty>(Expression<Func<T, TProperty>> property, bool descending = false)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, property, 
-                descending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, property,
+                descending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, _searchFields, _backendType);
         }
 
         /// <summary>
@@ -67,8 +70,8 @@ namespace Frontend.Services
         /// </summary>
         public SelectQueryBuilder<T, TResult> Search(string searchTerm)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
-                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, searchTerm, _searchFields);
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression,
+                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, searchTerm, _searchFields, _backendType);
         }
 
         /// <summary>
@@ -77,8 +80,8 @@ namespace Frontend.Services
         public SelectQueryBuilder<T, TResult> InFields(params Expression<Func<T, object>>[] searchFields)
         {
             var newSearchFields = new List<Expression<Func<T, object>>>(searchFields);
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
-                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, newSearchFields);
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression,
+                _orderByDescending, _selectExpression, _includeExpressions, _skip, _take, _searchTerm, newSearchFields, _backendType);
         }
 
         public SelectQueryBuilder<T, TResult> Include<TProperty>(Expression<Func<T, TProperty>> navigationProperty)
@@ -121,7 +124,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/select" : $"/api/{_entityName}/select";
-            var response = await _api.PostAsync<List<TResult>>(endpoint, request);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<List<TResult>>(endpoint, request, _backendType.Value)
+                : await _api.PostAsync<List<TResult>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Select query failed: {response.Message}");
@@ -151,7 +156,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/select-paged" : $"/api/{_entityName}/select-paged";
-            var response = await _api.PostAsync<PagedResult<TResult>>(endpoint, request);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<PagedResult<TResult>>(endpoint, request, _backendType.Value)
+                : await _api.PostAsync<PagedResult<TResult>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged select query failed: {response.Message}");
@@ -316,7 +323,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-select" : $"/api/{_entityName}/search-select";
-            var response = await _api.PostAsync<List<TResult>>(endpoint, searchRequest);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<List<TResult>>(endpoint, searchRequest, _backendType.Value)
+                : await _api.PostAsync<List<TResult>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search select failed: {response.Message}");
@@ -331,7 +340,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-select-paged" : $"/api/{_entityName}/search-select-paged";
-            var response = await _api.PostAsync<PagedResult<TResult>>(endpoint, searchRequest);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<PagedResult<TResult>>(endpoint, searchRequest, _backendType.Value)
+                : await _api.PostAsync<PagedResult<TResult>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search select failed: {response.Message}");

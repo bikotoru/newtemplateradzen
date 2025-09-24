@@ -28,12 +28,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddEFInterceptors(connectionString);
 
 // Register handlers from assemblies (this will scan for all handler classes)
-builder.Services.AddHandlersFromAssemblies(typeof(Program));
+builder.Services.AddHandlersFromAssemblies(typeof(Backend.Utils.EFInterceptors.Core.SaveHandler));
 
 // Register all services using ServiceRegistry
 builder.Services.RegisterAllServices();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<TokenEncryptionService>();
+builder.Services.AddScoped<Backend.Utils.Security.ICurrentUserService, Backend.Utils.Security.CurrentUserService>();
+builder.Services.AddHttpContextAccessor();
 
 // Register Background Services
 builder.Services.AddHostedService<TokenRefreshBackgroundService>();

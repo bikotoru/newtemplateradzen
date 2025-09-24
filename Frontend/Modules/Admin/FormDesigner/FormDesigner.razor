@@ -1,0 +1,137 @@
+@page "/admin/form-designer/formulario/{EntityName}"
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+@using Frontend.Components.Base
+@using Frontend.Components.Forms
+@using Frontend.Modules.Admin.FormDesigner.Components
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("FORMDESIGNER.UPDATE")]
+
+<PageTitle>Diseñador de Formularios</PageTitle>
+
+<div class="form-designer-container">
+    <!-- Header -->
+    <RadzenCard class="rz-mb-4">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <RadzenText TextStyle="TextStyle.H4" class="rz-mb-2">
+                    <RadzenIcon Icon="extension" class="rz-mr-2" />
+                    Diseñador de Formularios
+                </RadzenText>
+                @if (!string.IsNullOrEmpty(currentEntityDisplayName))
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-color-secondary">
+                        Editando: @currentEntityDisplayName
+                    </RadzenText>
+                }
+            </div>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Icon="arrow_back" Text="Volver a Lista"
+                            Variant="Variant.Text"
+                            Click="@GoBackToList" />
+                @if (!string.IsNullOrEmpty(currentEntityName))
+                {
+                    <RadzenButton Icon="preview" Text="Vista Previa"
+                                Variant="Variant.Outlined"
+                                Click="@PreviewForm" />
+                    <RadzenButton Icon="code" Text="Ver JSON"
+                                Variant="Variant.Outlined"
+                                Click="@ShowJsonPreview" />
+                    <RadzenButton Icon="save" Text="Guardar Layout"
+                                Variant="Variant.Filled"
+                                Click="@SaveLayout"
+                                IsBusy="@isSaving" />
+                }
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (string.IsNullOrEmpty(currentEntityName))
+    {
+        <!-- Mensaje de carga o error -->
+        <RadzenCard>
+            <div class="empty-designer">
+                <RadzenIcon Icon="hourglass_empty" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+                <RadzenText TextStyle="TextStyle.H6" class="rz-color-disabled rz-mt-2">
+                    Cargando información de la entidad...
+                </RadzenText>
+            </div>
+        </RadzenCard>
+    }
+    else
+    {
+        <!-- Diseñador Principal -->
+        <div class="designer-layout">
+            <!-- Panel Izquierdo: Campos Disponibles -->
+            <FieldsPanel AvailableFields="@availableFields"
+                        CurrentLayout="@currentLayout"
+                        OnAddFieldClick="@AddFieldToForm"
+                        OnEditFieldClick="@EditCustomField"
+                        OnCreateFieldClick="@ShowCreateFieldDialog" />
+
+            <!-- Vista Previa Central: Formulario Funcional -->
+            <PreviewSection CurrentLayout="@currentLayout"
+                          SelectedSection="@selectedSection"
+                          FieldSizeOptions="@fieldSizeOptions"
+                          OnAddSection="@AddNewSection"
+                          OnSelectSection="@SelectSection"
+                          OnConfigureSection="@ConfigureSection"
+                          OnDeleteSection="@DeleteSection"
+                          OnMoveFieldLeft="@HandleMoveFieldLeft"
+                          OnMoveFieldRight="@HandleMoveFieldRight"
+                          OnConfigureField="@ConfigureField"
+                          OnRemoveField="@HandleRemoveField"
+                          OnFieldSizeChanged="@OnFieldSizeChangedInPreview" />
+
+            <!-- Panel Derecho: Propiedades -->
+            <PropertiesPanel SelectedField="@selectedField"
+                           SelectedSection="@selectedSection"
+                           FieldSizeOptions="@fieldSizeOptions"
+                           GridSizeOptions="@gridSizeOptions"
+                           OnEditOptionsClick="@EditFieldOptions" />
+        </div>
+    }
+</div>
+
+<style>
+.form-designer-container {
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+}
+
+.designer-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 1rem;
+    height: 100%;
+    min-height: 600px;
+}
+
+.empty-designer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+}
+
+@@media (max-width: 1200px) {
+    .designer-layout {
+        grid-template-columns: 250px 1fr 250px;
+    }
+}
+
+@@media (max-width: 768px) {
+    .designer-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+    }
+}
+
+/* Asegurar compatibilidad con variables de tema Radzen */
+.form-designer-container {
+    color: var(--rz-text-color);
+    background-color: var(--rz-body-background-color);
+}
+</style>

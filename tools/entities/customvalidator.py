@@ -20,8 +20,14 @@ import os
 import sys
 import re
 import argparse
+import json
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+try:
+    import pyodbc
+    PYODBC_AVAILABLE = True
+except ImportError:
+    PYODBC_AVAILABLE = False
 
 class EntityMetadataManager:
     def __init__(self):
@@ -29,6 +35,7 @@ class EntityMetadataManager:
         self.shared_models_path = self.root_path / "Shared.Models"
         self.entities_path = self.shared_models_path / "Entities"
         self.attributes_namespace = "Shared.Models.Attributes"
+        self.connection_string = self.get_connection_string()
         
         # Mapeo de atributos disponibles
         self.available_attributes = {
@@ -46,6 +53,16 @@ class EntityMetadataManager:
                 "class_name": "NoSelectAttribute",
                 "usage": "[NoSelect]",
                 "description": "Campo que se devuelve como null en consultas (para datos sensibles)"
+            },
+            "FieldPermission": {
+                "class_name": "FieldPermissionAttribute",
+                "usage": "[FieldPermission(CREATE=\"ENTIDAD.CAMPO.CREATE\", UPDATE=\"ENTIDAD.CAMPO.EDIT\", VIEW=\"ENTIDAD.CAMPO.VIEW\")]",
+                "description": "Campo protegido por permisos granulares para CREATE/UPDATE/VIEW"
+            },
+            "Auditar": {
+                "class_name": "AuditarAttribute",
+                "usage": "[Auditar]",
+                "description": "Campo que será auditado automáticamente - cambios se registran en system_auditoria"
             }
         }
     
@@ -391,22 +408,45 @@ namespace {namespace}
                 print(f"   📝 Campo: {field_name}")
                 
                 for attribute in attributes:
-                    print(f"      🏷️  Agregando [{attribute}]...")
-                    
-                    # Usar lógica existente para cada atributo
-                    metadata_file = self.get_metadata_file_path(entity_name)
-                    
-                    if metadata_file.exists():
-                        success = self.update_metadata_file_single(entity_name, field_name, attribute)
+                    # Manejar FieldPermission de manera especial
+                    if attribute == "FieldPermission":
+                        print(f"      🔐 Configurando FieldPermission interactivamente...")
+                        interactive_result = self.handle_field_permission_interactive(entity_name, field_name)
+                        
+                        if interactive_result:
+                            # Usar el resultado interactivo como atributo
+                            metadata_file = self.get_metadata_file_path(entity_name)
+                            
+                            if metadata_file.exists():
+                                success = self.update_metadata_file_single_custom(entity_name, field_name, interactive_result)
+                            else:
+                                success = self.create_metadata_file_single_custom(entity_name, field_name, interactive_result)
+                            
+                            if success:
+                                success_count += 1
+                                entity_success_count += 1
+                                print(f"         ✅ {field_name}.FieldPermission configurado")
+                            else:
+                                print(f"         ⚠️  {field_name}.FieldPermission no pudo ser configurado")
+                        else:
+                            print(f"         ❌ {field_name}.FieldPermission cancelado")
                     else:
-                        success = self.create_metadata_file_single(entity_name, field_name, attribute)
-                    
-                    if success:
-                        success_count += 1
-                        entity_success_count += 1
-                        print(f"         ✅ {field_name}.{attribute} agregado")
-                    else:
-                        print(f"         ⚠️  {field_name}.{attribute} no agregado (ya existe)")
+                        # Procesar atributos normales
+                        print(f"      🏷️  Agregando [{attribute}]...")
+                        
+                        metadata_file = self.get_metadata_file_path(entity_name)
+                        
+                        if metadata_file.exists():
+                            success = self.update_metadata_file_single(entity_name, field_name, attribute)
+                        else:
+                            success = self.create_metadata_file_single(entity_name, field_name, attribute)
+                        
+                        if success:
+                            success_count += 1
+                            entity_success_count += 1
+                            print(f"         ✅ {field_name}.{attribute} agregado")
+                        else:
+                            print(f"         ⚠️  {field_name}.{attribute} no agregado (ya existe)")
             
             print(f"   📊 Entidad completada: {entity_success_count}/{entity_total}")
             print(f"   📁 Archivo: {self.get_metadata_file_path(entity_name).name}")
@@ -505,6 +545,94 @@ namespace {namespace}
         # Escribir archivo actualizado
         metadata_file.write_text(new_content, encoding='utf-8')
         return True
+
+    def create_metadata_file_single_custom(self, entity_name: str, field_name: str, custom_attribute: str) -> bool:
+        """Crea archivo metadata para un solo campo/atributo con contenido personalizado (sin prints)"""
+        metadata_file = self.get_metadata_file_path(entity_name)
+        
+        if metadata_file.exists():
+            return self.update_metadata_file_single_custom(entity_name, field_name, custom_attribute)
+        
+        # Determinar el namespace basado en la ubicación del archivo
+        entity_file = self.get_entity_file_path(entity_name)
+        namespace = "Shared.Models.Entities"
+        
+        if entity_file.exists():
+            # Leer el archivo de entidad para extraer el namespace
+            entity_content = entity_file.read_text(encoding='utf-8')
+            namespace_match = re.search(r'namespace\s+([\w.]+);', entity_content)
+            if namespace_match:
+                namespace = namespace_match.group(1)
+
+        # Contenido del archivo
+        content = f"""using System;
+using System.ComponentModel.DataAnnotations;
+using {self.attributes_namespace};
+
+namespace {namespace}
+{{
+    [MetadataType(typeof({entity_name}Metadata))]
+    public partial class {entity_name} {{ }}
+
+    public class {entity_name}Metadata
+    {{
+        [{custom_attribute}]
+        public string {field_name};
+    }}
+}}
+"""
+        
+        metadata_file.write_text(content, encoding='utf-8')
+        return True
+
+    def update_metadata_file_single_custom(self, entity_name: str, field_name: str, custom_attribute: str) -> bool:
+        """Actualiza archivo metadata para un solo campo/atributo con contenido personalizado (sin prints)"""
+        metadata_file = self.get_metadata_file_path(entity_name)
+        
+        # Leer contenido actual
+        content = metadata_file.read_text(encoding='utf-8')
+        
+        # Buscar la clase metadata
+        metadata_class_pattern = r'(public\s+class\s+\w+Metadata\s*\{)([^}]*)(^\s*\})'
+        match = re.search(metadata_class_pattern, content, re.MULTILINE | re.DOTALL)
+        
+        if not match:
+            return False
+        
+        class_start = match.group(1)
+        class_content = match.group(2)
+        class_end = match.group(3)
+        
+        # Buscar si el campo ya existe con FieldPermission
+        field_pattern = rf'(\[FieldPermission[^\]]*\]\s*)*\s*public\s+\w+\s+{field_name};'
+        field_match = re.search(field_pattern, class_content)
+        
+        if field_match:
+            # Campo existe con FieldPermission, reemplazarlo
+            existing_field_line = field_match.group(0)
+            new_field_line = f"        [{custom_attribute}]\n        public string {field_name};"
+            new_class_content = class_content.replace(existing_field_line, new_field_line)
+        else:
+            # Verificar si el campo existe sin FieldPermission
+            simple_field_pattern = rf'(\[[^\]]+\]\s*)*\s*public\s+\w+\s+{field_name};'
+            simple_field_match = re.search(simple_field_pattern, class_content)
+            
+            if simple_field_match:
+                # Campo existe sin FieldPermission, agregar el atributo
+                existing_field_line = simple_field_match.group(0)
+                new_field_line = f"        [{custom_attribute}]\n        {existing_field_line.strip()}"
+                new_class_content = class_content.replace(existing_field_line, new_field_line)
+            else:
+                # Campo no existe, agregarlo
+                new_field = f"\n        [{custom_attribute}]\n        public string {field_name};\n"
+                new_class_content = class_content + new_field
+        
+        # Reconstruir contenido completo
+        new_content = content.replace(match.group(0), class_start + new_class_content + class_end)
+        
+        # Escribir archivo actualizado
+        metadata_file.write_text(new_content, encoding='utf-8')
+        return True
     
     def list_entities(self):
         """Lista todas las entidades disponibles"""
@@ -540,6 +668,178 @@ namespace {namespace}
         print(f"\n📊 Total: {len(entity_files)} entidades")
         print("✅ = Tiene archivo .Metadata.cs")
         print("⭕ = Sin archivo .Metadata.cs")
+
+    def get_connection_string(self) -> Optional[str]:
+        """Obtiene connection string desde launchSettings.json"""
+        try:
+            launch_settings_path = self.root_path / "Backend" / "Properties" / "launchSettings.json"
+            if not launch_settings_path.exists():
+                return None
+                
+            with open(launch_settings_path, 'r') as f:
+                launch_settings = json.load(f)
+            
+            # Buscar en el perfil https
+            https_profile = launch_settings.get("profiles", {}).get("https", {})
+            env_vars = https_profile.get("environmentVariables", {})
+            sql_connection = env_vars.get("SQL")
+            
+            return sql_connection
+        except Exception as ex:
+            print(f"⚠️  No se pudo obtener connection string: {ex}")
+            return None
+
+    def check_permission_exists(self, action_key: str) -> bool:
+        """Verifica si un permiso existe en la base de datos"""
+        if not PYODBC_AVAILABLE or not self.connection_string:
+            return False
+            
+        try:
+            with pyodbc.connect(self.connection_string) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM system_permissions WHERE ActionKey = ?", (action_key,))
+                count = cursor.fetchone()[0]
+                return count > 0
+        except Exception as ex:
+            print(f"⚠️  Error verificando permiso {action_key}: {ex}")
+            return False
+
+    def create_permission_in_db(self, action_key: str, nombre: str, grupo: str, descripcion: str) -> bool:
+        """Crea un permiso en la base de datos"""
+        if not PYODBC_AVAILABLE or not self.connection_string:
+            print("⚠️  pyodbc no disponible o sin connection string")
+            return False
+            
+        try:
+            with pyodbc.connect(self.connection_string) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO system_permissions (Nombre, Descripcion, ActionKey, GroupKey, GrupoNombre, Active, FechaCreacion, FechaModificacion)
+                    VALUES (?, ?, ?, ?, ?, 1, GETUTCDATE(), GETUTCDATE())
+                """, (nombre, descripcion, action_key, grupo, grupo))
+                conn.commit()
+                return True
+        except Exception as ex:
+            print(f"❌ Error creando permiso {action_key}: {ex}")
+            return False
+
+    def handle_field_permission_interactive(self, entity_name: str, field_name: str) -> Optional[str]:
+        """Maneja FieldPermission de manera interactiva"""
+        
+        print(f"\n🔐 CONFIGURACIÓN FIELDPERMISSION")
+        print(f"   🏗️  Entidad: {entity_name}")
+        print(f"   📝 Campo: {field_name}")
+        print("-" * 50)
+        
+        # Generar nombres de permisos sugeridos
+        entity_upper = entity_name.upper()
+        field_upper = field_name.upper()
+        
+        permission_suggestions = {
+            "CREATE": f"{entity_upper}.{field_upper}.CREATE",
+            "UPDATE": f"{entity_upper}.{field_upper}.EDIT", 
+            "VIEW": f"{entity_upper}.{field_upper}.VIEW"
+        }
+        
+        print("🎯 Selecciona qué permisos aplicar (puedes elegir múltiples):")
+        print("   1. CREATE - Controla creación de registros con este campo")
+        print("   2. UPDATE - Controla modificación del campo en registros existentes")
+        print("   3. VIEW   - Controla si el campo es visible en consultas")
+        print("   4. Todos los anteriores")
+        print("   0. Cancelar")
+        
+        selected_permissions = {}
+        
+        while True:
+            try:
+                choice = input("\n🔹 Tu elección (1,2,3,4 o 0): ").strip()
+                
+                if choice == "0":
+                    print("❌ Cancelado")
+                    return None
+                elif choice == "1":
+                    selected_permissions["CREATE"] = permission_suggestions["CREATE"]
+                    break
+                elif choice == "2":
+                    selected_permissions["UPDATE"] = permission_suggestions["UPDATE"]
+                    break
+                elif choice == "3":
+                    selected_permissions["VIEW"] = permission_suggestions["VIEW"]
+                    break
+                elif choice == "4":
+                    selected_permissions = permission_suggestions.copy()
+                    break
+                else:
+                    print("❌ Opción inválida. Usa 1, 2, 3, 4 o 0")
+                    continue
+                    
+            except KeyboardInterrupt:
+                print("\n❌ Cancelado por usuario")
+                return None
+        
+        # Mostrar permisos seleccionados
+        print(f"\n📋 Permisos seleccionados:")
+        for perm_type, action_key in selected_permissions.items():
+            print(f"   {perm_type}: {action_key}")
+        
+        # Verificar cuáles existen en BD
+        existing_permissions = {}
+        missing_permissions = {}
+        
+        print(f"\n🔍 Verificando permisos en base de datos...")
+        
+        for perm_type, action_key in selected_permissions.items():
+            if self.check_permission_exists(action_key):
+                existing_permissions[perm_type] = action_key
+                print(f"   ✅ {action_key} existe")
+            else:
+                missing_permissions[perm_type] = action_key
+                print(f"   ❌ {action_key} NO existe")
+        
+        # Crear permisos faltantes si el usuario lo desea
+        if missing_permissions:
+            print(f"\n🔨 Se encontraron {len(missing_permissions)} permisos faltantes.")
+            create_choice = input("¿Deseas crearlos automáticamente? (s/N): ").strip().lower()
+            
+            if create_choice in ['s', 'si', 'sí', 'y', 'yes']:
+                grupo_name = entity_name.upper()
+                
+                for perm_type, action_key in missing_permissions.items():
+                    # Generar nombres descriptivos
+                    action_names = {
+                        "CREATE": f"Crear {field_name} en {entity_name}",
+                        "UPDATE": f"Modificar {field_name} en {entity_name}",
+                        "VIEW": f"Ver {field_name} en {entity_name}"
+                    }
+                    
+                    nombre = action_names.get(perm_type, f"{perm_type} {field_name}")
+                    descripcion = f"Permiso para {perm_type.lower()} el campo {field_name} de la entidad {entity_name}"
+                    
+                    print(f"   🔨 Creando {action_key}...")
+                    if self.create_permission_in_db(action_key, nombre, grupo_name, descripcion):
+                        print(f"   ✅ {action_key} creado exitosamente")
+                        existing_permissions[perm_type] = action_key
+                    else:
+                        print(f"   ❌ Error creando {action_key}")
+            else:
+                print("⚠️  Los permisos faltantes NO fueron creados")
+        
+        # Generar atributo FieldPermission
+        if existing_permissions:
+            parts = []
+            for perm_type in ["CREATE", "UPDATE", "VIEW"]:
+                if perm_type in existing_permissions:
+                    parts.append(f'{perm_type}="{existing_permissions[perm_type]}"')
+            
+            attribute_content = f"FieldPermission({', '.join(parts)})"
+            
+            print(f"\n✅ Atributo generado:")
+            print(f"   [{attribute_content}]")
+            
+            return attribute_content
+        else:
+            print("❌ No se pudieron configurar los permisos")
+            return None
 
 def main():
     parser = argparse.ArgumentParser(

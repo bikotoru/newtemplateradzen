@@ -1,0 +1,100 @@
+@using global::Forms.Models.DTOs
+@using Shared.Models.Responses
+@using System.Text.Json
+@using Frontend.Components.Base
+
+<div class="custom-fields-container">
+    @if (isLoading)
+    {
+        <div class="loading-container" style="text-align: center; padding: 2rem;">
+            <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+            <p style="margin-top: 1rem; color: #666;">Cargando campos personalizados...</p>
+        </div>
+    }
+    else if (formLayout?.Sections.Any() == true)
+    {
+        <RadzenRow Gap="1rem">
+            @foreach (var section in formLayout.Sections.Where(s => s.Fields.Any(f => f.IsSystemField == false)).OrderBy(s => s.SortOrder))
+            {
+                <RadzenColumn Size="@(section.GridSize)">
+                    <EssentialsCard Title="@(section.Title)"
+                                   Icon="@GetSectionIcon(section)"
+                                   IconColor="#0078d4"
+                                   IsCollapsed="@(!section.IsExpanded)"
+                                   ShowEssentials="false">
+
+                        <ChildContent>
+                            @if (!string.IsNullOrEmpty(section.Description))
+                            {
+                                <div style="color: #666; margin-bottom: 1rem; font-size: 0.9rem; padding-bottom: 1rem; border-bottom: 1px solid #f3f4f6;">
+                                    @(section.Description)
+                                </div>
+                            }
+
+                            @{
+                                var customFields = section.Fields.Where(f => f.IsSystemField == false && f.IsVisible).OrderBy(f => f.SortOrder).ToList();
+                                var rows = new List<List<FormFieldLayoutDto>>();
+                                var currentRow = new List<FormFieldLayoutDto>();
+                                var currentRowSize = 0;
+
+                                foreach (var field in customFields)
+                                {
+                                    if (currentRowSize + field.GridSize > 12)
+                                    {
+                                        if (currentRow.Any())
+                                        {
+                                            rows.Add(currentRow);
+                                            currentRow = new List<FormFieldLayoutDto>();
+                                            currentRowSize = 0;
+                                        }
+                                    }
+                                    currentRow.Add(field);
+                                    currentRowSize += field.GridSize;
+                                }
+                                if (currentRow.Any())
+                                {
+                                    rows.Add(currentRow);
+                                }
+                            }
+
+                            @foreach (var row in rows)
+                            {
+                                <RadzenRow Gap="1rem" style="margin-bottom: 1rem;">
+                                    @foreach (var field in row)
+                                    {
+                                        <RadzenColumn Size="@field.GridSize">
+                                            @RenderCustomField(field)
+                                        </RadzenColumn>
+                                    }
+                                </RadzenRow>
+                            }
+                        </ChildContent>
+                    </EssentialsCard>
+                </RadzenColumn>
+            }
+        </RadzenRow>
+
+        @if (ValidationErrors.Any())
+        {
+            <div style="margin-top: 1rem;">
+                <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat">
+                    <strong>Errores de validación:</strong>
+                    <ul style="margin: 0.5rem 0 0 1rem;">
+                        @foreach (var error in ValidationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </RadzenAlert>
+            </div>
+        }
+    }
+    else if (!hasCustomFields)
+    {
+        <div style="text-align: center; padding: 3rem; color: #666;">
+            <RadzenIcon Icon="info" Style="font-size: 3rem; margin-bottom: 1rem; color: #ddd;" />
+            <p>No hay campos personalizados configurados para esta entidad.</p>
+            <p style="font-size: 0.9rem;">Configure campos personalizados en el Diseñador de Formularios.</p>
+        </div>
+    }
+</div>

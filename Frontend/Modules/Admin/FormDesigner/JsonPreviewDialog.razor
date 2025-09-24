@@ -1,0 +1,57 @@
+@using Radzen
+@using Radzen.Blazor
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+
+<RadzenStack>
+    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+        <RadzenIcon Icon="code" class="rz-mr-2" />
+        Configuración JSON del Formulario
+    </RadzenText>
+
+    <RadzenTextArea @bind-Value="@JsonContent"
+                   Rows="20"
+                   Style="font-family: 'Courier New', monospace; font-size: 12px; width: 100%;"
+                   ReadOnly="true" />
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Copiar al Portapapeles"
+                     Icon="content_copy"
+                     Variant="Variant.Outlined"
+                     Click="@CopyJsonToClipboard" />
+        <RadzenButton Text="Cerrar"
+                     Icon="close"
+                     Variant="Variant.Text"
+                     Click="@(() => DialogService.Close())" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public string JsonContent { get; set; } = "";
+    [Inject] public DialogService DialogService { get; set; } = default!;
+
+    private async Task CopyJsonToClipboard()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", JsonContent);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copiado",
+                Detail = "JSON copiado al portapapeles",
+                Duration = 2000
+            });
+        }
+        catch (Exception)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Información",
+                Detail = "Selecciona todo el texto y cópialo manualmente (Ctrl+A, Ctrl+C)",
+                Duration = 4000
+            });
+        }
+    }
+}

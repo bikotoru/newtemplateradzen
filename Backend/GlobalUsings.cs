@@ -24,3 +24,4 @@ global using Shared.Models.QueryModels;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Logging;
+global using Shared.Models.Entities.Views;

@@ -1,0 +1,105 @@
+@using Radzen.Blazor
+
+<RadzenRow>
+    <RadzenColumn Size="12">
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6">
+                    <RadzenIcon Icon="@(IsReadOnly ? "visibility" : "table_view")" class="rz-me-2" />
+                    1. @(IsReadOnly ? "Entidad Seleccionada (Solo Lectura)" : "Seleccionar Entidad")
+                </RadzenText>
+
+                @if (IsReadOnly)
+                {
+                    <!-- Read-only view -->
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" class="rz-p-3" Style="background-color: var(--rz-background-color); border-radius: 8px;">
+                        <div>
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-secondary">Entidad:</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1">@SelectedEntity?.DisplayName</RadzenText>
+                        </div>
+                        <div>
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-secondary">Campos Seleccionados:</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1">@GetSelectedFieldsCount() campos</RadzenText>
+                        </div>
+                    </RadzenStack>
+                    
+                    @if (SelectedFields.Any())
+                    {
+                        <RadzenStack Gap="0.5rem">
+                            <RadzenText TextStyle="TextStyle.Subtitle2">Campos a mostrar:</RadzenText>
+                            <div class="rz-display-flex rz-gap-1 rz-flex-wrap">
+                                @foreach (var field in SelectedFields)
+                                {
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Primary" Text="@field.DisplayName" />
+                                }
+                            </div>
+                        </RadzenStack>
+                    }
+                }
+                else
+                {
+                    <!-- Editable view -->
+                    <RadzenRow>
+                        <RadzenColumn Size="6">
+                            <RadzenDropDown @bind-Value="SelectedEntityName"
+                                          Data="@AvailableEntities"
+                                          TextProperty="DisplayName"
+                                          ValueProperty="EntityName"
+                                          Placeholder="Selecciona una entidad..."
+                                          Change="@OnEntityChanged"
+                                          AllowClear="true"
+                                          Style="width: 100%;" />
+                        </RadzenColumn>
+                        <RadzenColumn Size="6">
+                            @if (!string.IsNullOrEmpty(SelectedEntityName))
+                            {
+                                <RadzenButton Text="@($"{GetSelectedFieldsCount()} campos seleccionados - Configurar")"
+                                            Icon="settings"
+                                            ButtonStyle="ButtonStyle.Info"
+                                            Size="ButtonSize.Small"
+                                            Click="@OnConfigureFieldsClick" />
+                            }
+                        </RadzenColumn>
+                    </RadzenRow>
+                }
+
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+    [Parameter] public List<AvailableEntityDto> AvailableEntities { get; set; } = new();
+    [Parameter] public string? SelectedEntityName { get; set; }
+    [Parameter] public AvailableEntityDto? SelectedEntity { get; set; }
+    [Parameter] public List<EntityFieldDefinition> EntityFields { get; set; } = new();
+    [Parameter] public List<EntityFieldDefinition> SelectedFields { get; set; } = new();
+    [Parameter] public bool IsReadOnly { get; set; } = false;
+
+    [Parameter] public EventCallback<string?> SelectedEntityNameChanged { get; set; }
+    [Parameter] public EventCallback OnEntitySelectionChanged { get; set; }
+    [Parameter] public EventCallback OnConfigureFields { get; set; }
+
+    private async Task OnEntityChanged()
+    {
+        await SelectedEntityNameChanged.InvokeAsync(SelectedEntityName);
+        await OnEntitySelectionChanged.InvokeAsync();
+    }
+
+    private async Task OnConfigureFieldsClick()
+    {
+        await OnConfigureFields.InvokeAsync();
+    }
+
+    private int GetSelectedFieldsCount()
+    {
+        // Si hay campos seleccionados explícitamente, usar esos
+        if (SelectedFields.Any())
+        {
+            return SelectedFields.Count;
+        }
+
+        // Si no hay selección, usar los campos por defecto
+        return EntityFields.Where(f => f.IsVisible && f.IsSelectedByDefault).Count();
+    }
+}

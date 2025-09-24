@@ -1,0 +1,490 @@
+@page "/admin/custom-fields/designer"
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+@using Forms.Models.Configurations
+
+<div style="height: 100%; overflow-y: auto;">
+
+    @if (isLoading)
+    {
+        <div class="rz-text-align-center rz-p-12">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <RadzenText TextStyle="TextStyle.H6" class="rz-mt-4">Cargando campo personalizado...</RadzenText>
+        </div>
+    }
+    else
+    {
+        <RadzenTabs @bind-SelectedIndex="selectedTabIndex" class="rz-mt-4">
+        <Tabs>
+            <!-- Paso 1: Información Básica -->
+            <RadzenTabsItem Text="📋 Información Básica">
+                <div class="rz-p-2">
+                    <RadzenRow Gap="1rem">
+                        <RadzenColumn Size="12">
+                            <RadzenCard class="rz-p-3">
+                                <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-mb-3">
+                                    Configuración del Campo
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.75rem">
+                                    <RadzenFormField Text="Nombre del Campo" Variant="Variant.Outlined">
+                                        <ChildContent>
+                                            <RadzenTextBox @bind-Value="currentField.FieldName"
+                                                         @oninput="OnFieldNameChanged"
+                                                         Placeholder="ej: TelefonoEmergencia"
+                                                         Style="width: 100%;"
+                                                         Disabled="@isEditMode" />
+                                        </ChildContent>
+                                        <Helper>
+                                            @if (isEditMode)
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-warning">
+                                                    <RadzenIcon Icon="lock" Style="font-size: 14px;" />
+                                                    El nombre del campo no se puede modificar
+                                                </RadzenText>
+                                            }
+                                            else
+                                            {
+                                                <RadzenText TextStyle="TextStyle.Caption" class="rz-color-info">
+                                                    Se guardará como: @(GetFullFieldName())
+                                                </RadzenText>
+                                            }
+                                        </Helper>
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Nombre para Mostrar" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="currentField.DisplayName"
+                                                     Placeholder="ej: Teléfono de Emergencia"
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Descripción (Opcional)" Variant="Variant.Outlined">
+                                        <RadzenTextArea @bind-Value="currentField.Description"
+                                                      Placeholder="Descripción del campo..."
+                                                      Rows="3"
+                                                      Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Orden" Variant="Variant.Outlined">
+                                        <RadzenNumeric @bind-Value="currentField.SortOrder"
+                                                     TValue="int"
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </div>
+            </RadzenTabsItem>
+
+            <!-- Paso 2: Tipo de Campo -->
+            <RadzenTabsItem Text="🎨 Tipo de Campo">
+                <div class="rz-p-4">
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-mb-4">
+                        @if (isEditMode)
+                        {
+                            <text>Tipo de Campo (No Modificable)</text>
+                        }
+                        else
+                        {
+                            <text>Selecciona el Tipo de Campo</text>
+                        }
+                    </RadzenText>
+
+                    @if (isEditMode)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning" class="rz-mb-4">
+                            <RadzenIcon Icon="lock" class="rz-mr-2" />
+                            El tipo de campo no se puede modificar una vez creado
+                        </RadzenAlert>
+                    }
+
+                    <RadzenRow Gap="1rem">
+                        @foreach (var fieldType in availableFieldTypes)
+                        {
+                            <RadzenColumn Size="4" SizeMD="3" SizeLG="2">
+                                <RadzenCard class="@($"{GetFieldTypeCardClass(fieldType.Value)} {(isEditMode ? "disabled" : "")}")"
+                                          Style="@($"{(isEditMode ? "cursor: not-allowed; opacity: 0.6;" : "cursor: pointer;")} transition: all 0.3s ease;")"
+                                          @onclick="() => { if (!isEditMode) SelectFieldType(fieldType.Value); }">
+
+                                    <div class="rz-text-align-center rz-p-3">
+                                        <RadzenIcon Icon="@fieldType.Icon"
+                                                  Style="@GetFieldTypeIconStyle(fieldType.Value)" />
+                                        <RadzenText TextStyle="TextStyle.Body2" class="rz-mt-2 rz-mb-1">
+                                            @fieldType.DisplayName
+                                        </RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption">
+                                            @fieldType.Description
+                                        </RadzenText>
+                                    </div>
+                                </RadzenCard>
+                            </RadzenColumn>
+                        }
+                    </RadzenRow>
+
+                </div>
+            </RadzenTabsItem>
+
+            <!-- Paso 3: Configuración Avanzada -->
+            <RadzenTabsItem Text="⚙️ Configuración">
+                <div class="rz-p-4">
+                    <RadzenRow Gap="2rem">
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    Validaciones
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <RadzenCheckBox @bind-Value="currentField.IsRequired" Name="isRequired" />
+                                    <RadzenLabel Text="Campo Requerido" Component="isRequired" />
+
+                                    @if (IsTextType())
+                                    {
+                                        <RadzenFormField Text="Longitud Mínima" Variant="Variant.Outlined">
+                                            <RadzenNumeric @bind-Value="validationConfig.MinLength" TValue="int?" Style="width: 100%;" />
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Longitud Máxima" Variant="Variant.Outlined">
+                                            <RadzenNumeric @bind-Value="validationConfig.MaxLength" TValue="int?" Style="width: 100%;" />
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Patrón (Regex)" Variant="Variant.Outlined">
+                                            <RadzenTextBox @bind-Value="validationConfig.Pattern"
+                                                         Placeholder="^[A-Za-z]+$"
+                                                         Style="width: 100%;" />
+                                        </RadzenFormField>
+                                    }
+
+                                    @if (IsNumericType())
+                                    {
+                                        <RadzenFormField Text="Valor Mínimo" Variant="Variant.Outlined">
+                                            <RadzenNumeric @bind-Value="validationConfig.Min" TValue="decimal?" Style="width: 100%;" />
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Valor Máximo" Variant="Variant.Outlined">
+                                            <RadzenNumeric @bind-Value="validationConfig.Max" TValue="decimal?" Style="width: 100%;" />
+                                        </RadzenFormField>
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    Configuración de UI
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <RadzenFormField Text="Placeholder" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="uiConfig.Placeholder"
+                                                     Placeholder="Texto de ayuda..."
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Texto de Ayuda" Variant="Variant.Outlined">
+                                        <RadzenTextBox @bind-Value="uiConfig.HelpText"
+                                                     Placeholder="Instrucciones para el usuario..."
+                                                     Style="width: 100%;" />
+                                    </RadzenFormField>
+
+                                    @if (HasSelectOptions())
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mt-3">
+                                            Opciones
+                                        </RadzenText>
+
+                                        <RadzenButton Text="Agregar Opción"
+                                                    Icon="add"
+                                                    ButtonStyle="ButtonStyle.Secondary"
+                                                    Size="ButtonSize.Small"
+                                                    Click="AddSelectOption" />
+
+                                        @if (uiConfig.Options?.Any() == true)
+                                        {
+                                            @foreach (var option in uiConfig.Options)
+                                            {
+                                                <RadzenCard class="rz-p-2">
+                                                    <RadzenRow>
+                                                        <RadzenColumn Size="5">
+                                                            <RadzenTextBox @bind-Value="option.Value"
+                                                                         Placeholder="Valor"
+                                                                         Style="width: 100%;" />
+                                                        </RadzenColumn>
+                                                        <RadzenColumn Size="5">
+                                                            <RadzenTextBox @bind-Value="option.Label"
+                                                                         Placeholder="Etiqueta"
+                                                                         Style="width: 100%;" />
+                                                        </RadzenColumn>
+                                                        <RadzenColumn Size="2">
+                                                            <RadzenButton Icon="delete"
+                                                                        ButtonStyle="ButtonStyle.Danger"
+                                                                        Variant="Variant.Text"
+                                                                        Size="ButtonSize.Small"
+                                                                        Click="() => RemoveSelectOption(option)" />
+                                                        </RadzenColumn>
+                                                    </RadzenRow>
+                                                </RadzenCard>
+                                            }
+                                        }
+                                    }
+
+                                    @if (HasReferenceConfig())
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mt-3">
+                                            Configuración de Referencia
+                                        </RadzenText>
+
+                                        <RadzenFormField Text="Entidad Objetivo" Variant="Variant.Outlined">
+                                            @if (entitiesLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="rz-mt-1">Cargando entidades...</RadzenText>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().TargetEntity"
+                                                              Data="@availableEntities"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione entidad..."
+                                                              Style="width: 100%;"
+                                                              Change="@(async (object value) => await OnTargetEntityChanged(value?.ToString() ?? ""))">
+                                                    <Template Context="entity">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            @if (!string.IsNullOrEmpty(entity.Icon))
+                                                            {
+                                                                <RadzenIcon Icon="@entity.Icon" Style="font-size: 16px;" />
+                                                            }
+                                                            <div>
+                                                                <div>@entity.Text</div>
+                                                                @if (!string.IsNullOrEmpty(entity.Description))
+                                                                {
+                                                                    <div style="font-size: 0.8rem; color: var(--rz-text-disabled-color);">@entity.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Campo de Visualización" Variant="Variant.Outlined">
+                                            @if (fieldsLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                    <RadzenText TextStyle="TextStyle.Caption" class="rz-mt-1">Cargando campos...</RadzenText>
+                                                </div>
+                                            }
+                                            else if (availableDisplayFields.Any())
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().DisplayProperty"
+                                                              Data="@availableDisplayFields"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione campo para mostrar..."
+                                                              Style="width: 100%;">
+                                                    <Template Context="field">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <RadzenIcon Icon="@(field.FieldType == "custom" ? "extension" : "table_chart")" Style="font-size: 14px;" />
+                                                            <div>
+                                                                <div>@field.Text</div>
+                                                                @if (!string.IsNullOrEmpty(field.Description))
+                                                                {
+                                                                    <div style="font-size: 0.75rem; color: var(--rz-text-disabled-color);">@field.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                            else
+                                            {
+                                                <RadzenTextBox @bind-Value="@GetReferenceConfig().DisplayProperty"
+                                                             Placeholder="ej: Name, DisplayName"
+                                                             Style="width: 100%;" />
+                                            }
+                                        </RadzenFormField>
+
+                                        <RadzenFormField Text="Campo de Valor" Variant="Variant.Outlined">
+                                            @if (fieldsLoading)
+                                            {
+                                                <div class="rz-text-align-center rz-p-2">
+                                                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                                                </div>
+                                            }
+                                            else if (availableValueFields.Any())
+                                            {
+                                                <RadzenDropDown @bind-Value="@GetReferenceConfig().ValueProperty"
+                                                              Data="@availableValueFields"
+                                                              TextProperty="Text"
+                                                              ValueProperty="Value"
+                                                              Placeholder="Seleccione campo de valor..."
+                                                              Style="width: 100%;">
+                                                    <Template Context="field">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <RadzenIcon Icon="@(field.Value == "Id" ? "vpn_key" : "table_chart")" Style="font-size: 14px;" />
+                                                            <div>
+                                                                <div>@field.Text</div>
+                                                                @if (!string.IsNullOrEmpty(field.Description))
+                                                                {
+                                                                    <div style="font-size: 0.75rem; color: var(--rz-text-disabled-color);">@field.Description</div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDropDown>
+                                            }
+                                            else
+                                            {
+                                                <RadzenTextBox @bind-Value="@GetReferenceConfig().ValueProperty"
+                                                             Placeholder="ej: Id"
+                                                             Style="width: 100%;" />
+                                            }
+                                        </RadzenFormField>
+
+                                        <RadzenRow Gap="1rem">
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowMultiple" Name="allowMultiple" />
+                                                <RadzenLabel Text="Selección múltiple" Component="allowMultiple" />
+                                            </RadzenColumn>
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowCreate" Name="allowCreate" />
+                                                <RadzenLabel Text="Permitir crear" Component="allowCreate" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+
+                                        <RadzenRow Gap="1rem">
+                                            <RadzenColumn Size="6">
+                                                <RadzenCheckBox @bind-Value="@GetReferenceConfig().AllowClear" Name="allowClear" />
+                                                <RadzenLabel Text="Permitir limpiar" Component="allowClear" />
+                                            </RadzenColumn>
+                                        </RadzenRow>
+
+                                       
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </div>
+            </RadzenTabsItem>
+
+            <!-- Paso 4: Confirmar -->
+            <RadzenTabsItem Text="✅ Confirmar">
+                <div class="rz-p-4">
+                    <RadzenRow Gap="2rem">
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    Resumen del Campo Personalizado
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.5rem">
+                                    <RadzenText><strong>Entidad:</strong> @currentField.EntityName</RadzenText>
+                                    <RadzenText><strong>Nombre:</strong> @currentField.FieldName</RadzenText>
+                                    <RadzenText><strong>Título:</strong> @currentField.DisplayName</RadzenText>
+                                    <RadzenText><strong>Tipo:</strong> @GetFieldTypeDisplay()</RadzenText>
+                                    <RadzenText><strong>Requerido:</strong> @(currentField.IsRequired ? "Sí" : "No")</RadzenText>
+                                    @if (!string.IsNullOrEmpty(currentField.Description))
+                                    {
+                                        <RadzenText><strong>Descripción:</strong> @currentField.Description</RadzenText>
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="6">
+                            <RadzenCard>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+                                    🔐 Permisos
+                                </RadzenText>
+
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="1rem">
+                                    <RadzenCheckBox @bind-Value="createPermissions" Name="createPermissions" />
+                                    <RadzenLabel Text="Crear permisos automáticos para este campo" Component="createPermissions" />
+
+                                    @if (createPermissions)
+                                    {
+                                        <RadzenAlert AlertStyle="AlertStyle.Info" class="rz-mt-2">
+                                            <RadzenIcon Icon="info" class="rz-mr-2" />
+                                            Se crearán permisos automáticamente para VIEW, CREATE y UPDATE
+                                        </RadzenAlert>
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-mt-4">
+                        <RadzenButton Text="Cancelar"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="Cancel" />
+                        <RadzenButton Text="@(isEditMode ? "Actualizar Campo" : "Crear Campo")"
+                                    ButtonStyle="ButtonStyle.Primary"
+                                    Icon="save"
+                                    Click="CreateField"
+                                    IsBusy="isCreating" />
+                    </RadzenStack>
+                </div>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+
+    <!-- Navegación entre pasos -->
+    <RadzenCard class="rz-mt-4">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+            <RadzenButton Text="Anterior"
+                        ButtonStyle="ButtonStyle.Light"
+                        Icon="navigate_before"
+                        Disabled="selectedTabIndex == 0"
+                        Click="PreviousStep" />
+
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-align-self-center">
+                Paso @(selectedTabIndex + 1) de 4
+            </RadzenText>
+
+            <RadzenButton Text="Siguiente"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Icon="navigate_next"
+                        Disabled="selectedTabIndex == 3 || !CanContinue()"
+                        Click="NextStep" />
+        </RadzenStack>
+    </RadzenCard>
+    }
+</div>
+
+<style>
+.field-type-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.field-type-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.field-type-card.selected {
+    border-color: var(--rz-primary);
+    background: var(--rz-primary-lighter);
+}
+
+.field-type-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.field-type-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.preview-container {
+    min-height: 120px;
+}
+</style>

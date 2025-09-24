@@ -66,6 +66,7 @@ Perfecto, voy a crear un sistema de {TIPO_SISTEMA} con {NUMERO} entidades:
 - {NUMERO} formularios en Frontend/
 - {NUMERO} listas/grillas en Frontend/
 - Permisos del sistema automáticos para cada entidad
+- Registros automáticos en system_form_entities para FormDesigner
 
 ⚡ **ORDEN DE CREACIÓN:**
 {FASES_ORDENADAS}
@@ -105,13 +106,13 @@ def crear_archivos_implementacion(fases):
 
 ```bash
 # 1. {ENTIDAD1} (Entidad normal - completa)
-python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --auto-register --system-entity --icon "{ICON}" --category "{CATEGORIA}" --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
 
 # 2. {ENTIDAD2} (Entidad normal - completa)
-python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --auto-register --system-entity --icon "{ICON}" --category "{CATEGORIA}" --fields {CAMPOS} --form-fields {FORM} --grid-fields {GRID} --search-fields "{SEARCH}"
 
 # 3. {ENTIDAD_CON_FK} (Entidad con relaciones - completa)
-python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
+python3 tools/forms/entity-generator.py --entity "{NOMBRE}" --plural "{PLURAL}" --module "{MODULO}" --target todo --auto-register --system-entity --icon "{ICON}" --category "{CATEGORIA}" --fields {CAMPOS} --fk {FK} --form-fields {FORM} --grid-fields {GRID} --lookups {LOOKUPS} --search-fields "{SEARCH}"
 
 # 4. {TABLA_NN} (Relación N:N - SINTAXIS ELEGANTE)
 python3 tools/forms/entity-generator.py --source {tabla1} --to {tabla2} --module "{MODULO}" --target db --fields {CAMPOS} --fk {FK}
@@ -303,10 +304,10 @@ def es_previsional(nombre):
 Perfecto, voy a crear un sistema de ventas con 5 entidades:
 
 📋 **ENTIDADES A CREAR:**
-• **Marca** - campos: nombre, codigointerno (Módulo: Catalogo)
-• **Categoria** - campos: nombre, codigointerno (Módulo: Catalogo)  
-• **Producto** - campos: nombre, codigosku, precioventa, preciocompra + relaciones → Marca, Categoria (Módulo: Catalogo)
-• **Venta** - campos: numventa (autoincremental), montototal (Módulo: Ventas)
+• **Marca** - campos: nombre, codigointerno (Módulo: Catalogo) 🏷️ inventory
+• **Categoria** - campos: nombre, codigointerno (Módulo: Catalogo) 📂 category
+• **Producto** - campos: nombre, codigosku, precioventa, preciocompra + relaciones → Marca, Categoria (Módulo: Catalogo) 📦 shopping_bag
+• **Venta** - campos: numventa (autoincremental), montototal (Módulo: Ventas) 💰 point_of_sale
 • **NNVenta_Productos** - tabla N:N con cantidad, precioneto, descuentopeso, etc. (Módulo: Ventas)
   ⚠️ *Solo tabla BD, sin interfaz*
 
@@ -315,6 +316,7 @@ Perfecto, voy a crear un sistema de ventas con 5 entidades:
 - 4 controladores y servicios en Backend/ (Marca, Categoria, Producto, Venta)
 - 12 archivos de interfaz en Frontend/ (4 entidades × 3 componentes c/u)
 - 24 permisos del sistema automáticos (6 por cada entidad normal)
+- 4 registros automáticos en system_form_entities para FormDesigner
 
 ⚡ **ORDEN DE CREACIÓN:**
 **Fase 1 - Sistema de Ventas**: Marca, Categoria, Producto, Venta, NNVenta_Productos
@@ -343,6 +345,7 @@ Perfecto, voy a crear un sistema de facturación con 2 entidades:
 - 2 controladores y servicios en Backend/
 - 6 archivos de interfaz en Frontend/
 - 12 permisos del sistema automáticos
+- 2 registros automáticos en system_form_entities para FormDesigner
 
 ⚡ **ORDEN DE CREACIÓN:**
 **Fase 1 - Sistema Facturación**: Cliente, Factura

@@ -1,0 +1,125 @@
+@page "/advanced-query"
+@using Radzen.Blazor
+@using System.Text.Json
+@using Frontend.Pages.AdvancedQuery.Components
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+
+<PageTitle>Consulta Avanzada</PageTitle>
+
+<PageWithCommandBar BackPath="/advanced-query/saved-queries/list"
+                     ShowSave="@(CanSave && !IsReadOnlyMode)"
+                     OnSaveClick="@SaveForm">
+    <RadzenStack Gap="1rem">
+        <!-- Header Section -->
+        @if (IsPlayMode && currentSavedQuery != null)
+        {
+            <RadzenCard>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                        <RadzenIcon Icon="play_arrow" Style="font-size: 2rem; color: var(--rz-success);" />
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenText TextStyle="TextStyle.H4" style="margin: 0;">Vista Previa: @currentSavedQuery.Name</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body2" style="margin: 0; color: var(--rz-text-secondary-color);">
+                                Modo solo lectura - Entidad: @currentSavedQuery.EntityName
+                            </RadzenText>
+                        </RadzenStack>
+                    </RadzenStack>
+                    
+                    <!-- Botones de Acción -->
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Text="Editar Búsqueda" 
+                                      Icon="edit" 
+                                      ButtonStyle="ButtonStyle.Primary" 
+                                      Size="ButtonSize.Medium"
+                                      Click="@SwitchToEditMode"
+                                      title="Cambiar a modo edición" />
+                        
+                        @if (currentSavedQuery?.CanShare == true)
+                        {
+                            <RadzenButton Text="Compartir" 
+                                          Icon="share" 
+                                          ButtonStyle="ButtonStyle.Secondary" 
+                                          Size="ButtonSize.Medium"
+                                          Click="@OpenShareModal"
+                                          title="Compartir esta búsqueda" />
+                        }
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <HeaderSection />
+        }
+
+        <!-- Entity Selector -->
+        <EntitySelector AvailableEntities="@availableEntities"
+                       @bind-SelectedEntityName="@selectedEntityName"
+                       SelectedEntity="@selectedEntity"
+                       EntityFields="@entityFields"
+                       SelectedFields="@selectedFields"
+                       OnEntitySelectionChanged="@OnEntitySelected"
+                       OnConfigureFields="@OpenFieldSelectionDialog"
+                       IsReadOnly="@IsReadOnlyMode" />
+
+        <!-- Query Name Input -->
+        @if (!string.IsNullOrEmpty(selectedEntityName) && !IsPlayMode)
+        {
+            <RadzenCard Style="margin-bottom: 1rem;">
+                <RadzenStack Gap="0.5rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                            Nombre de la Búsqueda
+                        </RadzenText>
+                        
+                        @if (currentSavedQuery?.CanShare == true)
+                        {
+                            <RadzenButton Text="Compartir" 
+                                          Icon="share" 
+                                          ButtonStyle="ButtonStyle.Secondary" 
+                                          Size="ButtonSize.Small"
+                                          Click="@OpenShareModal"
+                                          title="Compartir esta búsqueda" />
+                        }
+                    </RadzenStack>
+                    
+                    <RadzenTextBox @bind-Value="@queryName" 
+                                   Placeholder="Ingrese un nombre para guardar esta búsqueda..." 
+                                   Style="width: 100%;" />
+                </RadzenStack>
+            </RadzenCard>
+        }
+
+        <!-- Filter Configuration -->
+        <FilterConfiguration @ref="filterConfigurationRef"
+                            SelectedEntityName="@selectedEntityName"
+                            EntityFields="@entityFields"
+                            IsLoading="@isLoading"
+                            @bind-LogicalOperator="@logicalOperator"
+                            @bind-TakeLimit="@takeLimit"
+                            OnExecuteQuery="@ExecuteQuery"
+                            OnClearFilters="@ClearFilters"
+                            OnDataFilterReady="@OnDataFilterReady"
+                            IsReadOnly="@IsReadOnlyMode"
+                            ReadOnlyFilters="@readOnlyFilters" />
+
+        <!-- Query Results -->
+        <QueryResults Results="@queryResults"
+                      DisplayFields="@GetDisplayFields()"
+                      EntityName="@selectedEntityName"
+                      LastQueryRequest="@lastExecutedRequest"
+                      BackendApi="@selectedEntity?.BackendApi"
+                      OnViewDetails="@ViewDetails" />
+
+        <!-- Loading Indicator -->
+        <LoadingIndicator IsLoading="@isLoading" LoadingText="Ejecutando consulta..." />
+    </RadzenStack>
+</PageWithCommandBar>
+
+<!-- Share Modal -->
+@if (showShareModal && currentSavedQuery != null)
+{
+    <ShareQueryModal SavedQuery="@currentSavedQuery" 
+                     OnClose="@OnShareModalClosed" 
+                     OnShared="@OnQueryShared" />
+}

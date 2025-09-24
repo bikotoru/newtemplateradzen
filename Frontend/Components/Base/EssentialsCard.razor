@@ -1,18 +1,58 @@
 @inject IJSRuntime JSRuntime
-    <div class="essentials-card">
-        <div class="card-header" @onclick="ToggleCollapsed">
-            <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
-            @if (!string.IsNullOrEmpty(Icon))
-            {
-                <RadzenIcon Icon="@Icon" Style="@($"margin-right: 8px; font-size: 14px;" + (!string.IsNullOrEmpty(IconColor) ? $" color: {IconColor};" : ""))" />
-            }
-            <span class="header-title">@Title</span>
-            @if (ShowHeaderTemplate && HeaderTemplate != null)
-            {
-                <div class="header-template">
-                    @HeaderTemplate
-                </div>
-            }
+    <div class="essentials-card @(IsSelected ? "card-selected" : "")">
+        <div class="card-header @(IsSelected ? "selected" : "")" @onclick="HandleHeaderClick">
+            <div class="header-left" @onclick="ToggleCollapsed" @onclick:stopPropagation="true">
+                <span class="header-icon @(_isCollapsed ? "collapsed" : "")">@(_isCollapsed ? "▶" : "▼")</span>
+                @if (!string.IsNullOrEmpty(Icon))
+                {
+                    <RadzenIcon Icon="@Icon" Style="@($"margin-right: 8px; font-size: 14px;" + (!string.IsNullOrEmpty(IconColor) ? $" color: {IconColor};" : ""))" />
+                }
+                <span class="header-title">@Title</span>
+            </div>
+
+            <div class="header-right">
+                @if (ShowHeaderTemplate && HeaderTemplate != null)
+                {
+                    <div class="header-template">
+                        @HeaderTemplate
+                    </div>
+                }
+
+                @if (ShowActionButtons)
+                {
+                    <div class="action-buttons">
+                        @if (ShowSelectButton)
+                        {
+                            <RadzenButton Icon="@(IsSelected ? "check_circle" : "radio_button_unchecked")"
+                                        Size="ButtonSize.ExtraSmall"
+                                        Variant="@(IsSelected ? Variant.Filled : Variant.Text)"
+                                        ButtonStyle="@(IsSelected ? ButtonStyle.Success : ButtonStyle.Base)"
+                                        Click="HandleSelectClick"
+                                        Title="@(IsSelected ? "Seleccionado" : "Seleccionar")"
+                                        @onclick:stopPropagation="true" />
+                        }
+                        @if (ShowSettingsButton)
+                        {
+                            <RadzenButton Icon="settings"
+                                        Size="ButtonSize.ExtraSmall"
+                                        Variant="Variant.Text"
+                                        Click="HandleSettingsClick"
+                                        Title="Configurar"
+                                        @onclick:stopPropagation="true" />
+                        }
+                        @if (ShowDeleteButton)
+                        {
+                            <RadzenButton Icon="delete"
+                                        Size="ButtonSize.ExtraSmall"
+                                        Variant="Variant.Text"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Click="HandleDeleteClick"
+                                        Title="Eliminar"
+                                        @onclick:stopPropagation="true" />
+                        }
+                    </div>
+                }
+            </div>
         </div>
 
         <div class="card-content @(_isCollapsed ? "collapsed" : "")">
@@ -45,6 +85,18 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback<bool> OnCollapsedChanged { get; set; }
 
+    // Nuevos parámetros para botones de acción
+    [Parameter] public bool ShowActionButtons { get; set; } = false;
+    [Parameter] public bool ShowSelectButton { get; set; } = false;
+    [Parameter] public bool ShowSettingsButton { get; set; } = false;
+    [Parameter] public bool ShowDeleteButton { get; set; } = false;
+    [Parameter] public bool IsSelected { get; set; } = false;
+    [Parameter] public bool IsSelectable { get; set; } = false;
+    [Parameter] public EventCallback OnSelectClick { get; set; }
+    [Parameter] public EventCallback OnSettingsClick { get; set; }
+    [Parameter] public EventCallback OnDeleteClick { get; set; }
+    [Parameter] public EventCallback OnCardClick { get; set; }
+
     private bool _isCollapsed;
 
     protected override void OnInitialized()
@@ -60,6 +112,38 @@
             await OnCollapsedChanged.InvokeAsync(_isCollapsed);
         }
     }
+
+    private async Task HandleSelectClick()
+    {
+        if (OnSelectClick.HasDelegate)
+        {
+            await OnSelectClick.InvokeAsync();
+        }
+    }
+
+    private async Task HandleSettingsClick()
+    {
+        if (OnSettingsClick.HasDelegate)
+        {
+            await OnSettingsClick.InvokeAsync();
+        }
+    }
+
+    private async Task HandleDeleteClick()
+    {
+        if (OnDeleteClick.HasDelegate)
+        {
+            await OnDeleteClick.InvokeAsync();
+        }
+    }
+
+    private async Task HandleHeaderClick()
+    {
+        if (IsSelectable && OnCardClick.HasDelegate)
+        {
+            await OnCardClick.InvokeAsync();
+        }
+    }
 }
 
 <style>
@@ -69,6 +153,13 @@
         border-radius: 2px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         margin-bottom: 16px;
+        transition: all 0.2s ease;
+    }
+
+    .essentials-card.card-selected {
+        border-color: #0078d4;
+        box-shadow: 0 0 0 1px #0078d4, 0 8px 24px rgba(0, 120, 212, 0.15);
+        transform: translateY(-2px);
     }
 
     body.dark-theme .essentials-card,
@@ -78,21 +169,44 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
+    body.dark-theme .essentials-card.card-selected,
+    [data-theme="dark"] .essentials-card.card-selected {
+        border-color: #106ebe;
+        box-shadow: 0 0 0 1px #106ebe, 0 8px 24px rgba(16, 110, 190, 0.2);
+        transform: translateY(-2px);
+    }
+
     .card-header {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         padding: 12px 16px;
         background: #f8f9fa;
         border-bottom: 1px solid #e1e1e1;
         cursor: pointer;
         user-select: none;
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
+    }
+
+    .card-header.selected {
+        background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%);
+        border-color: #0078d4;
+        box-shadow: 0 0 0 2px #0078d4, 0 4px 12px rgba(0, 120, 212, 0.2);
+        transform: translateY(-1px);
     }
 
     body.dark-theme .card-header,
     [data-theme="dark"] .card-header {
         background: #2d2d2d;
         border-bottom-color: #3c3c3c;
+    }
+
+    body.dark-theme .card-header.selected,
+    [data-theme="dark"] .card-header.selected {
+        background: linear-gradient(135deg, #1a3a5c 0%, #0d2d4a 100%);
+        border-color: #106ebe;
+        box-shadow: 0 0 0 2px #106ebe, 0 4px 12px rgba(16, 110, 190, 0.3);
+        transform: translateY(-1px);
     }
 
     .card-header:hover {
@@ -133,8 +247,38 @@
         color: #e1e1e1;
     }
 
+    .header-left {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .header-template {
-        margin-left: auto;
+        margin-right: 8px;
+    }
+
+    .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .card-header:hover .action-buttons {
+        opacity: 1;
+    }
+
+    .action-buttons .rz-button {
+        padding: 4px;
+        min-width: 24px;
+        min-height: 24px;
     }
 
     .card-content {

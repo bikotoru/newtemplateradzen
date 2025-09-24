@@ -1,0 +1,204 @@
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+@using Microsoft.AspNetCore.Components.Rendering
+
+<div class="form-canvas">
+    <RadzenCard class="rz-h-100">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" class="rz-mb-3">
+            <RadzenText TextStyle="TextStyle.H6">
+                <RadzenIcon Icon="web" class="rz-mr-2" />
+                Diseño del Formulario
+            </RadzenText>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Icon="add" Text="Agregar Sección"
+                            Size="ButtonSize.Small"
+                            Variant="Variant.Outlined"
+                            Click="@OnAddSection" />
+            </RadzenStack>
+        </RadzenStack>
+
+
+        <div class="form-sections-container">
+            @if (!CurrentLayout.Sections.Any())
+            {
+                <div class="empty-canvas">
+                    <RadzenIcon Icon="web_asset_off" Style="font-size: 4rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.H6" class="rz-color-disabled rz-mt-2">
+                        Arrastra campos aquí o agrega una sección para comenzar
+                    </RadzenText>
+                </div>
+            }
+            else
+            {
+                @foreach (var formSection in CurrentLayout.Sections.OrderBy(s => s.SortOrder))
+                {
+                    <div class="form-section" data-section-id="@formSection.Id">
+                        <RadzenFieldset Text="@formSection.Title" AllowCollapse="true" Collapsed="@(!formSection.IsExpanded)">
+                            <HeaderTemplate>
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2">@formSection.Title</RadzenText>
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                        <RadzenDropDown @bind-Value="formSection.GridSize"
+                                                      Data="@GridSizeOptions"
+                                                      TextProperty="Text"
+                                                      ValueProperty="Value"
+                                                      Style="width: 100px;"
+                                                      Size="ButtonSize.Small" />
+                                        <RadzenButton Icon="settings" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                    Click="@(() => OnConfigureSection.InvokeAsync(formSection))" />
+                                        <RadzenButton Icon="delete" Size="ButtonSize.Small" Variant="Variant.Text"
+                                                    Click="@(() => OnDeleteSection.InvokeAsync(formSection))" />
+                                    </RadzenStack>
+                                </RadzenStack>
+                            </HeaderTemplate>
+                            <ChildContent>
+                                <div class="section-content"
+                                     style="@GetSectionGridStyle(formSection)">
+
+                                    @if (!formSection.Fields.Any())
+                                    {
+                                        <div class="empty-section">
+                                            <RadzenText TextStyle="TextStyle.Caption" class="rz-color-disabled">
+                                                Arrastra campos aquí
+                                            </RadzenText>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var field in formSection.Fields.OrderBy(f => f.SortOrder))
+                                        {
+                                            <div class="form-field-container"
+                                                 style="@GetFieldGridStyle(field)"
+                                                 data-field-id="@field.Id">
+                                                <div class="field-wrapper">
+                                                    <div class="field-controls">
+                                                        @{
+                                                            var fieldsInSection = formSection.Fields.OrderBy(f => f.SortOrder).ToList();
+                                                            var currentIndex = fieldsInSection.IndexOf(field);
+                                                        }
+
+                                                        @if (currentIndex > 0)
+                                                        {
+                                                            <RadzenButton Icon="keyboard_arrow_left" Size="ButtonSize.ExtraSmall"
+                                                                        Variant="Variant.Text"
+                                                                        Click="@(() => OnMoveFieldLeft.InvokeAsync((formSection, field)))"
+                                                                        Title="Mover izquierda" />
+                                                        }
+
+                                                        @if (currentIndex < fieldsInSection.Count - 1)
+                                                        {
+                                                            <RadzenButton Icon="keyboard_arrow_right" Size="ButtonSize.ExtraSmall"
+                                                                        Variant="Variant.Text"
+                                                                        Click="@(() => OnMoveFieldRight.InvokeAsync((formSection, field)))"
+                                                                        Title="Mover derecha" />
+                                                        }
+
+                                                        <RadzenDropDown @bind-Value="field.GridSize"
+                                                                      Data="@FieldSizeOptions"
+                                                                      TextProperty="Text"
+                                                                      ValueProperty="Value"
+                                                                      Style="width: 80px;"
+                                                                      Size="ButtonSize.ExtraSmall" />
+                                                        <RadzenButton Icon="settings" Size="ButtonSize.ExtraSmall"
+                                                                    Variant="Variant.Text"
+                                                                    Click="@(() => OnConfigureField.InvokeAsync(field))" />
+                                                        <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall"
+                                                                    Variant="Variant.Text"
+                                                                    Click="@(() => OnRemoveField.InvokeAsync((formSection, field)))" />
+                                                    </div>
+                                                    @RenderFieldPreview(field)
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </ChildContent>
+                        </RadzenFieldset>
+                    </div>
+                }
+            }
+        </div>
+    </RadzenCard>
+</div>
+
+<style>
+.form-canvas {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.form-sections-container {
+    min-height: 400px;
+    padding: 1rem;
+}
+
+.empty-canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    border: 2px dashed var(--rz-border-color);
+    border-radius: 8px;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-content {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 100px;
+    border: 1px dashed transparent;
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+.empty-section {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80px;
+    border: 1px dashed var(--rz-border-color);
+    border-radius: 6px;
+}
+
+.form-field-container {
+    position: relative;
+}
+
+.field-wrapper {
+    position: relative;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    background: var(--rz-base-300);
+    transition: all 0.2s ease;
+}
+
+.field-wrapper:hover {
+    border-color: var(--rz-primary);
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-controls {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: var(--rz-base-100);
+    padding: 0 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-wrapper:hover .field-controls {
+    opacity: 1;
+}
+</style>

@@ -13,13 +13,15 @@ namespace Frontend.Services
         protected readonly ILogger<BaseApiService<T>> _logger;
         protected readonly string _baseUrl;
         private readonly QueryService _queryService;
+        private readonly BackendType _backendType;
 
-        protected BaseApiService(API api, ILogger<BaseApiService<T>> logger, string baseUrl)
+        protected BaseApiService(API api, ILogger<BaseApiService<T>> logger, string baseUrl, BackendType backendType = BackendType.GlobalBackend)
         {
             _api = api;
             _logger = logger;
             _baseUrl = baseUrl.TrimEnd('/');
             _queryService = new QueryService(_api);
+            _backendType = backendType;
         }
 
         #region Individual Operations
@@ -27,55 +29,79 @@ namespace Frontend.Services
         /// <summary>
         /// Crear una entidad individual
         /// </summary>
-        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request)
+        public virtual async Task<ApiResponse<T>> CreateAsync(CreateRequest<T> request, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Creating {typeof(T).Name}");
-            return await _api.PostAsync<T>($"{_baseUrl}/create", request);
+            return await _api.PostAsync<T>($"{_baseUrl}/create", request, backendType);
         }
 
         /// <summary>
         /// Actualizar una entidad individual
         /// </summary>
-        public virtual async Task<ApiResponse<T>> UpdateAsync(UpdateRequest<T> request)
+        public virtual async Task<ApiResponse<T>> UpdateAsync(UpdateRequest<T> request, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Updating {typeof(T).Name}");
-            return await _api.PutAsync<T>($"{_baseUrl}/update", request);
+            return await _api.PutAsync<T>($"{_baseUrl}/update", request, backendType);
         }
 
         /// <summary>
         /// Obtener todos los registros (paginado por defecto)
         /// </summary>
-        public virtual async Task<ApiResponse<PagedResponse<T>>> GetAllPagedAsync(int page = 1, int pageSize = 10)
+        public virtual async Task<ApiResponse<PagedResponse<T>>> GetAllPagedAsync(int page = 1, int pageSize = 10, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Getting paged {typeof(T).Name} - Page: {page}, PageSize: {pageSize}");
-            return await _api.GetAsync<PagedResponse<T>>($"{_baseUrl}/all?page={page}&pageSize={pageSize}&all=false");
+            return await _api.GetAsync<PagedResponse<T>>($"{_baseUrl}/all?page={page}&pageSize={pageSize}&all=false", backendType);
         }
 
         /// <summary>
         /// Obtener todos los registros sin paginación
         /// </summary>
-        public virtual async Task<ApiResponse<List<T>>> GetAllUnpagedAsync()
+        public virtual async Task<ApiResponse<List<T>>> GetAllUnpagedAsync(BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Getting all {typeof(T).Name} (unpaged)");
-            return await _api.GetAsync<List<T>>($"{_baseUrl}/all?all=true");
+            return await _api.GetAsync<List<T>>($"{_baseUrl}/all?all=true", backendType);
         }
 
         /// <summary>
         /// Obtener por ID
         /// </summary>
-        public virtual async Task<ApiResponse<T>> GetByIdAsync(Guid id)
+        public virtual async Task<ApiResponse<T>> GetByIdAsync(Guid id, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Getting {typeof(T).Name} by ID: {id}");
-            return await _api.GetAsync<T>($"{_baseUrl}/{id}");
+            return await _api.GetAsync<T>($"{_baseUrl}/{id}", backendType);
         }
 
         /// <summary>
         /// Eliminar por ID
         /// </summary>
-        public virtual async Task<ApiResponse<bool>> DeleteAsync(Guid id)
+        public virtual async Task<ApiResponse<bool>> DeleteAsync(Guid id, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Deleting {typeof(T).Name} with ID: {id}");
-            return await _api.DeleteAsync<bool>($"{_baseUrl}/{id}");
+            return await _api.DeleteAsync<bool>($"{_baseUrl}/{id}", backendType);
         }
 
         #endregion
@@ -85,19 +111,27 @@ namespace Frontend.Services
         /// <summary>
         /// Crear múltiples entidades
         /// </summary>
-        public virtual async Task<ApiResponse<BatchResponse<T>>> CreateBatchAsync(CreateBatchRequest<T> batchRequest)
+        public virtual async Task<ApiResponse<BatchResponse<T>>> CreateBatchAsync(CreateBatchRequest<T> batchRequest, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Creating batch of {batchRequest.Requests?.Count ?? 0} {typeof(T).Name}");
-            return await _api.PostAsync<BatchResponse<T>>($"{_baseUrl}/create-batch", batchRequest);
+            return await _api.PostAsync<BatchResponse<T>>($"{_baseUrl}/create-batch", batchRequest, backendType);
         }
 
         /// <summary>
         /// Actualizar múltiples entidades
         /// </summary>
-        public virtual async Task<ApiResponse<BatchResponse<T>>> UpdateBatchAsync(UpdateBatchRequest<T> batchRequest)
+        public virtual async Task<ApiResponse<BatchResponse<T>>> UpdateBatchAsync(UpdateBatchRequest<T> batchRequest, BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Updating batch of {batchRequest.Requests?.Count ?? 0} {typeof(T).Name}");
-            return await _api.PutAsync<BatchResponse<T>>($"{_baseUrl}/update-batch", batchRequest);
+            return await _api.PutAsync<BatchResponse<T>>($"{_baseUrl}/update-batch", batchRequest, backendType);
         }
 
         #endregion
@@ -107,22 +141,30 @@ namespace Frontend.Services
         /// <summary>
         /// Health check endpoint
         /// </summary>
-        public virtual async Task<ApiResponse<object>> HealthCheckAsync()
+        public virtual async Task<ApiResponse<object>> HealthCheckAsync(BackendType backendType = BackendType.NotSet)
         {
+            if(backendType == BackendType.NotSet)
+            {
+                backendType = _backendType;
+            }
             _logger.LogInformation($"Performing health check for {typeof(T).Name}");
-            return await _api.GetAsync<object>($"{_baseUrl}/health");
+            return await _api.GetAsync<object>($"{_baseUrl}/health", backendType);
         }
 
         #endregion
 
         #region Query Operations (Dynamic Queries)
 
-        public virtual async Task<ApiResponse<List<T>>> QueryAsync(QueryRequest queryRequest)
+        public virtual async Task<ApiResponse<List<T>>> QueryAsync(QueryRequest queryRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing query for {typeof(T).Name}");
-                return await _api.PostAsync<List<T>>($"{_baseUrl}/query", queryRequest);
+                return await _api.PostAsync<List<T>>($"{_baseUrl}/query", queryRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -131,12 +173,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> QueryPagedAsync(QueryRequest queryRequest)
+        public virtual async Task<ApiResponse<PagedResult<T>>> QueryPagedAsync(QueryRequest queryRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing paged query for {typeof(T).Name}");
-                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/paged", queryRequest);
+                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/paged", queryRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -145,12 +191,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<List<object>>> QuerySelectAsync(QueryRequest queryRequest)
+        public virtual async Task<ApiResponse<List<object>>> QuerySelectAsync(QueryRequest queryRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing select query for {typeof(T).Name}");
-                return await _api.PostAsync<List<object>>($"{_baseUrl}/select", queryRequest);
+                return await _api.PostAsync<List<object>>($"{_baseUrl}/select", queryRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -159,12 +209,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<PagedResult<object>>> QuerySelectPagedAsync(QueryRequest queryRequest)
+        public virtual async Task<ApiResponse<PagedResult<object>>> QuerySelectPagedAsync(QueryRequest queryRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing paged select query for {typeof(T).Name}");
-                return await _api.PostAsync<PagedResult<object>>($"{_baseUrl}/select-paged", queryRequest);
+                return await _api.PostAsync<PagedResult<object>>($"{_baseUrl}/select-paged", queryRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -177,12 +231,16 @@ namespace Frontend.Services
 
         #region Search Operations (Intelligent Search)
 
-        public virtual async Task<ApiResponse<List<T>>> SearchAsync(SearchRequest searchRequest)
+        public virtual async Task<ApiResponse<List<T>>> SearchAsync(SearchRequest searchRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<List<T>>($"{_baseUrl}/search", searchRequest);
+                return await _api.PostAsync<List<T>>($"{_baseUrl}/search", searchRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -191,12 +249,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> SearchPagedAsync(SearchRequest searchRequest)
+        public virtual async Task<ApiResponse<PagedResult<T>>> SearchPagedAsync(SearchRequest searchRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing paged search for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search-paged", searchRequest);
+                return await _api.PostAsync<PagedResult<T>>($"{_baseUrl}/search-paged", searchRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -205,12 +267,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<List<object>>> SearchSelectAsync(SearchRequest searchRequest)
+        public virtual async Task<ApiResponse<List<object>>> SearchSelectAsync(SearchRequest searchRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<List<object>>($"{_baseUrl}/search-select", searchRequest);
+                return await _api.PostAsync<List<object>>($"{_baseUrl}/search-select", searchRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -219,12 +285,16 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<PagedResult<object>>> SearchSelectPagedAsync(SearchRequest searchRequest)
+        public virtual async Task<ApiResponse<PagedResult<object>>> SearchSelectPagedAsync(SearchRequest searchRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Executing paged search select for {typeof(T).Name} with term: {searchRequest.SearchTerm}");
-                return await _api.PostAsync<PagedResult<object>>($"{_baseUrl}/search-select-paged", searchRequest);
+                return await _api.PostAsync<PagedResult<object>>($"{_baseUrl}/search-select-paged", searchRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -233,7 +303,7 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task<ApiResponse<List<T>>> SearchAsync(string searchTerm, string[]? searchFields = null, QueryRequest? baseQuery = null)
+        public virtual async Task<ApiResponse<List<T>>> SearchAsync(string searchTerm, string[]? searchFields = null, QueryRequest? baseQuery = null, BackendType backendType = BackendType.NotSet)
         {
             var searchRequest = new SearchRequest
             {
@@ -242,10 +312,10 @@ namespace Frontend.Services
                 BaseQuery = baseQuery
             };
 
-            return await SearchAsync(searchRequest);
+            return await SearchAsync(searchRequest, backendType);
         }
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> SearchPagedAsync(string searchTerm, int page = 1, int pageSize = 10, string[]? searchFields = null, QueryRequest? baseQuery = null)
+        public virtual async Task<ApiResponse<PagedResult<T>>> SearchPagedAsync(string searchTerm, int page = 1, int pageSize = 10, string[]? searchFields = null, QueryRequest? baseQuery = null, BackendType backendType = BackendType.NotSet)
         {
             var searchRequest = new SearchRequest
             {
@@ -256,7 +326,7 @@ namespace Frontend.Services
                 Take = pageSize
             };
 
-            return await SearchPagedAsync(searchRequest);
+            return await SearchPagedAsync(searchRequest, backendType);
         }
 
         #endregion
@@ -268,24 +338,44 @@ namespace Frontend.Services
             return _queryService.For<T>(_baseUrl);
         }
 
+        public virtual QueryBuilder<T> Query(BackendType backendType)
+        {
+            return _queryService.For<T>(_baseUrl, backendType);
+        }
+
         public virtual QueryBuilder<T> QueryAsync()
         {
             return Query();
+        }
+
+        public virtual QueryBuilder<T> QueryAsync(BackendType backendType)
+        {
+            return Query(backendType);
         }
 
         #endregion
 
         #region Radzen Integration (LoadDataArgs)
 
-        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(LoadDataArgs args)
+        public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(LoadDataArgs args, BackendType? backendType = null)
         {
             try
             {
-                _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}");
-                
-                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, null);
+                _logger.LogInformation($"LoadDataAsync basic for {typeof(T).Name} - Skip: {args.Skip}, Top: {args.Top}, Filter: '{args.Filter ?? "null"}'");
+
+                // Para casos sin searchFields específicos, intentar detectar campos de búsqueda comunes
+                List<string>? defaultSearchFields = null;
+                if (!string.IsNullOrEmpty(args.Filter))
+                {
+                    // Intentar usar campos comunes para búsqueda
+                    defaultSearchFields = GetDefaultSearchFields();
+                    _logger.LogInformation($"Using default search fields for {typeof(T).Name}: [{string.Join(", ", defaultSearchFields ?? new List<string>())}]");
+                }
+
+                var queryRequest = ConvertLoadDataArgsToQueryRequest(args, null, defaultSearchFields);
                 _logger.LogInformation($"Using QueryPagedAsync with Filter: '{queryRequest.Filter ?? "null"}'");
-                return await QueryPagedAsync(queryRequest);
+                var finalBackendType = backendType ?? _backendType;
+                return await QueryPagedAsync(queryRequest, finalBackendType);
             }
             catch (Exception ex)
             {
@@ -296,11 +386,12 @@ namespace Frontend.Services
 
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, null, searchFields, null, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -313,11 +404,12 @@ namespace Frontend.Services
 
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, null, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, null, null, searchFields, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -331,6 +423,7 @@ namespace Frontend.Services
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
             QueryBuilder<T>? baseQuery = null,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
@@ -341,11 +434,12 @@ namespace Frontend.Services
                 {
                     _logger.LogInformation($"Using QueryRequest approach for column filters in {typeof(T).Name}");
                     var queryRequest = ConvertLoadDataArgsToQueryRequest(args, baseQuery, searchFields?.Select(sf => GetPropertyName(sf)).ToList());
-                    return await QueryPagedAsync(queryRequest);
+                    var finalBackendType = backendType ?? _backendType;
+                    return await QueryPagedAsync(queryRequest, finalBackendType);
                 }
-                
+
                 // Para otros casos sin filtros de columna, usar el QueryBuilder original
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields, null, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -359,11 +453,12 @@ namespace Frontend.Services
         public virtual async Task<ApiResponse<PagedResult<T>>> LoadDataAsync(
             LoadDataArgs args,
             QueryBuilder<T>? baseQuery,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields, backendType);
                 var result = await query.ToPagedResultAsync();
                 return ApiResponse<PagedResult<T>>.SuccessResponse(result);
             }
@@ -378,11 +473,12 @@ namespace Frontend.Services
             LoadDataArgs args,
             Expression<Func<T, TResult>> selector,
             QueryBuilder<T>? baseQuery = null,
+            BackendType? backendType = null,
             params Expression<Func<T, object>>[] searchFields)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, searchFields, null, backendType);
                 var result = await query.Select(selector).ToPagedResultAsync();
                 return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
             }
@@ -397,11 +493,12 @@ namespace Frontend.Services
             LoadDataArgs args,
             Expression<Func<T, TResult>> selector,
             QueryBuilder<T>? baseQuery,
-            List<string> searchFields)
+            List<string> searchFields,
+            BackendType? backendType = null)
         {
             try
             {
-                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields);
+                var query = ConvertLoadDataArgsToQuery(args, baseQuery, null, searchFields, backendType);
                 var result = await query.Select(selector).ToPagedResultAsync();
                 return ApiResponse<PagedResult<TResult>>.SuccessResponse(result);
             }
@@ -449,13 +546,15 @@ namespace Frontend.Services
         #region Private Helper Methods for LoadData
 
         private QueryBuilder<T> ConvertLoadDataArgsToQuery(
-            LoadDataArgs args, 
+            LoadDataArgs args,
             QueryBuilder<T>? baseQuery = null,
             Expression<Func<T, object>>[]? typedSearchFields = null,
-            List<string>? stringSearchFields = null)
+            List<string>? stringSearchFields = null,
+            BackendType? backendType = null)
         {
-            var query = baseQuery ?? Query();
+            var query = baseQuery ?? (backendType.HasValue ? Query(backendType.Value) : Query());
             query._baseUrl = _baseUrl;
+            query._backendType = backendType is null ? BackendType.GlobalBackend : backendType;
             if (args.Filters != null && args.Filters.Any())
             {
                 foreach (var filter in args.Filters)
@@ -549,13 +648,38 @@ namespace Frontend.Services
 
             // Agregar filtros de columna si existen
             var allFilters = new List<string>();
-            
+
             // Si ya hay filtro del baseQuery, agregarlo
             if (!string.IsNullOrEmpty(queryRequest.Filter))
             {
                 allFilters.Add($"({queryRequest.Filter})");
             }
-            
+
+            // AGREGAR FILTRO DE BÚSQUEDA GENERAL (args.Filter) - ESTA ERA LA PARTE FALTANTE
+            if (!string.IsNullOrEmpty(args.Filter))
+            {
+                _logger.LogInformation($"Processing search filter from LoadDataArgs: '{args.Filter}'");
+
+                // Si hay searchFields específicos, crear filtro OR para cada campo
+                if (searchFields != null && searchFields.Any())
+                {
+                    var searchConditions = searchFields.Select(field =>
+                        $"{field}.Contains(\"{args.Filter}\")").ToList();
+                    var searchFilter = string.Join(" || ", searchConditions);
+                    allFilters.Add($"({searchFilter})");
+                    _logger.LogInformation($"Created search filter for fields [{string.Join(", ", searchFields)}]: {searchFilter}");
+                }
+                else
+                {
+                    // Fallback: usar un campo genérico de búsqueda
+                    // En este caso, se asume que el backend manejará la búsqueda
+                    // O podríamos usar un campo por defecto como "Name" o "DisplayName"
+                    _logger.LogWarning($"No search fields specified, filter '{args.Filter}' may not work properly");
+                    // Agregar el filtro tal como viene para que el backend lo procese
+                    allFilters.Add($"Filter(\"{args.Filter}\")");
+                }
+            }
+
             // Agregar filtros de las columnas (args.Filters)
             if (args.Filters != null && args.Filters.Any())
             {
@@ -588,6 +712,35 @@ namespace Frontend.Services
             queryRequest.Take = args.Top;
 
             return queryRequest;
+        }
+
+        /// <summary>
+        /// Obtiene campos de búsqueda por defecto para la entidad
+        /// </summary>
+        private List<string>? GetDefaultSearchFields()
+        {
+            var entityType = typeof(T);
+            var commonSearchProperties = new[] { "Nombre", "Name", "DisplayName", "Title", "Titulo", "Description", "Descripcion" };
+
+            var availableFields = new List<string>();
+
+            foreach (var propertyName in commonSearchProperties)
+            {
+                var property = entityType.GetProperty(propertyName);
+                if (property != null && property.PropertyType == typeof(string))
+                {
+                    availableFields.Add(propertyName);
+                }
+            }
+
+            if (availableFields.Any())
+            {
+                _logger.LogDebug($"Found default search fields for {entityType.Name}: [{string.Join(", ", availableFields)}]");
+                return availableFields;
+            }
+
+            _logger.LogDebug($"No default search fields found for {entityType.Name}");
+            return null;
         }
 
         private string ConvertRadzenFilterToString(FilterDescriptor filter)
@@ -753,12 +906,16 @@ namespace Frontend.Services
 
         #region Excel Export Operations
 
-        public virtual async Task<byte[]> ExportToExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest)
+        public virtual async Task<byte[]> ExportToExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest, BackendType backendType = BackendType.NotSet)
         {
             try
             {
+                if(backendType == BackendType.NotSet)
+                {
+                    backendType = _backendType;
+                }
                 _logger.LogInformation($"Starting Excel export for {typeof(T).Name}");
-                var excelBytes = await _api.PostFileAsync($"{_baseUrl}/export/excel", exportRequest);
+                var excelBytes = await _api.PostFileAsync($"{_baseUrl}/export/excel", exportRequest, backendType);
                 
                 _logger.LogInformation($"Excel export completed for {typeof(T).Name}. Downloaded {excelBytes.Length} bytes");
                 return excelBytes;
@@ -770,13 +927,13 @@ namespace Frontend.Services
             }
         }
 
-        public virtual async Task DownloadExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest, FileDownloadService fileDownloadService, string? fileName = null)
+        public virtual async Task DownloadExcelAsync(Shared.Models.Export.ExcelExportRequest exportRequest, FileDownloadService fileDownloadService, string? fileName = null, BackendType backendType = BackendType.NotSet)
         {
             try
             {
                 _logger.LogInformation($"Starting Excel download for {typeof(T).Name}");
 
-                var excelBytes = await ExportToExcelAsync(exportRequest);
+                var excelBytes = await ExportToExcelAsync(exportRequest, backendType);
                 var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 
                 await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);
@@ -793,7 +950,7 @@ namespace Frontend.Services
         /// <summary>
         /// Exporta a Excel usando LoadDataArgs (convierte automáticamente)
         /// </summary>
-        public virtual async Task<byte[]> ExportToExcelAsync(LoadDataArgs args, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        public virtual async Task<byte[]> ExportToExcelAsync(LoadDataArgs args, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null, BackendType backendType = BackendType.NotSet)
         {
             try
             {
@@ -819,7 +976,7 @@ namespace Frontend.Services
                     AutoFitColumns = true
                 };
                 
-                return await ExportToExcelAsync(exportRequest);
+                return await ExportToExcelAsync(exportRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -831,11 +988,11 @@ namespace Frontend.Services
         /// <summary>
         /// Descarga Excel usando LoadDataArgs
         /// </summary>
-        public virtual async Task DownloadExcelAsync(LoadDataArgs args, FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        public virtual async Task DownloadExcelAsync(LoadDataArgs args, FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null, BackendType backendType = BackendType.NotSet)
         {
             try
             {
-                var excelBytes = await ExportToExcelAsync(args, columns, fileName);
+                var excelBytes = await ExportToExcelAsync(args, columns, fileName, backendType);
                 var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 
                 await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);
@@ -852,7 +1009,7 @@ namespace Frontend.Services
         /// <summary>
         /// Exporta a Excel simple (sin filtros)
         /// </summary>
-        public virtual async Task<byte[]> ExportToExcelAsync(List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        public virtual async Task<byte[]> ExportToExcelAsync(List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null, BackendType backendType = BackendType.NotSet)
         {
             try
             {
@@ -873,7 +1030,7 @@ namespace Frontend.Services
                     AutoFitColumns = true
                 };
                 
-                return await ExportToExcelAsync(exportRequest);
+                return await ExportToExcelAsync(exportRequest, backendType);
             }
             catch (Exception ex)
             {
@@ -885,11 +1042,11 @@ namespace Frontend.Services
         /// <summary>
         /// Descarga Excel simple (sin filtros)
         /// </summary>
-        public virtual async Task DownloadExcelAsync(FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null)
+        public virtual async Task DownloadExcelAsync(FileDownloadService fileDownloadService, List<Shared.Models.Export.ExcelColumnConfig>? columns = null, string? fileName = null, BackendType backendType = BackendType.NotSet)
         {
             try
             {
-                var excelBytes = await ExportToExcelAsync(columns, fileName);
+                var excelBytes = await ExportToExcelAsync(columns, fileName, backendType);
                 var finalFileName = fileName ?? $"{typeof(T).Name}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
                 
                 await fileDownloadService.DownloadExcelAsync(excelBytes, finalFileName);

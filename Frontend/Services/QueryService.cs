@@ -22,6 +22,11 @@ namespace Frontend.Services
         {
             return new QueryBuilder<T>(_api, typeof(T).Name, baseUrl);
         }
+
+        public QueryBuilder<T> For<T>(string baseUrl, BackendType backendType) where T : class
+        {
+            return new QueryBuilder<T>(_api, typeof(T).Name, baseUrl, backendType);
+        }
     }
 
     public class QueryBuilder<T> where T : class
@@ -29,13 +34,14 @@ namespace Frontend.Services
         protected readonly API _api;
         protected readonly string _entityName;
         public string? _baseUrl;
+        public BackendType? _backendType;
         protected readonly List<Expression<Func<T, bool>>> _filters = new();
         protected LambdaExpression? _orderByExpression;
         protected bool _orderByDescending = false;
         protected readonly List<string> _includeExpressions = new();
         protected int? _skip;
         protected int? _take;
-        
+
         // Search properties
         protected string? _searchTerm;
         protected readonly List<Expression<Func<T, object>>> _searchFields = new();
@@ -45,18 +51,34 @@ namespace Frontend.Services
             _api = api;
             _entityName = entityName;
             _baseUrl = null;
+            _backendType = null;
         }
-        
+
         public QueryBuilder(API api, string entityName, string baseUrl)
         {
             _api = api;
             _entityName = entityName;
             _baseUrl = baseUrl?.TrimEnd('/');
+            _backendType = null;
+        }
+
+        public QueryBuilder(API api, string entityName, string baseUrl, BackendType? backendType)
+        {
+            _api = api;
+            _entityName = entityName;
+            _baseUrl = baseUrl?.TrimEnd('/');
+            _backendType = backendType;
         }
 
         public QueryBuilder<T> Where(Expression<Func<T, bool>> predicate)
         {
             _filters.Add(predicate);
+            return this;
+        }
+
+        public QueryBuilder<T> UseBackend(BackendType backendType)
+        {
+            _backendType = backendType;
             return this;
         }
 
@@ -69,8 +91,8 @@ namespace Frontend.Services
 
         public SelectQueryBuilder<T, TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
         {
-            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression, 
-                _orderByDescending, selector, _includeExpressions, _skip, _take, _searchTerm, _searchFields);
+            return new SelectQueryBuilder<T, TResult>(_api, _entityName, _baseUrl, _filters, _orderByExpression,
+                _orderByDescending, selector, _includeExpressions, _skip, _take, _searchTerm, _searchFields, _backendType);
         }
 
         public QueryBuilder<T> Include<TProperty>(Expression<Func<T, TProperty>> navigationProperty)
@@ -126,12 +148,14 @@ namespace Frontend.Services
         public QueryBuilder<T> And(QueryBuilder<T> other)
         {
             var newQuery = new QueryBuilder<T>(_api, _entityName);
-            
+
             // Copiar filtros de ambos QueryBuilders
             newQuery._filters.AddRange(_filters);
             newQuery._filters.AddRange(other._filters);
-            
+
             // Copiar otras propiedades del QueryBuilder actual
+            newQuery._baseUrl = _baseUrl;
+            newQuery._backendType = _backendType;
             newQuery._orderByExpression = _orderByExpression;
             newQuery._orderByDescending = _orderByDescending;
             newQuery._includeExpressions.AddRange(_includeExpressions);
@@ -139,7 +163,7 @@ namespace Frontend.Services
             newQuery._take = _take;
             newQuery._searchTerm = _searchTerm;
             newQuery._searchFields.AddRange(_searchFields);
-            
+
             return newQuery;
         }
 
@@ -149,7 +173,7 @@ namespace Frontend.Services
         public QueryBuilder<T> Or(QueryBuilder<T> other)
         {
             var newQuery = new QueryBuilder<T>(_api, _entityName);
-            
+
             // Crear una expresión OR que combine los filtros de ambos QueryBuilders
             if (_filters.Any() && other._filters.Any())
             {
@@ -159,14 +183,14 @@ namespace Frontend.Services
                 {
                     leftExpression = leftExpression == null ? filter : CombineWithAnd(leftExpression, filter);
                 }
-                
+
                 // Combinar todos los filtros del segundo QueryBuilder con AND
                 Expression<Func<T, bool>>? rightExpression = null;
                 foreach (var filter in other._filters)
                 {
                     rightExpression = rightExpression == null ? filter : CombineWithAnd(rightExpression, filter);
                 }
-                
+
                 // Combinar ambas expresiones con OR
                 if (leftExpression != null && rightExpression != null)
                 {
@@ -182,8 +206,10 @@ namespace Frontend.Services
             {
                 newQuery._filters.AddRange(other._filters);
             }
-            
+
             // Copiar otras propiedades del QueryBuilder actual
+            newQuery._baseUrl = _baseUrl;
+            newQuery._backendType = _backendType;
             newQuery._orderByExpression = _orderByExpression;
             newQuery._orderByDescending = _orderByDescending;
             newQuery._includeExpressions.AddRange(_includeExpressions);
@@ -191,7 +217,7 @@ namespace Frontend.Services
             newQuery._take = _take;
             newQuery._searchTerm = _searchTerm;
             newQuery._searchFields.AddRange(_searchFields);
-            
+
             return newQuery;
         }
 
@@ -208,12 +234,14 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/query" : $"/api/{_entityName}/query";
-            var response = await _api.PostAsync<List<T>>(endpoint, request);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<List<T>>(endpoint, request, _backendType.Value)
+                : await _api.PostAsync<List<T>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Query failed: {response.Message}");
             }
-            
+
             return response.Data ?? new List<T>();
         }
 
@@ -278,12 +306,14 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible, sino fallback al patrón antiguo
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/paged" : $"/api/{_entityName}/paged";
-            var response = await _api.PostAsync<PagedResult<T>>(endpoint, request);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<PagedResult<T>>(endpoint, request, _backendType.Value)
+                : await _api.PostAsync<PagedResult<T>>(endpoint, request);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged query failed: {response.Message}");
             }
-            
+
             return response.Data ?? new PagedResult<T>();
         }
 
@@ -416,7 +446,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search" : $"/api/{_entityName}/search";
-            var response = await _api.PostAsync<List<T>>(endpoint, searchRequest);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<List<T>>(endpoint, searchRequest, _backendType.Value)
+                : await _api.PostAsync<List<T>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Search failed: {response.Message}");
@@ -431,7 +463,9 @@ namespace Frontend.Services
 
             // ✅ SOLUCIONADO: Usar _baseUrl del service si está disponible
             var endpoint = !string.IsNullOrEmpty(_baseUrl) ? $"{_baseUrl}/search-paged" : $"/api/{_entityName}/search-paged";
-            var response = await _api.PostAsync<PagedResult<T>>(endpoint, searchRequest);
+            var response = _backendType.HasValue
+                ? await _api.PostAsync<PagedResult<T>>(endpoint, searchRequest, _backendType.Value)
+                : await _api.PostAsync<PagedResult<T>>(endpoint, searchRequest);
             if (!response.Success)
             {
                 throw new HttpRequestException($"Paged search failed: {response.Message}");

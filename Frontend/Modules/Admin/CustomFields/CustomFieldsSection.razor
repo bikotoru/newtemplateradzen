@@ -1,0 +1,386 @@
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+@using Forms.Models.Configurations
+@using ConditionEvaluationResult = Forms.Models.Configurations.ConditionEvaluationResult
+@using Frontend.Services
+@inject API Api
+@inject NotificationService NotificationService
+
+@* Componente reutilizable para mostrar campos personalizados en cualquier formulario *@
+
+@if (customFields?.Any() == true)
+{
+    <RadzenFieldset Text="@SectionTitle" AllowCollapse="true" class="rz-mt-4">
+        <RadzenRow Gap="1rem">
+            @foreach (var field in visibleFields)
+            {
+                <RadzenColumn Size="@GetColumnSize(field)" class="rz-mb-3">
+                    @RenderCustomField(field)
+                </RadzenColumn>
+            }
+        </RadzenRow>
+    </RadzenFieldset>
+}
+
+@code {
+    [Parameter] public string EntityName { get; set; } = "";
+    [Parameter] public string SectionTitle { get; set; } = "Campos Personalizados";
+    [Parameter] public Guid? OrganizationId { get; set; }
+    [Parameter] public Guid? UserId { get; set; }
+    [Parameter] public Dictionary<string, object?> FieldValues { get; set; } = new();
+    [Parameter] public EventCallback<Dictionary<string, object?>> FieldValuesChanged { get; set; }
+    [Parameter] public bool ReadOnly { get; set; } = false;
+
+    private List<CustomFieldDefinitionDto>? customFields;
+    private List<CustomFieldDefinitionDto> visibleFields = new();
+    private Dictionary<string, ConditionEvaluationResult> conditionResults = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomFields();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (FieldValues?.Any() == true)
+        {
+            await EvaluateConditions();
+        }
+    }
+
+    private async Task LoadCustomFields()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(EntityName)) return;
+
+            string endpoint;
+            if (UserId.HasValue)
+            {
+                // Cargar solo campos visibles para el usuario específico
+                endpoint = $"api/customfielddefinitions/{EntityName}/user/{UserId}";
+                if (OrganizationId.HasValue)
+                {
+                    endpoint += $"?organizationId={OrganizationId}";
+                }
+            }
+            else
+            {
+                // Cargar todos los campos
+                endpoint = $"api/customfielddefinitions/{EntityName}";
+                if (OrganizationId.HasValue)
+                {
+                    endpoint += $"?organizationId={OrganizationId}";
+                }
+            }
+
+            var response = await Api.GetAsync<List<CustomFieldDefinitionDto>>(endpoint, BackendType.FormBackend);
+            if (response.Success && response.Data != null)
+            {
+                customFields = response.Data;
+                await EvaluateConditions();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = $"Error cargando campos personalizados: {ex.Message}",
+                Duration = 4000
+            });
+        }
+    }
+
+    private async Task EvaluateConditions()
+    {
+        if (customFields == null) return;
+
+        try
+        {
+            // Evaluar condiciones si hay valores de campo
+            if (FieldValues?.Any() == true)
+            {
+                var request = new FieldConditionEvaluationRequest
+                {
+                    EntityName = EntityName,
+                    OrganizationId = OrganizationId,
+                    FieldValues = FieldValues
+                };
+
+                var response = await Api.PostAsync<Dictionary<string, ConditionEvaluationResult>>("api/customfielddefinitions/evaluate-conditions", request, BackendType.FormBackend);
+                if (response.Success && response.Data != null)
+                {
+                    conditionResults = response.Data;
+                }
+            }
+
+            // Filtrar campos visibles
+            visibleFields = customFields.Where(field =>
+            {
+                if (!conditionResults.TryGetValue(field.FieldName, out var result))
+                {
+                    return true; // Visible por defecto si no hay condiciones
+                }
+                return result.IsVisible;
+            }).OrderBy(f => f.SortOrder).ToList();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // En caso de error, mostrar todos los campos
+            visibleFields = customFields.OrderBy(f => f.SortOrder).ToList();
+            StateHasChanged();
+        }
+    }
+
+    private RenderFragment RenderCustomField(CustomFieldDefinitionDto field)
+    {
+        return builder =>
+        {
+            var fieldType = FieldTypeExtensions.FromString(field.FieldType);
+            var isRequired = GetEffectiveRequired(field);
+            var isReadOnly = ReadOnly || GetEffectiveReadOnly(field);
+            var currentValue = FieldValues.GetValueOrDefault(field.FieldName);
+
+            // Container del campo
+            builder.OpenComponent<RadzenFormField>(0);
+            builder.AddAttribute(1, "Text", field.DisplayName + (isRequired ? " *" : ""));
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(fieldBuilder =>
+            {
+                switch (fieldType)
+                {
+                    case FieldType.Text:
+                        fieldBuilder.OpenComponent<RadzenTextBox>(0);
+                        fieldBuilder.AddAttribute(1, "Value", currentValue?.ToString() ?? field.DefaultValue ?? "");
+                        fieldBuilder.AddAttribute(2, "Placeholder", GetPlaceholder(field));
+                        fieldBuilder.AddAttribute(3, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(4, "Disabled", isReadOnly);
+                        fieldBuilder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<string>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue);
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+
+                    case FieldType.TextArea:
+                        var rows = field.UIConfig?.Rows ?? 3;
+                        fieldBuilder.OpenComponent<RadzenTextArea>(0);
+                        fieldBuilder.AddAttribute(1, "Value", currentValue?.ToString() ?? field.DefaultValue ?? "");
+                        fieldBuilder.AddAttribute(2, "Placeholder", GetPlaceholder(field));
+                        fieldBuilder.AddAttribute(3, "Rows", rows);
+                        fieldBuilder.AddAttribute(4, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(5, "Disabled", isReadOnly);
+                        fieldBuilder.AddAttribute(6, "ValueChanged", EventCallback.Factory.Create<string>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue);
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+
+                    case FieldType.Number:
+                        decimal? numericValue = null;
+                        if (currentValue != null && decimal.TryParse(currentValue.ToString(), out var parsed))
+                        {
+                            numericValue = parsed;
+                        }
+                        else if (!string.IsNullOrEmpty(field.DefaultValue) && decimal.TryParse(field.DefaultValue, out var defaultParsed))
+                        {
+                            numericValue = defaultParsed;
+                        }
+
+                        fieldBuilder.OpenComponent<RadzenNumeric<decimal?>>(0);
+                        fieldBuilder.AddAttribute(1, "Value", numericValue);
+                        fieldBuilder.AddAttribute(2, "Placeholder", GetPlaceholder(field));
+                        fieldBuilder.AddAttribute(3, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(4, "Disabled", isReadOnly);
+                        if (field.ValidationConfig?.Min.HasValue == true)
+                        {
+                            fieldBuilder.AddAttribute(5, "Min", field.ValidationConfig.Min.Value);
+                        }
+                        if (field.ValidationConfig?.Max.HasValue == true)
+                        {
+                            fieldBuilder.AddAttribute(6, "Max", field.ValidationConfig.Max.Value);
+                        }
+                        if (field.ValidationConfig?.Step.HasValue == true)
+                        {
+                            fieldBuilder.AddAttribute(7, "Step", field.ValidationConfig.Step.Value);
+                        }
+                        fieldBuilder.AddAttribute(8, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue);
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+
+                    case FieldType.Date:
+                        DateTime? dateValue = null;
+                        if (currentValue != null && DateTime.TryParse(currentValue.ToString(), out var dateParsed))
+                        {
+                            dateValue = dateParsed;
+                        }
+
+                        fieldBuilder.OpenComponent<RadzenDatePicker<DateTime?>>(0);
+                        fieldBuilder.AddAttribute(1, "Value", dateValue);
+                        fieldBuilder.AddAttribute(2, "Placeholder", GetPlaceholder(field) ?? "Selecciona una fecha");
+                        fieldBuilder.AddAttribute(3, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(4, "Disabled", isReadOnly);
+                        fieldBuilder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<DateTime?>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue);
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+
+                    case FieldType.Boolean:
+                        bool boolValue = false;
+                        if (currentValue != null && bool.TryParse(currentValue.ToString(), out var boolParsed))
+                        {
+                            boolValue = boolParsed;
+                        }
+                        else if (!string.IsNullOrEmpty(field.DefaultValue) && bool.TryParse(field.DefaultValue, out var defaultBoolParsed))
+                        {
+                            boolValue = defaultBoolParsed;
+                        }
+
+                        var style = field.UIConfig?.Style ?? "switch";
+                        if (style == "switch")
+                        {
+                            fieldBuilder.OpenComponent<RadzenSwitch>(0);
+                            fieldBuilder.AddAttribute(1, "Value", boolValue);
+                            fieldBuilder.AddAttribute(2, "Disabled", isReadOnly);
+                            fieldBuilder.AddAttribute(3, "ValueChanged", EventCallback.Factory.Create<bool>(this, async (newValue) =>
+                            {
+                                await OnFieldValueChanged(field.FieldName, newValue);
+                            }));
+                            fieldBuilder.CloseComponent();
+                        }
+                        else
+                        {
+                            fieldBuilder.OpenComponent<RadzenCheckBox<bool>>(0);
+                            fieldBuilder.AddAttribute(1, "Value", boolValue);
+                            fieldBuilder.AddAttribute(2, "Disabled", isReadOnly);
+                            fieldBuilder.AddAttribute(3, "ValueChanged", EventCallback.Factory.Create<bool>(this, async (newValue) =>
+                            {
+                                await OnFieldValueChanged(field.FieldName, newValue);
+                            }));
+                            fieldBuilder.CloseComponent();
+                        }
+                        break;
+
+                    case FieldType.Select:
+                        var options = field.UIConfig?.Options?.Select(o => o.Value).ToList() ?? new List<string>();
+                        fieldBuilder.OpenComponent<RadzenDropDown<string>>(0);
+                        fieldBuilder.AddAttribute(1, "Value", currentValue?.ToString() ?? field.DefaultValue);
+                        fieldBuilder.AddAttribute(2, "Data", options);
+                        fieldBuilder.AddAttribute(3, "Placeholder", GetPlaceholder(field) ?? "Selecciona una opción");
+                        fieldBuilder.AddAttribute(4, "Style", "width: 100%;");
+                        fieldBuilder.AddAttribute(5, "Disabled", isReadOnly);
+                        fieldBuilder.AddAttribute(6, "ValueChanged", EventCallback.Factory.Create<string>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue);
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+
+                    case FieldType.MultiSelect:
+                        var multiOptions = field.UIConfig?.Options?.Select(o => o.Value).ToList() ?? new List<string>();
+                        List<string> selectedValues = new();
+                        if (currentValue != null)
+                        {
+                            if (currentValue is IEnumerable<string> stringList)
+                            {
+                                selectedValues = stringList.ToList();
+                            }
+                            else if (currentValue is string stringValue && !string.IsNullOrEmpty(stringValue))
+                            {
+                                selectedValues = stringValue.Split(',').ToList();
+                            }
+                        }
+
+                        fieldBuilder.OpenComponent<RadzenListBox<IEnumerable<string>>>(0);
+                        fieldBuilder.AddAttribute(1, "Value", selectedValues);
+                        fieldBuilder.AddAttribute(2, "Data", multiOptions);
+                        fieldBuilder.AddAttribute(3, "Multiple", true);
+                        fieldBuilder.AddAttribute(4, "Style", "width: 100%; height: 120px;");
+                        fieldBuilder.AddAttribute(5, "Disabled", isReadOnly);
+                        fieldBuilder.AddAttribute(6, "ValueChanged", EventCallback.Factory.Create<IEnumerable<string>>(this, async (newValue) =>
+                        {
+                            await OnFieldValueChanged(field.FieldName, newValue?.ToList());
+                        }));
+                        fieldBuilder.CloseComponent();
+                        break;
+                }
+            }));
+            builder.CloseComponent();
+
+            // Help text
+            var helpText = GetHelpText(field);
+            if (!string.IsNullOrEmpty(helpText))
+            {
+                builder.OpenComponent<RadzenText>(10);
+                builder.AddAttribute(11, "TextStyle", TextStyle.Caption);
+                builder.AddAttribute(12, "class", "rz-mt-1");
+                builder.AddAttribute(13, "ChildContent", (RenderFragment)(textBuilder =>
+                {
+                    textBuilder.AddContent(0, helpText);
+                }));
+                builder.CloseComponent();
+            }
+        };
+    }
+
+    #region Utilidades
+
+    private async Task OnFieldValueChanged(string fieldName, object? newValue)
+    {
+        FieldValues[fieldName] = newValue;
+        await FieldValuesChanged.InvokeAsync(FieldValues);
+        await EvaluateConditions(); // Re-evaluar condiciones cuando cambie un valor
+    }
+
+    private bool GetEffectiveRequired(CustomFieldDefinitionDto field)
+    {
+        if (conditionResults.TryGetValue(field.FieldName, out var result))
+        {
+            return result.IsRequired;
+        }
+        return field.IsRequired;
+    }
+
+    private bool GetEffectiveReadOnly(CustomFieldDefinitionDto field)
+    {
+        if (conditionResults.TryGetValue(field.FieldName, out var result))
+        {
+            return result.IsReadOnly;
+        }
+        return false;
+    }
+
+    private string? GetPlaceholder(CustomFieldDefinitionDto field)
+    {
+        return field.UIConfig?.Placeholder;
+    }
+
+    private string? GetHelpText(CustomFieldDefinitionDto field)
+    {
+        return field.UIConfig?.HelpText;
+    }
+
+    private int GetColumnSize(CustomFieldDefinitionDto field)
+    {
+        // Determinar el tamaño de columna basado en el tipo de campo
+        return field.FieldType switch
+        {
+            "textarea" => 12,      // Área de texto ocupa toda la fila
+            "multiselect" => 6,    // Selección múltiple ocupa media fila
+            "boolean" => 4,        // Campos booleanos más pequeños
+            _ => 6                 // Por defecto, media fila
+        };
+    }
+
+    #endregion
+}

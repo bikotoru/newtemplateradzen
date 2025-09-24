@@ -745,6 +745,294 @@ public class SystemPermissionService : BaseQueryService<SystemPermissions>
 
 ---
 
+## 🚀 SISTEMA FORCE OPERATIONS - BYPASS DE FIELD PERMISSIONS
+
+### **¿Cuándo Usar Force Operations?**
+
+El Sistema Force permite **bypasear temporalmente** las validaciones de FieldPermission para casos específicos donde las operaciones automáticas del sistema necesitan acceso a campos protegidos:
+
+#### **Escenarios de Uso Obligatorio:**
+
+1. **✅ Procesos de Aprobación**: 
+   - Juan aprueba una solicitud → El sistema debe actualizar automáticamente el sueldo
+   - Maria autoriza un cambio → El sistema modifica campos que el usuario no puede tocar directamente
+
+2. **✅ Importaciones/Migraciones**: 
+   - Carga masiva de datos con permisos elevados del sistema
+   - Sincronización de datos desde sistemas externos
+
+3. **✅ Procesos Automáticos**: 
+   - Workflows que actualizan campos protegidos como resultado de otras acciones
+   - Cálculos automáticos que modifican campos sensibles
+
+4. **✅ Reportes/Auditorías Especiales**: 
+   - Consultas que necesitan ver todos los campos para análisis
+   - Exports de datos completos para auditores
+
+### **Force SaveChanges - Para Operaciones de Escritura**
+
+```csharp
+// ❌ Operación NORMAL - Aplica validaciones FieldPermission (puede fallar)
+await _context.SaveChangesAsync();
+
+// ✅ FORCE - Saltea validaciones FieldPermission
+await _context.ForceSaveChangesAsync();
+await _context.ForceSaveChangesAsync("Juan aprobó solicitud de aumento #12345");
+
+// ✅ Versión síncrona también disponible
+_context.ForceSaveChanges("Proceso automático de nómina");
+```
+
+### **Force Queries - Para Operaciones de Lectura**
+
+```csharp
+// ❌ Operación NORMAL - Oculta campos sin permisos VIEW
+var empleados = await _context.Empleados.ToListAsync();
+
+// ✅ FORCE - Muestra todos los campos sin importar permisos VIEW
+var empleados = await _context.Empleados.ForceToListAsync();
+var empleados = await _context.Empleados.ForceToListAsync("Reporte para auditoría");
+
+// ✅ Otros métodos Force disponibles:
+var empleado = await query.ForceFirstOrDefaultAsync("Validación proceso aprobación");
+var count = await query.ForceCountAsync("Conteo para dashboard ejecutivo"); 
+bool exists = await query.ForceAnyAsync("Verificación automática sistema");
+var empleado = await query.ForceSingleOrDefaultAsync("Obtener empleado específico");
+```
+
+### **⭐ Ejemplo Completo: Sistema de Aprobaciones**
+
+```csharp
+/// <summary>
+/// CASO DE USO: Juan (Jefe) aprueba solicitud de aumento
+/// Juan tiene permisos SOLICITUD.APROBAR pero NO tiene EMPLEADO.SUELDOBASE.EDIT
+/// El sistema debe poder actualizar el sueldo automáticamente tras la aprobación
+/// </summary>
+public async Task AprobarSolicitudAumentoAsync(Guid solicitudId, Guid usuarioAprobadorId)
+{
+    // 1. ✅ FORCE QUERY - Obtener datos completos para validación
+    //    (puede incluir campos que el usuario no puede ver normalmente)
+    var solicitud = await _context.SolicitudesAumento
+        .Where(s => s.Id == solicitudId && s.Estado == "Pendiente")
+        .ForceFirstOrDefaultAsync("Proceso de aprobación - obtener solicitud completa");
+        
+    if (solicitud == null) throw new InvalidOperationException("Solicitud no encontrada o ya procesada");
+        
+    var empleado = await _context.Empleados
+        .Where(e => e.Id == solicitud.EmpleadoId)
+        .ForceFirstOrDefaultAsync("Proceso de aprobación - obtener empleado completo");
+
+    if (empleado == null) throw new InvalidOperationException("Empleado no encontrado");
+
+    // 2. ✅ Validaciones de negocio (usando datos completos obtenidos con Force)
+    if (solicitud.NuevoSueldo <= empleado.SueldoBase)
+        throw new InvalidOperationException("El nuevo sueldo debe ser mayor al actual");
+    
+    if (solicitud.NuevoSueldo > empleado.SueldoBase * 1.5m)
+        throw new InvalidOperationException("Aumento no puede ser mayor al 50%");
+
+    // 3. ✅ Actualizar datos (algunos campos protegidos por FieldPermission)
+    solicitud.Estado = "Aprobada";
+    solicitud.AprobadoPor = usuarioAprobadorId;
+    solicitud.FechaAprobacion = DateTime.UtcNow;
+    
+    // CAMPO PROTEGIDO: Normalmente requiere EMPLEADO.SUELDOBASE.EDIT
+    empleado.SueldoBase = solicitud.NuevoSueldo;
+    empleado.FechaUltimoCambioSueldo = DateTime.UtcNow;
+
+    // 4. ✅ FORCE SAVE - Saltear validaciones FieldPermission para campos protegidos
+    await _context.ForceSaveChangesAsync($"Aprobación automática solicitud #{solicitudId} por usuario {usuarioAprobadorId}");
+    
+    // 5. ✅ Log de auditoría
+    _logger.LogInformation("Solicitud {SolicitudId} aprobada automáticamente. Sueldo actualizado de {SueldoAnterior} a {SueldoNuevo}", 
+        solicitudId, solicitud.SueldoAnterior, solicitud.NuevoSueldo);
+}
+```
+
+### **⚠️ Consideraciones de Seguridad y Auditoría**
+
+```csharp
+/// <summary>
+/// PRINCIPIOS DE SEGURIDAD para Force Operations
+/// </summary>
+
+// ✅ 1. SIEMPRE documentar la razón del Force
+await _context.ForceSaveChangesAsync("RAZÓN ESPECÍFICA Y CLARA");
+
+// ✅ 2. Usar Force SOLO en métodos de negocio controlados (nunca desde controllers directamente)
+// ❌ PROHIBIDO en Controllers:
+[HttpPost("direct-update")]  
+public async Task<IActionResult> BadExample()
+{
+    // ❌ NUNCA hacer Force directamente en controllers
+    await _context.ForceSaveChangesAsync(); // ❌ Riesgo de seguridad
+}
+
+// ✅ CORRECTO en Services:
+public class ApprovalService 
+{
+    public async Task ProcessApprovalAsync(Guid requestId, Guid approverId)
+    {
+        // ✅ Force dentro de lógica de negocio controlada
+        await _context.ForceSaveChangesAsync($"Proceso aprobación {requestId} por {approverId}");
+    }
+}
+
+// ✅ 3. Validar PRIMERO que la operación Force es legítima
+public async Task UpdateSalaryAsync(Guid empleadoId, decimal nuevoSueldo, string justificacion)
+{
+    // VALIDACIONES DE NEGOCIO PRIMERO
+    var empleado = await _context.Empleados.FindAsync(empleadoId);
+    if (empleado == null) throw new ArgumentException("Empleado no existe");
+    if (nuevoSueldo <= 0) throw new ArgumentException("Sueldo debe ser positivo");
+    if (string.IsNullOrEmpty(justificacion)) throw new ArgumentException("Justificación requerida para Force");
+    
+    // Otras validaciones específicas del dominio
+    await ValidateBusinessRulesAsync(empleado, nuevoSueldo);
+    
+    // SOLO después de validaciones, usar Force
+    empleado.SueldoBase = nuevoSueldo;
+    await _context.ForceSaveChangesAsync($"Actualización sueldo: {justificacion}");
+}
+
+// ✅ 4. Logging automático de operaciones Force
+// El sistema automáticamente registra:
+// 🚀 FORCE MODE: Saltando validaciones FieldPermission - Razón: Juan aprobó solicitud #12345
+// 🚀 FORCE MODE: Saltando ocultación campos FieldPermission - Razón: Reporte auditoría mensual
+```
+
+### **📋 Guía de Implementación Force Operations**
+
+#### **PASO 1: Identificar Necesidad de Force**
+```csharp
+// ✅ Preguntarse:
+// - ¿Es una operación automática legítima del sistema?
+// - ¿El usuario tiene permisos para INICIAR la acción pero no para los campos resultantes?
+// - ¿Es para reportes/auditorías especiales?
+// - ¿Hay alternativas sin usar Force?
+
+// ❌ NO usar Force para:
+// - Bypasear permisos por conveniencia
+// - Operaciones iniciadas directamente por usuario final
+// - Casos donde se puede dar el permiso correcto al usuario
+```
+
+#### **PASO 2: Implementar con Validaciones**
+```csharp
+public async Task ProcessWithForce(ProcessRequest request)
+{
+    // 1. Validar que el usuario puede INICIAR esta operación
+    if (!await _permissionService.HasPermissionAsync(request.UserId, "PROCESS.APPROVE"))
+        throw new UnauthorizedAccessException("No autorizado para aprobar");
+    
+    // 2. Validaciones de negocio completas
+    await ValidateBusinessRules(request);
+    
+    // 3. Obtener datos con Force si es necesario
+    var data = await _context.Entities
+        .Where(conditions)
+        .ForceToListAsync($"Proceso {request.Type} iniciado por {request.UserId}");
+    
+    // 4. Procesar con lógica de negocio
+    foreach (var item in data)
+    {
+        // Aplicar cambios que requieren permisos especiales
+        item.ProtectedField = CalculateNewValue(item);
+    }
+    
+    // 5. Guardar con Force
+    await _context.ForceSaveChangesAsync($"Proceso {request.Type} completado automáticamente");
+}
+```
+
+#### **PASO 3: Testing de Force Operations**
+```csharp
+[Test]
+public async Task Force_Operations_Should_Bypass_Field_Permissions()
+{
+    // Arrange: Usuario SIN permisos de campo
+    var userWithoutFieldPermissions = CreateUserWithoutFieldPermissions();
+    SetCurrentUser(userWithoutFieldPermissions);
+    
+    // Act: Operación Force
+    var result = await _service.ProcessApprovalAsync(requestId, userId);
+    
+    // Assert: Debe completarse exitosamente a pesar de falta de permisos
+    Assert.IsTrue(result.Success);
+    Assert.AreEqual(expectedValue, entity.ProtectedField);
+}
+
+[Test]
+public async Task Normal_Operations_Should_Respect_Field_Permissions()
+{
+    // Arrange: Usuario SIN permisos de campo
+    var userWithoutFieldPermissions = CreateUserWithoutFieldPermissions();
+    SetCurrentUser(userWithoutFieldPermissions);
+    
+    // Act & Assert: Operación normal debe fallar
+    await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        _context.SaveChangesAsync()); // Sin Force
+}
+```
+
+### **🔍 Debugging Force Operations**
+
+#### **Logs del Sistema Force**
+```bash
+# ✅ Logs exitosos - estos logs indican que Force está funcionando
+🚀 FORCE MODE: Saltando validaciones FieldPermission - Razón: Juan aprobó solicitud #12345
+🚀 FORCE MODE: Saltando ocultación campos FieldPermission - Razón: Reporte auditoría mensual
+
+# ❌ Logs problemáticos - investigar si aparecen estos
+🔒 CAMPO OMITIDO: Campo 'SueldoBase' omitido del UPDATE. Permiso requerido: EMPLEADO.SUELDOBASE.EDIT
+🚨 ACCESO DENEGADO: No tiene permisos para actualizar campo 'SueldoBase'
+```
+
+#### **Troubleshooting Force Operations**
+```csharp
+// ❌ PROBLEMA: Force no funciona, sigue validando permisos
+// ✅ SOLUCIÓN: Verificar que AsyncLocal<ForceOperationInfo> esté funcionando
+
+// ❌ PROBLEMA: Force funciona pero no se registra en logs  
+// ✅ SOLUCIÓN: Verificar configuración de logging en Program.cs
+
+// ❌ PROBLEMA: Force causa errores de concurrencia
+// ✅ SOLUCIÓN: Force es thread-safe con AsyncLocal, verificar otros issues
+
+// ❌ PROBLEMA: Force se "filtra" a otras operaciones
+// ✅ SOLUCIÓN: ForceOperationContext se limpia automáticamente, verificar flujo de código
+```
+
+### **📝 Documentación Obligatoria**
+
+Cuando implementes Force Operations, SIEMPRE documentar:
+
+```csharp
+/// <summary>
+/// ⚠️ FORCE OPERATION: Este método usa Force para bypasear FieldPermissions
+/// 
+/// JUSTIFICACIÓN: Proceso de aprobación automática donde el usuario aprobador
+/// tiene permisos para aprobar pero no para modificar campos resultantes directamente.
+/// 
+/// CAMPOS AFECTADOS: SueldoBase, FechaUltimoCambio (requieren EMPLEADO.SUELDOBASE.EDIT)
+/// TRIGGER: Usuario con permiso SOLICITUD.APROBAR aprueba solicitud
+/// AUDITORIA: Registrado en logs con ID de solicitud y usuario aprobador
+/// 
+/// VALIDACIONES PREVIAS:
+/// - Usuario tiene permiso SOLICITUD.APROBAR
+/// - Solicitud existe y está en estado Pendiente
+/// - Nuevo sueldo cumple reglas de negocio (max 50% aumento)
+/// </summary>
+/// <param name="solicitudId">ID de la solicitud a aprobar</param>
+/// <param name="usuarioAprobadorId">ID del usuario que aprueba</param>
+public async Task AprobarSolicitudAumentoAsync(Guid solicitudId, Guid usuarioAprobadorId)
+{
+    // Implementation with Force...
+}
+```
+
+---
+
 ## 🎨 PATRONES DE DISEÑO Y UX
 
 ### 1. **Responsive Design**

@@ -1,0 +1,174 @@
+@using Frontend.Pages.AdvancedQuery
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenDialog @bind-Visible="@isVisible" 
+              Title="Compartir Búsqueda Guardada" 
+              Style="width: 600px; height: 500px;"
+              Resizable="true">
+    
+    <div style="height: 400px; overflow: auto;">
+        <RadzenTabs>
+            
+            <RadzenTab Title="Compartir con Usuario" Icon="person">
+                <div style="padding: 1rem;">
+                    
+                    @if (availableUsers?.Any() == true)
+                    {
+                        <RadzenFormField Text="Seleccionar Usuario">
+                            <RadzenDropDown @bind-Value="@selectedUserId"
+                                           Data="@availableUsers"
+                                           TextProperty="Name"
+                                           ValueProperty="Id"
+                                           Placeholder="Selecciona un usuario..."
+                                           Style="width: 100%; margin-bottom: 1rem;" />
+                        </RadzenFormField>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info">
+                            No hay usuarios disponibles para compartir.
+                        </RadzenAlert>
+                    }
+
+                    <RadzenFieldset Text="Permisos">
+                        <RadzenStack Gap="0.5rem">
+                            <div>
+                                <RadzenCheckBox @bind-Value="@userPermissions.CanView" TValue="bool" Name="CanViewUser" />
+                                <RadzenLabel Text="Puede Ver" For="CanViewUser" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@userPermissions.CanEdit" TValue="bool" Name="CanEditUser" />
+                                <RadzenLabel Text="Puede Editar" For="CanEditUser" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@userPermissions.CanExecute" TValue="bool" Name="CanExecuteUser" />
+                                <RadzenLabel Text="Puede Ejecutar" For="CanExecuteUser" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@userPermissions.CanShare" TValue="bool" Name="CanShareUser" />
+                                <RadzenLabel Text="Puede Compartir" For="CanShareUser" />
+                            </div>
+                        </RadzenStack>
+                    </RadzenFieldset>
+
+                    <div style="margin-top: 1rem;">
+                        <RadzenButton Click="@ShareWithUser" 
+                                      Text="Compartir con Usuario" 
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Icon="share"
+                                      Disabled="@(string.IsNullOrEmpty(selectedUserId))" />
+                    </div>
+                    
+                </div>
+            </RadzenTab>
+
+            <RadzenTab Title="Compartir con Rol" Icon="group">
+                <div style="padding: 1rem;">
+                    
+                    @if (availableRoles?.Any() == true)
+                    {
+                        <RadzenFormField Text="Seleccionar Rol">
+                            <RadzenDropDown @bind-Value="@selectedRoleId"
+                                           Data="@availableRoles"
+                                           TextProperty="Name"
+                                           ValueProperty="Id"
+                                           Placeholder="Selecciona un rol..."
+                                           Style="width: 100%; margin-bottom: 1rem;" />
+                        </RadzenFormField>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info">
+                            No hay roles disponibles para compartir.
+                        </RadzenAlert>
+                    }
+
+                    <RadzenFieldset Text="Permisos">
+                        <RadzenStack Gap="0.5rem">
+                            <div>
+                                <RadzenCheckBox @bind-Value="@rolePermissions.CanView" TValue="bool" Name="CanViewRole" />
+                                <RadzenLabel Text="Puede Ver" For="CanViewRole" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@rolePermissions.CanEdit" TValue="bool" Name="CanEditRole" />
+                                <RadzenLabel Text="Puede Editar" For="CanEditRole" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@rolePermissions.CanExecute" TValue="bool" Name="CanExecuteRole" />
+                                <RadzenLabel Text="Puede Ejecutar" For="CanExecuteRole" />
+                            </div>
+                            <div>
+                                <RadzenCheckBox @bind-Value="@rolePermissions.CanShare" TValue="bool" Name="CanShareRole" />
+                                <RadzenLabel Text="Puede Compartir" For="CanShareRole" />
+                            </div>
+                        </RadzenStack>
+                    </RadzenFieldset>
+
+                    <div style="margin-top: 1rem;">
+                        <RadzenButton Click="@ShareWithRole" 
+                                      Text="Compartir con Rol" 
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Icon="share"
+                                      Disabled="@(string.IsNullOrEmpty(selectedRoleId))" />
+                    </div>
+                    
+                </div>
+            </RadzenTab>
+
+            <RadzenTab Title="Compartidos Actuales" Icon="list">
+                <div style="padding: 1rem;">
+                    
+                    @if (currentShares?.Any() == true)
+                    {
+                        <RadzenDataGrid Data="@currentShares" TItem="SavedQueryShareDto" 
+                                       AllowPaging="false" 
+                                       AllowSorting="true"
+                                       Style="height: 300px;">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="SharedWithName" Title="Compartido Con" />
+                                <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanView" Title="Ver">
+                                    <Template Context="share">
+                                        <RadzenCheckBox Value="@share.CanView" TValue="bool" Disabled="true" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanEdit" Title="Editar">
+                                    <Template Context="share">
+                                        <RadzenCheckBox Value="@share.CanEdit" TValue="bool" Disabled="true" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="SavedQueryShareDto" Title="Acciones">
+                                    <Template Context="share">
+                                        <RadzenButton Click="@(() => RevokeShare(share))" 
+                                                      ButtonStyle="ButtonStyle.Danger" 
+                                                      Variant="Variant.Text"
+                                                      Icon="delete" 
+                                                      Size="ButtonSize.Small" 
+                                                      Title="Revocar compartido" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info">
+                            Esta búsqueda no ha sido compartida con nadie aún.
+                        </RadzenAlert>
+                    }
+                    
+                </div>
+            </RadzenTab>
+
+        </RadzenTabs>
+    </div>
+
+    <div style="text-align: right; margin-top: 1rem;">
+        <RadzenButton Click="@Close" Text="Cerrar" ButtonStyle="ButtonStyle.Secondary" />
+    </div>
+
+</RadzenDialog>
+
+@code {
+    // Component logic will be in ShareQueryModal.razor.cs
+}

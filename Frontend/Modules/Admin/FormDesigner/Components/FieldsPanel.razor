@@ -1,0 +1,184 @@
+@using Forms.Models.DTOs
+@using Forms.Models.Enums
+
+<div class="fields-panel">
+    <RadzenCard class="rz-h-100">
+        <RadzenText TextStyle="TextStyle.H6" class="rz-mb-3">
+            <RadzenIcon Icon="extension" class="rz-mr-2" />
+            Campos Personalizados
+        </RadzenText>
+
+        <div class="add-custom-field rz-mb-3" @onclick="@OnCreateFieldClick">
+            <RadzenIcon Icon="add" class="add-icon" />
+            <span>Crear Nuevo Campo</span>
+        </div>
+
+        <div class="field-items-container">
+            @if (AvailableFields?.CustomFields != null)
+            {
+                @foreach (var field in AvailableFields.CustomFields)
+                {
+                    var isAdded = IsFieldAlreadyAdded(field.FieldName);
+                    <div class="field-item custom-field @(isAdded ? "field-added" : "")"
+                         @onclick="@(() => !isAdded ? OnAddFieldClick.InvokeAsync(field) : Task.CompletedTask)">
+                        <RadzenIcon Icon="@GetFieldIcon(field.FieldType)" class="field-icon" />
+                        <div class="field-info">
+                            <div class="field-name">@field.DisplayName</div>
+                            <div class="field-type">@GetFieldTypeDisplay(field.FieldType)</div>
+                        </div>
+                        @if (isAdded)
+                        {
+                            <RadzenIcon Icon="check_circle" class="added-indicator" Title="Campo ya agregado al formulario" />
+                        }
+                        <RadzenButton Icon="edit" Size="ButtonSize.ExtraSmall"
+                                    Variant="Variant.Text"
+                                    class="edit-field-btn"
+                                    Click="@(() => OnEditFieldClick.InvokeAsync(field))" />
+                    </div>
+                }
+            }
+        </div>
+    </RadzenCard>
+</div>
+
+<style>
+.fields-panel {
+    height: 100%;
+}
+
+.field-items-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.field-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--rz-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.field-item:hover {
+    border-color: var(--rz-primary);
+    box-shadow: 0 2px 8px var(--rz-shadow-1);
+}
+
+.field-item.custom-field {
+    background: var(--rz-warning-lighter);
+    border-left: 3px solid var(--rz-warning);
+}
+
+.field-item.field-added {
+    background: #f0f8f0;
+    border-left: 3px solid #28a745;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.field-item.field-added .field-name {
+    color: #28a745;
+    font-weight: 700;
+}
+
+.field-item.field-added .field-type {
+    color: #28a745;
+}
+
+.field-item.field-added .field-icon {
+    color: #28a745;
+}
+
+.field-item.field-added:hover {
+    border-color: #28a745;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    transform: none;
+}
+
+.field-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    color: var(--rz-primary);
+}
+
+.field-info {
+    flex: 1;
+}
+
+.field-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.field-type {
+    font-size: 0.75rem;
+    color: var(--rz-text-secondary-color);
+}
+
+.edit-field-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.field-item:hover .edit-field-btn {
+    opacity: 1;
+}
+
+.add-custom-field {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px dashed var(--rz-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--rz-text-secondary-color);
+    transition: all 0.2s ease;
+}
+
+.add-custom-field:hover {
+    border-color: var(--rz-primary);
+    color: var(--rz-primary);
+}
+
+.add-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+}
+
+.added-indicator {
+    font-size: 1.2rem;
+    color: #28a745;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Tema oscuro */
+@@media (prefers-color-scheme: dark) {
+    .field-item.field-added {
+        background: #1a3a26;
+        border-left: 3px solid #51c878;
+    }
+
+    .field-item.field-added .field-name,
+    .field-item.field-added .field-type,
+    .field-item.field-added .field-icon {
+        color: #51c878;
+    }
+
+    .field-item.field-added:hover {
+        border-color: #51c878;
+        box-shadow: 0 2px 8px rgba(81, 200, 120, 0.3);
+    }
+
+    .added-indicator {
+        color: #51c878;
+    }
+}
+</style>

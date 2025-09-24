@@ -28,7 +28,14 @@ namespace Backend.Utils.EFInterceptors.Extensions
 
             // Register the interceptor as a singleton to avoid multiple instances
             services.AddSingleton<NoSelectQueryInterceptor>(provider =>
-                new NoSelectQueryInterceptor(provider.GetRequiredService<ILogger<NoSelectQueryInterceptor>>()));
+                new NoSelectQueryInterceptor(
+                    provider.GetRequiredService<ILogger<NoSelectQueryInterceptor>>(),
+                    provider));
+            
+            services.AddSingleton<SimpleSaveInterceptor>(provider =>
+                new SimpleSaveInterceptor(
+                    provider.GetRequiredService<ILogger<SimpleSaveInterceptor>>(),
+                    provider));
             
             // Register DbContext options first with interceptors
             services.AddDbContext<AppDbContext>((serviceProvider, options) =>
@@ -44,7 +51,13 @@ namespace Backend.Utils.EFInterceptors.Extensions
                 
                 // Get the singleton interceptor instead of creating new ones
                 var noSelectInterceptor = serviceProvider.GetRequiredService<NoSelectQueryInterceptor>();
-                options.AddInterceptors(noSelectInterceptor);
+                var simpleSaveInterceptor = serviceProvider.GetRequiredService<SimpleSaveInterceptor>();
+
+                // Log para debugging
+                var logger = serviceProvider.GetService<ILogger>();
+                logger?.LogInformation("🔧 [DbContextExtensions] Registrando interceptors: NoSelect, SimpleSave");
+
+                options.AddInterceptors(noSelectInterceptor, simpleSaveInterceptor);
                 
                 options.EnableSensitiveDataLogging(false);
                 options.EnableDetailedErrors(true);
@@ -55,6 +68,7 @@ namespace Backend.Utils.EFInterceptors.Extensions
 
             // Replace with intercepted version
             services.AddScoped<AppDbContext, InterceptedAppDbContext>();
+            services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
             return services;
         }

@@ -1,0 +1,124 @@
+@using Frontend.Pages.AdvancedQuery
+@using Radzen
+
+<div>
+    <RadzenCard Style="margin-bottom: 1rem;">
+        <RadzenText TextStyle="TextStyle.H6">Gestión de Compartidos</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" Style="margin-bottom: 1rem;">
+            Administra quién tiene acceso a esta búsqueda guardada y qué permisos tienen.
+        </RadzenText>
+
+        <RadzenButton Click="@OpenShareModal" 
+                      Text="Compartir con Nuevos Usuarios/Roles" 
+                      ButtonStyle="ButtonStyle.Primary"
+                      Icon="person_add"
+                      Style="margin-bottom: 1rem;" />
+    </RadzenCard>
+
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 2rem;">
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+            <p style="margin-top: 1rem;">Cargando compartidos...</p>
+        </div>
+    }
+    else if (shares?.Any() == true)
+    {
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.H6" Style="margin-bottom: 1rem;">
+                Compartidos Actuales (@shares.Count)
+            </RadzenText>
+            
+            <RadzenDataGrid Data="@shares" 
+                           TItem="SavedQueryShareDto" 
+                           AllowPaging="true"
+                           PageSize="10"
+                           AllowSorting="true"
+                           AllowFiltering="true">
+                <Columns>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="SharedWithName" Title="Compartido Con" Width="200px" />
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="FechaCreacion" Title="Fecha Compartido" Width="180px">
+                        <Template Context="share">
+                            @share.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanView" Title="Ver" Width="80px">
+                        <Template Context="share">
+                            <RadzenCheckBox Value="@share.CanView" TValue="bool" Disabled="true" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanEdit" Title="Editar" Width="80px">
+                        <Template Context="share">
+                            <RadzenCheckBox Value="@share.CanEdit" TValue="bool" Disabled="true" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanExecute" Title="Ejecutar" Width="80px">
+                        <Template Context="share">
+                            <RadzenCheckBox Value="@share.CanExecute" TValue="bool" Disabled="true" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Property="CanShare" Title="Compartir" Width="80px">
+                        <Template Context="share">
+                            <RadzenCheckBox Value="@share.CanShare" TValue="bool" Disabled="true" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SavedQueryShareDto" Title="Acciones" Width="120px" Sortable="false" Filterable="false">
+                        <Template Context="share">
+                            <RadzenButton Click="@(() => EditShare(share))" 
+                                          ButtonStyle="ButtonStyle.Info" 
+                                          Variant="Variant.Text"
+                                          Icon="edit" 
+                                          Size="ButtonSize.Small" 
+                                          Title="Editar permisos" 
+                                          Style="margin-right: 0.25rem;" />
+                            <RadzenButton Click="@(() => RevokeShare(share))" 
+                                          ButtonStyle="ButtonStyle.Danger" 
+                                          Variant="Variant.Text"
+                                          Icon="delete" 
+                                          Size="ButtonSize.Small" 
+                                          Title="Revocar compartido" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
+    }
+    else
+    {
+        <RadzenCard>
+            <div style="text-align: center; padding: 2rem;">
+                <RadzenIcon Icon="share" Style="font-size: 48px; color: #ccc; margin-bottom: 1rem;" />
+                <RadzenText TextStyle="TextStyle.H6" Style="color: #666;">
+                    Esta búsqueda no ha sido compartida
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: #999; margin-bottom: 1rem;">
+                    Comparte esta búsqueda con otros usuarios o roles para que puedan acceder a ella.
+                </RadzenText>
+                <RadzenButton Click="@OpenShareModal" 
+                              Text="Compartir Ahora" 
+                              ButtonStyle="ButtonStyle.Primary"
+                              Icon="person_add" />
+            </div>
+        </RadzenCard>
+    }
+</div>
+
+<!-- Modal for sharing -->
+@if (showShareModal)
+{
+    <ShareQueryModal SavedQuery="@savedQuery" 
+                     OnClose="@(() => { showShareModal = false; StateHasChanged(); })" 
+                     OnShared="@OnShared" />
+}
+
+<!-- Modal for editing permissions -->
+@if (showEditModal && selectedShare != null)
+{
+    <EditShareModal Share="@selectedShare" 
+                    OnClose="@(() => { showEditModal = false; selectedShare = null; StateHasChanged(); })" 
+                    OnUpdated="@OnShareUpdated" />
+}
+
+@code {
+    // Component logic will be in ShareManagementTab.razor.cs
+}

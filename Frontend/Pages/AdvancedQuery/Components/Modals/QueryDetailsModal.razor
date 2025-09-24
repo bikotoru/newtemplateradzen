@@ -1,0 +1,16 @@
+@using Radzen.Blazor
+
+<div style="max-width: 800px;">
+    <RadzenMarkdown Value="@QueryInfo" />
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.End" Style="margin-top: 1rem;">
+        <RadzenButton Text="Copiar Query" Icon="content_copy" Click="@(() => OnCopyQuery.InvokeAsync(FilterString))" />
+        <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Light" Click="@OnClose" />
+    </RadzenStack>
+</div>
+
+@code {
+    [Parameter] public string QueryInfo { get; set; } = string.Empty;
+    [Parameter] public string FilterString { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnCopyQuery { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+}

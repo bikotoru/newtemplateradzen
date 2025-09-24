@@ -1,0 +1,70 @@
+@using Frontend.Pages.AdvancedQuery
+@using Radzen
+
+<RadzenDialog @bind-Visible="@isVisible" 
+              Title="Duplicar Búsqueda Guardada" 
+              Style="width: 500px;"
+              Resizable="false">
+    
+    <div style="padding: 1rem;">
+        
+        <RadzenAlert AlertStyle="AlertStyle.Info" Style="margin-bottom: 1rem;">
+            <RadzenIcon Icon="info" />
+            Se creará una copia de la búsqueda "<strong>@SavedQuery?.Name</strong>" con el nuevo nombre especificado.
+        </RadzenAlert>
+
+        <RadzenFormField Text="Nuevo Nombre *" Style="width: 100%; margin-bottom: 1rem;">
+            <RadzenTextBox @bind-Value="@newName" 
+                           Placeholder="Ingrese el nombre para la copia"
+                           Style="width: 100%;" />
+        </RadzenFormField>
+
+        @if (!string.IsNullOrEmpty(validationMessage))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Style="margin-bottom: 1rem;">
+                @validationMessage
+            </RadzenAlert>
+        }
+
+        <RadzenText TextStyle="TextStyle.Body2" Style="color: #666; margin-bottom: 1rem;">
+            La búsqueda duplicada incluirá:
+        </RadzenText>
+        
+        <ul style="margin-bottom: 1rem; color: #666;">
+            <li>La misma configuración de entidad</li>
+            <li>Los mismos campos seleccionados</li>
+            <li>Los mismos filtros aplicados</li>
+            <li>La misma configuración de límite de registros</li>
+        </ul>
+
+        <RadzenText TextStyle="TextStyle.Body2" Style="color: #666; margin-bottom: 1rem;">
+            La búsqueda duplicada será <strong>privada</strong> (no pública) y <strong>no será una plantilla</strong>, 
+            independientemente de la configuración original.
+        </RadzenText>
+
+    </div>
+
+    <div style="text-align: right; padding: 1rem; border-top: 1px solid #ddd; background-color: #f8f9fa;">
+        <RadzenButton Click="@Close" 
+                      Text="Cancelar" 
+                      ButtonStyle="ButtonStyle.Secondary" 
+                      Style="margin-right: 0.5rem;" />
+        <RadzenButton Click="@DuplicateQuery" 
+                      Text="Duplicar" 
+                      ButtonStyle="ButtonStyle.Primary"
+                      Icon="content_copy"
+                      Disabled="@(string.IsNullOrWhiteSpace(newName) || isProcessing)" />
+    </div>
+
+    @if (isProcessing)
+    {
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center;">
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+        </div>
+    }
+
+</RadzenDialog>
+
+@code {
+    // Component logic will be in DuplicateQueryModal.razor.cs
+}
