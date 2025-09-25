@@ -1,0 +1,509 @@
+@using Radzen.Blazor
+@using System.Reflection
+@using Frontend.Services
+
+<RadzenCard>
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H6">
+            <RadzenIcon Icon="filter_alt" /> Configurar Filtros
+        </RadzenText>
+
+        @if (filterRows.Any())
+        {
+            <div class="filter-table">
+                <div class="filter-header">
+                    <div class="col-field">Campo</div>
+                    <div class="col-operator">Operación</div>
+                    <div class="col-value">Valor</div>
+                    <div class="col-actions">Acciones</div>
+                </div>
+
+                @foreach (var row in filterRows)
+                {
+                    <div class="filter-row @(row.IsExpanded ? "expanded" : "")" style="padding-left: @(row.Level * 30)px;">
+                        @if (row.IsRelation)
+                        {
+                            <!-- Fila de relación -->
+                            <div class="col-field">
+                                <RadzenIcon Icon="@(row.IsExpanded ? "expand_less" : "expand_more")"
+                                          Style="cursor: pointer;"
+                                          @onclick="@(() => ToggleExpand(row))" />
+                                <strong>@row.DisplayName</strong>
+                            </div>
+                            <div class="col-operator">
+                                <RadzenDropDown @bind-Value="row.SelectedOperator"
+                                              Data="@GetRelationOperators()"
+                                              TextProperty="Text"
+                                              ValueProperty="Value"
+                                              Style="width: 100%;"
+                                              Change="@(() => OnRelationOperatorChange(row))" />
+                            </div>
+                            <div class="col-value">
+                                @if (row.SelectedOperator == "relacionado")
+                                {
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                        Expandir para configurar
+                                    </RadzenText>
+                                }
+                            </div>
+                            <div class="col-actions">
+                                <RadzenButton Icon="delete"
+                                            ButtonStyle="ButtonStyle.Danger"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => RemoveFilter(row))" />
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Fila de campo normal -->
+                            <div class="col-field">
+                                @row.DisplayName
+                            </div>
+                            <div class="col-operator">
+                                <RadzenDropDown @bind-Value="row.SelectedOperator"
+                                              Data="@GetOperatorsForType(row.PropertyType)"
+                                              Style="width: 100%;" />
+                            </div>
+                            <div class="col-value">
+                                @switch (row.PropertyType.Name)
+                                {
+                                    case "String":
+                                        <RadzenTextBox @bind-Value="row.StringValue" Style="width: 100%;" />
+                                        break;
+                                    case "Int32":
+                                    case "Int64":
+                                    case "Decimal":
+                                    case "Double":
+                                        <RadzenNumeric @bind-Value="row.NumericValue" Style="width: 100%;" TValue="decimal?" />
+                                        break;
+                                    case "Boolean":
+                                        <RadzenCheckBox @bind-Value="row.BoolValue" />
+                                        break;
+                                    case "DateTime":
+                                        <RadzenDatePicker @bind-Value="row.DateValue" Style="width: 100%;" TValue="DateTime?" />
+                                        break;
+                                    default:
+                                        <RadzenTextBox @bind-Value="row.StringValue" Style="width: 100%;" />
+                                        break;
+                                }
+                            </div>
+                            <div class="col-actions">
+                                <RadzenButton Icon="delete"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => RemoveFilter(row))" />
+                            </div>
+                        }
+                    </div>
+
+                    @* Mostrar campos hijos si está expandido y es relación *@
+                    @if (row.IsRelation && row.IsExpanded && row.SelectedOperator == "relacionado")
+                    {
+                        @foreach (var childRow in row.Children)
+                        {
+                            <div class="filter-row child-row" style="padding-left: @((row.Level + 1) * 30)px;">
+                                <div class="col-field">
+                                    @if (childRow.IsRelation)
+                                    {
+                                        <RadzenIcon Icon="@(childRow.IsExpanded ? "expand_less" : "expand_more")"
+                                                  Style="cursor: pointer;"
+                                                  @onclick="@(() => ToggleExpand(childRow))" />
+                                        <strong>@childRow.DisplayName</strong>
+                                    }
+                                    else
+                                    {
+                                        @childRow.DisplayName
+                                    }
+                                </div>
+                                <div class="col-operator">
+                                    <RadzenDropDown @bind-Value="childRow.SelectedOperator"
+                                                  Data="@(childRow.IsRelation ? GetRelationOperators() : GetOperatorsForType(childRow.PropertyType))"
+                                                  TextProperty="@(childRow.IsRelation ? "Text" : null)"
+                                                  ValueProperty="@(childRow.IsRelation ? "Value" : null)"
+                                                  Style="width: 100%;"
+                                                  Change="@((value) => { if (childRow.IsRelation) OnRelationOperatorChange(childRow); })" />
+                                </div>
+                                <div class="col-value">
+                                    @if (!childRow.IsRelation)
+                                    {
+                                        @switch (childRow.PropertyType.Name)
+                                        {
+                                            case "String":
+                                                <RadzenTextBox @bind-Value="childRow.StringValue" Style="width: 100%;" />
+                                                break;
+                                            case "Int32":
+                                            case "Int64":
+                                            case "Decimal":
+                                            case "Double":
+                                                <RadzenNumeric @bind-Value="childRow.NumericValue" Style="width: 100%;" TValue="decimal?" />
+                                                break;
+                                            case "Boolean":
+                                                <RadzenCheckBox @bind-Value="childRow.BoolValue" />
+                                                break;
+                                            case "DateTime":
+                                                <RadzenDatePicker @bind-Value="childRow.DateValue" Style="width: 100%;" TValue="DateTime?" />
+                                                break;
+                                            default:
+                                                <RadzenTextBox @bind-Value="childRow.StringValue" Style="width: 100%;" />
+                                                break;
+                                        }
+                                    }
+                                    else if (childRow.SelectedOperator == "relacionado")
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                                            Expandir para configurar
+                                        </RadzenText>
+                                    }
+                                </div>
+                                <div class="col-actions">
+                                    @if (!childRow.IsRelation || childRow.SelectedOperator != "relacionado")
+                                    {
+                                        <RadzenButton Icon="delete"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="@(() => RemoveChildFilter(row, childRow))" />
+                                    }
+                                </div>
+                            </div>
+
+                            @* Recursivo: mostrar hijos del hijo si es relación expandida *@
+                            @if (childRow.IsRelation && childRow.IsExpanded && childRow.SelectedOperator == "relacionado")
+                            {
+                                @foreach (var grandChildRow in childRow.Children)
+                                {
+                                    <div class="filter-row grandchild-row" style="padding-left: @((row.Level + 2) * 30)px;">
+                                        <div class="col-field">@grandChildRow.DisplayName</div>
+                                        <div class="col-operator">
+                                            <RadzenDropDown @bind-Value="grandChildRow.SelectedOperator"
+                                                          Data="@GetOperatorsForType(grandChildRow.PropertyType)"
+                                                          Style="width: 100%;" />
+                                        </div>
+                                        <div class="col-value">
+                                            @switch (grandChildRow.PropertyType.Name)
+                                            {
+                                                case "String":
+                                                    <RadzenTextBox @bind-Value="grandChildRow.StringValue" Style="width: 100%;" />
+                                                    break;
+                                                case "Int32":
+                                                case "Int64":
+                                                case "Decimal":
+                                                case "Double":
+                                                    <RadzenNumeric @bind-Value="grandChildRow.NumericValue" Style="width: 100%;" TValue="decimal?" />
+                                                    break;
+                                                case "Boolean":
+                                                    <RadzenCheckBox @bind-Value="grandChildRow.BoolValue" />
+                                                    break;
+                                                case "DateTime":
+                                                    <RadzenDatePicker @bind-Value="grandChildRow.DateValue" Style="width: 100%;" TValue="DateTime?" />
+                                                    break;
+                                                default:
+                                                    <RadzenTextBox @bind-Value="grandChildRow.StringValue" Style="width: 100%;" />
+                                                    break;
+                                            }
+                                        </div>
+                                        <div class="col-actions">
+                                            <RadzenButton Icon="delete"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => RemoveChildFilter(childRow, grandChildRow))" />
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                    }
+                }
+            </div>
+        }
+
+        <!-- Botón para agregar filtro -->
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+            <RadzenDropDown @bind-Value="selectedFieldToAdd"
+                          Data="@availableFields"
+                          TextProperty="DisplayName"
+                          ValueProperty="PropertyName"
+                          Placeholder="Seleccionar campo..."
+                          Style="width: 300px;" />
+
+            <RadzenButton Text="Agregar Filtro"
+                        Icon="add"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="@AddFilter"
+                        Disabled="@(string.IsNullOrEmpty(selectedFieldToAdd))" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [Parameter] public List<EntityFieldDefinition> EntityFields { get; set; } = new();
+    [Parameter] public EventCallback OnFilterChanged { get; set; }
+
+    private List<FilterRow> filterRows = new();
+    private List<EntityFieldDefinition> availableFields = new();
+
+    /// <summary>
+    /// Expone los filtros configurados
+    /// </summary>
+    public List<FilterRow> Filters => filterRows;
+    private string? selectedFieldToAdd;
+
+    protected override void OnParametersSet()
+    {
+        availableFields = EntityFields.Where(f => f.IsSearchable).ToList();
+    }
+
+    private void AddFilter()
+    {
+        if (string.IsNullOrEmpty(selectedFieldToAdd)) return;
+
+        var field = EntityFields.FirstOrDefault(f => f.PropertyName == selectedFieldToAdd);
+        if (field == null) return;
+
+        var newRow = new FilterRow
+        {
+            PropertyName = field.PropertyName,
+            DisplayName = field.DisplayName,
+            PropertyType = field.PropertyType,
+            IsRelation = field.IsNavigationProperty,
+            RelatedEntityTypeName = field.RelatedEntityTypeName,
+            Level = 0
+        };
+
+        filterRows.Add(newRow);
+        selectedFieldToAdd = null;
+        StateHasChanged();
+    }
+
+    private void RemoveFilter(FilterRow row)
+    {
+        filterRows.Remove(row);
+        StateHasChanged();
+    }
+
+    private void RemoveChildFilter(FilterRow parent, FilterRow child)
+    {
+        parent.Children.Remove(child);
+        StateHasChanged();
+    }
+
+    private void ToggleExpand(FilterRow row)
+    {
+        row.IsExpanded = !row.IsExpanded;
+
+        // Si se expande y no tiene hijos, cargarlos
+        if (row.IsExpanded && !row.Children.Any() && row.IsRelation)
+        {
+            LoadChildFields(row);
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnRelationOperatorChange(FilterRow row)
+    {
+        if (row.SelectedOperator == "relacionado")
+        {
+            row.IsExpanded = true;
+            if (!row.Children.Any())
+            {
+                LoadChildFields(row);
+            }
+        }
+        else
+        {
+            row.IsExpanded = false;
+            row.Children.Clear();
+        }
+        StateHasChanged();
+    }
+
+    private void LoadChildFields(FilterRow parentRow)
+    {
+        if (string.IsNullOrEmpty(parentRow.RelatedEntityTypeName)) return;
+
+        // Buscar el tipo de la entidad relacionada
+        var entityType = FindEntityType(parentRow.RelatedEntityTypeName);
+        if (entityType == null) return;
+
+        var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        foreach (var property in properties)
+        {
+            if (IsFilterableProperty(property))
+            {
+                var childRow = new FilterRow
+                {
+                    PropertyName = property.Name,
+                    DisplayName = ConvertToDisplayName(property.Name),
+                    PropertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType,
+                    IsRelation = IsNavigationProperty(property),
+                    RelatedEntityTypeName = IsNavigationProperty(property) ? property.PropertyType.Name : null,
+                    Level = parentRow.Level + 1
+                };
+
+                parentRow.Children.Add(childRow);
+            }
+        }
+    }
+
+    private Type? FindEntityType(string typeName)
+    {
+        var sharedModelsAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Shared.Models");
+
+        if (sharedModelsAssembly != null)
+        {
+            var fullTypeName = $"Shared.Models.Entities.{typeName}";
+            return sharedModelsAssembly.GetType(fullTypeName, false, true);
+        }
+
+        return null;
+    }
+
+    private bool IsFilterableProperty(PropertyInfo property)
+    {
+        var propertyName = property.Name.ToLower();
+        return !propertyName.Contains("customfield") &&
+               propertyName != "id" &&
+               propertyName != "creadorid" &&
+               propertyName != "modificadorid" &&
+               propertyName != "organizationid";
+    }
+
+    private bool IsNavigationProperty(PropertyInfo property)
+    {
+        return property.PropertyType.IsClass &&
+               property.PropertyType != typeof(string) &&
+               property.PropertyType.Namespace?.StartsWith("Shared.Models.Entities") == true &&
+               !property.PropertyType.IsArray &&
+               !property.PropertyType.IsGenericType;
+    }
+
+    private string ConvertToDisplayName(string propertyName)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(propertyName, "([a-z])([A-Z])", "$1 $2");
+    }
+
+    private List<string> GetOperatorsForType(Type type)
+    {
+        if (type == typeof(string))
+            return new List<string> { "Contiene", "Igual a", "Comienza con", "Termina con", "No contiene" };
+        else if (type == typeof(bool) || type == typeof(bool?))
+            return new List<string> { "Igual a", "Diferente de" };
+        else if (IsNumericType(type))
+            return new List<string> { "Igual a", "Mayor que", "Menor que", "Mayor o igual", "Menor o igual" };
+        else if (type == typeof(DateTime) || type == typeof(DateTime?))
+            return new List<string> { "Igual a", "Antes de", "Después de" };
+        else
+            return new List<string> { "Igual a", "Diferente de" };
+    }
+
+    private bool IsNumericType(Type type)
+    {
+        return type == typeof(int) || type == typeof(int?) ||
+               type == typeof(long) || type == typeof(long?) ||
+               type == typeof(decimal) || type == typeof(decimal?) ||
+               type == typeof(double) || type == typeof(double?) ||
+               type == typeof(float) || type == typeof(float?);
+    }
+
+    private class RelationOperator
+    {
+        public string Text { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    private List<RelationOperator> GetRelationOperators()
+    {
+        return new List<RelationOperator>
+        {
+            new RelationOperator { Text = "Relacionado", Value = "relacionado" },
+            new RelationOperator { Text = "Es nulo", Value = "isnull" },
+            new RelationOperator { Text = "No es nulo", Value = "isnotnull" }
+        };
+    }
+
+    public class FilterRow
+    {
+        public string PropertyName { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public Type PropertyType { get; set; } = typeof(string);
+        public bool IsRelation { get; set; }
+        public string? RelatedEntityTypeName { get; set; }
+        public int Level { get; set; }
+        public bool IsExpanded { get; set; }
+        public string SelectedOperator { get; set; } = "";
+        public List<FilterRow> Children { get; set; } = new();
+        public string PropertyPath => GeneratePropertyPath();
+
+        // Valores para diferentes tipos
+        public string? StringValue { get; set; }
+        public decimal? NumericValue { get; set; }
+        public bool? BoolValue { get; set; }
+        public DateTime? DateValue { get; set; }
+
+        // Propiedad unificada para obtener el valor actual
+        public object? Value
+        {
+            get
+            {
+                if (StringValue != null) return StringValue;
+                if (NumericValue != null) return NumericValue;
+                if (BoolValue != null) return BoolValue;
+                if (DateValue != null) return DateValue;
+                return null;
+            }
+        }
+
+        private string GeneratePropertyPath()
+        {
+            // Esta propiedad generará el path completo para las propiedades anidadas
+            // Por ahora retornar solo el PropertyName
+            return PropertyName;
+        }
+    }
+}
+
+<style>
+    .filter-table {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .filter-header {
+        display: table-row;
+        background: var(--rz-base-background-color);
+        font-weight: bold;
+    }
+
+    .filter-header > div {
+        display: table-cell;
+        padding: 0.75rem;
+        border-bottom: 2px solid var(--rz-border-color);
+    }
+
+    .filter-row {
+        display: table-row;
+        border-bottom: 1px solid var(--rz-border-color);
+    }
+
+    .filter-row > div {
+        display: table-cell;
+        padding: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .filter-row.child-row {
+        background: rgba(var(--rz-primary-rgb), 0.03);
+    }
+
+    .filter-row.grandchild-row {
+        background: rgba(var(--rz-primary-rgb), 0.06);
+    }
+
+    .col-field { width: 30%; }
+    .col-operator { width: 25%; }
+    .col-value { width: 35%; }
+    .col-actions { width: 10%; text-align: center; }
+</style>

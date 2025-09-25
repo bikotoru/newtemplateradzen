@@ -1,0 +1,12 @@
+[
+  {
+    "entidad": "Comuna",
+    "modulo": "Core.Localidades",
+    "urllista": "/core/localidades/comuna/list"
+  },
+  {
+    "entidad": "Region",
+    "modulo": "Core.Localidades",
+    "urllista": "/core/localidades/region/list"
+  }
+]

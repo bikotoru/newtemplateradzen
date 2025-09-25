@@ -14,7 +14,8 @@
       "Read(//mnt/c/Users/vuret/OneDrive/Escritorio/**)",
       "Bash(cd:*)",
       "Bash(grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Read(//mnt/f/NewAgendaGes/radzen-blazor/Radzen.Blazor/**)"
     ],
     "deny": [],
     "ask": []

@@ -1,4 +1,6 @@
 using Frontend.Services;
+using Frontend.Modules.Core.Localidades.Comunas;
+using Frontend.Modules.Core.Localidades.Regions;
 using Frontend.Modules.Admin.SystemUsers;
 using Frontend.Modules.Admin.SystemRoles;
 using Frontend.Modules.Admin.SystemPermissions;
@@ -25,6 +27,8 @@ public static class ServiceRegistry
         services.AddScoped<AdvancedQueryService>();
 
         // Module Services
+        services.AddScoped<ComunaService>();
+        services.AddScoped<RegionService>();
         services.AddScoped<SystemUserService>();
         services.AddScoped<SystemRoleService>();
         services.AddScoped<SystemPermissionService>();

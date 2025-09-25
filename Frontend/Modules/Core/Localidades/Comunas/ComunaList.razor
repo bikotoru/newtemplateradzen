@@ -1,0 +1,44 @@
+@page "/core/localidades/comuna/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities
+@using Radzen
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("COMUNA.VIEW")]
+
+<PageTitle>Comunas</PageTitle>
+
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/"
+                        ShowNew
+                        NewPath="/core/localidades/comuna/formulario"
+                        >
+
+        <RadzenCard>
+            <EntityTable T="Comuna" 
+                         @ref="entityTable"
+                         @key="@GetGridKey()"
+                         ShowSearchBar="true"
+                         ShowExcelExport="true"
+                         ShowRefreshButton="true"
+                         ShowAutoRefresh="true"
+                         ShowColumnConfig="true"
+                         ShowActions="true"
+                         SearchPlaceholder="Buscar comunas..."
+                         BaseQuery="@(currentView?.QueryBuilder)"
+                         ColumnConfigs="@(currentView?.ColumnConfigs)"
+                         ForceOrderByIndex="true"
+                         EnableSelectOptimization="true"
+                         SelectOnlyVisibleColumns="true"
+                         ViewConfigurations="@ViewConfigurationsTyped"
+                         CurrentView="@currentView"
+                         OnViewChanged="@OnViewChanged"
+                         ViewDisplayNameProperty="DisplayName"
+                         OnEdit="@HandleEdit"
+                         OnDelete="@HandleDelete">
+            </EntityTable>
+        </RadzenCard>
+
+    </PageWithCommandBar>
+}

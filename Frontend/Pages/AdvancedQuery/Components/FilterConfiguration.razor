@@ -1,4 +1,5 @@
 @using Radzen.Blazor
+@using FilterRow = Frontend.Pages.AdvancedQuery.Components.HierarchicalFilter.FilterRow
 @implements IDisposable
 
 @if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
@@ -97,43 +98,11 @@
                             </RadzenColumn>
                         </RadzenRow>
 
-                        <!-- RadzenDataFilter -->
-                        <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
-                        <RadzenDataFilter @ref="dataFilterRef"
-                                        TItem="object"
-                                        LogicalFilterOperator="@LogicalOperator"
-                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                        Auto="false"
-                                        ContainsText="Contiene"
-                                        StartsWithText="Comienza con"
-                                        EndsWithText="Termina con"
-                                        EqualsText="Igual a"
-                                        NotEqualsText="Diferente de"
-                                        LessThanText="Menor que"
-                                        DoesNotContainText="No Contiene"
-                                        GreaterThanText="Mayor que"
-                                        IsNullText="Es nulo"
-                                        AddFilterGroupText="Agregar Grupo de Filtro"
-                                        IsNotNullText="No es nulo"
-                                        IsEmptyText="Está vacío"
-                                        IsNotEmptyText="No está vacío"
-                                        AndOperatorText="Y"
-                                        OrOperatorText="O"
-                                        AddFilterText="Agregar filtro"
-                                        LessThanOrEqualsText="Menor o Igual"
-                                        GreaterThanOrEqualsText="Mayor o Igual"
-                                        RemoveFilterText="Quitar filtro"
-                                        ClearFilterText="Limpiar filtro">
-                            <Properties>
-                                @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
-                                {
-                                    <RadzenDataFilterProperty Property="@field.PropertyName"
-                                                            Title="@field.DisplayName"
-                                                            Type="@field.PropertyType" />
-                                }
-                            </Properties>
-                        </RadzenDataFilter>
-                        </div>
+
+                        <!-- Nuevo Filtro Jerárquico -->
+                        <HierarchicalFilter @ref="hierarchicalFilterRef"
+                                          EntityFields="@EntityFields"
+                                          OnFilterChanged="@RefreshFilterState" />
 
                         <!-- Botones de Acción -->
                         <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" JustifyContent="JustifyContent.Center">
@@ -165,19 +134,15 @@
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public bool IsReadOnly { get; set; } = false;
 
-    private RadzenDataFilter<object>? dataFilterRef;
     private bool hasFilters = false;
     private Timer? filterCheckTimer;
+    private HierarchicalFilter? hierarchicalFilterRef;
 
     /// <summary>
-    /// Expone la referencia del DataFilter para uso del componente padre
+    /// Expone si hay filtros configurados
     /// </summary>
-    public RadzenDataFilter<object>? DataFilter => dataFilterRef;
+    public bool HasFilters => hasFilters;
 
-    /// <summary>
-    /// Indica si hay filtros configurados
-    /// </summary>
-    private bool HasFilters => hasFilters;
 
     [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
     [Parameter] public int TakeLimit { get; set; } = 50;
@@ -205,36 +170,16 @@
     }
 
 
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             // Iniciar timer para verificar cambios en filtros cada 500ms
             filterCheckTimer = new Timer(CheckFiltersState, null, 500, 500);
-            
-            // Notificar cuando DataFilter esté listo
-            if (dataFilterRef != null)
-            {
-                Console.WriteLine("🎯 FilterConfiguration: DataFilter is ready on first render");
-                await OnDataFilterReady.InvokeAsync();
-            }
-            else
-            {
-                Console.WriteLine("⚠️ FilterConfiguration: DataFilter is null on first render");
-                // Intentar notificar después de un pequeño delay
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(100);
-                    await InvokeAsync(async () =>
-                    {
-                        if (dataFilterRef != null)
-                        {
-                            Console.WriteLine("🎯 FilterConfiguration: DataFilter ready after delay");
-                            await OnDataFilterReady.InvokeAsync();
-                        }
-                    });
-                });
-            }
+
+            // Notificar que el componente está listo
+            await OnDataFilterReady.InvokeAsync();
         }
     }
 
@@ -242,12 +187,8 @@
     {
         try
         {
-            var currentHasFilters = dataFilterRef?.Filters?.Any() == true;
-            if (currentHasFilters != hasFilters)
-            {
-                hasFilters = currentHasFilters;
-                InvokeAsync(StateHasChanged);
-            }
+            // TODO: Implementar verificación de filtros con el nuevo componente
+            InvokeAsync(StateHasChanged);
         }
         catch
         {
@@ -260,8 +201,16 @@
     /// </summary>
     public void RefreshFilterState()
     {
-        hasFilters = dataFilterRef?.Filters?.Any() == true;
+        hasFilters = hierarchicalFilterRef?.Filters?.Any() == true;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Expone los filtros para ser accedidos desde el componente padre
+    /// </summary>
+    public List<FilterRow> GetFilters()
+    {
+        return hierarchicalFilterRef?.Filters ?? new List<FilterRow>();
     }
 
     /// <summary>
@@ -322,6 +271,7 @@
             _ => operatorValue
         };
     }
+
 
     public void Dispose()
     {

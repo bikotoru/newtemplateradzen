@@ -6,6 +6,8 @@ global using Backend.Modules.Auth.Login;
 global using Backend.Modules.Admin.SystemPermissions;
 global using Backend.Modules.Admin.SystemRoles;
 global using Backend.Modules.Admin.SystemUsers;
+global using Backend.Modules.Core.Localidades.Regions;
+global using Backend.Modules.Core.Localidades.Comunas;
 
 // Utils Services
 global using Backend.Utils.Security;

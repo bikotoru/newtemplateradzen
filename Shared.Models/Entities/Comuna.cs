@@ -6,7 +6,7 @@ namespace Shared.Models.Entities;
 /// <summary>
 /// Core.Localidades
 /// </summary>
-public partial class Region
+public partial class Comuna
 {
     public Guid Id { get; set; }
 
@@ -26,11 +26,13 @@ public partial class Region
 
     public string? Nombre { get; set; }
 
-    public virtual ICollection<Comuna> Comuna { get; set; } = new List<Comuna>();
+    public Guid? RegionId { get; set; }
 
     public virtual SystemUsers? Creador { get; set; }
 
     public virtual SystemUsers? Modificador { get; set; }
 
     public virtual SystemOrganization? Organization { get; set; }
+
+    public virtual Region? Region { get; set; }
 }

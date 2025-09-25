@@ -1,0 +1,101 @@
+@page "/core/localidades/region/formulario"
+@page "/core/localidades/region/formulario/{Id:guid}"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base
+@using Frontend.Components.Validation
+@using Shared.Models.Entities
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("REGION.VIEW", "REGION.CREATE", "REGION.UPDATE")]
+
+<PageTitle>@(isEditMode ? $"Editar Region - {entity?.CustomFields}" : "Nuevo Region")</PageTitle>
+
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/core/localidades/region/list" 
+                        ShowSave="@CanSave"
+                        OnSaveClick="@SaveForm">
+
+        <div class="full-width-tabs">
+            <CrmTabs DefaultTabId="tab1" DisableUrlSync="true">
+                
+                <CrmTab Id="tab1" Title="Información General" Icon="edit" IconColor="#0078d4">
+                    <div class="scrollable-content">
+                        <RadzenRow JustifyContent="JustifyContent.Center">
+                            <RadzenColumn SizeLG="4" SizeMD="6" SizeSM="12">
+                                
+                                <EssentialsCard Title="@(isEditMode ? "Editar Region" : "Nuevo Region")" 
+                                               Icon="@(isEditMode ? "edit" : "add")" 
+                                               IconColor="#0078d4"
+                                               ShowEssentials=@(entity?.Id != Guid.Empty)>
+                                 
+                                    <EssentialsTemplate>
+                                        <EssentialsGrid>
+                                            <EssentialsItem Label="Estado" Value="@(entity?.Active == true ? "Activo" : "Inactivo")" />
+                                            <EssentialsItem Label="Creado" Value="@(entity?.FechaCreacion.ToString("dd/MM/yyyy") ?? "")" />
+                                            <EssentialsItem Label="ID" Value="@(entity?.Id.ToString() ?? "")" />
+                                        </EssentialsGrid>
+                                    </EssentialsTemplate>
+                                    
+                                    <ChildContent>
+                                        @if (isLoading)
+                                        {
+                                            <div class="loading-container" style="text-align: center; padding: 2rem;">
+                                                <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" />
+                                                <p style="margin-top: 1rem; color: #666;">Cargando datos...</p>
+                                            </div>
+                                        }
+                                        else if (entity != null)
+                                        {
+                                            <FormValidator Entity="entity" Rules="@GetValidationRules()">
+                                                
+                                                <RadzenStack Gap="1rem">
+                                                    <ValidatedInput FieldName="CustomFields" Value="@entity.CustomFields">
+                                                <RadzenFormField Text="CustomFields" Style="width: 100%">
+                                                    <RadzenTextBox @oninput="@(v => entity.CustomFields = v.Value?.ToString())" 
+                                                                   Value="@entity.CustomFields"
+                                                                   Placeholder="Ingrese customfields" />
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                            <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+                                                <RadzenFormField Text="Nombre" Style="width: 100%">
+                                                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                                                                   Value="@entity.Nombre"
+                                                                   Placeholder="Ingrese nombre" />
+                                                </RadzenFormField>
+                                            </ValidatedInput>
+                                                    
+                                                </RadzenStack>
+                                                
+                                            </FormValidator>
+                                        }
+                                    </ChildContent>
+                                </EssentialsCard>
+                                
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </div>
+                </CrmTab>
+                
+            </CrmTabs>
+        </div>
+
+    </PageWithCommandBar>
+
+    @if (!CanEdit)
+    {
+        <div class="read-only-notice">
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                <RadzenIcon Icon="visibility" /> Estás viendo este registro en modo solo lectura. 
+                @if (isEditMode)
+                {
+                    <text>Necesitas el permiso "REGION.UPDATE" para modificarlo.</text>
+                }
+                else
+                {
+                    <text>Necesitas el permiso "REGION.CREATE" para crear registros.</text>
+                }
+            </RadzenAlert>
+        </div>
+    }
+}
+

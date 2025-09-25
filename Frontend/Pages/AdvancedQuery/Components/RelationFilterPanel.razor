@@ -1,0 +1,274 @@
+@using Radzen.Blazor
+@using System.Reflection
+@using Frontend.Services
+
+<RadzenCard Style="@GetPanelStyle()">
+    <!-- Header con expand/collapse -->
+    <div @onclick="ToggleExpand" style="cursor: pointer; user-select: none;">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenIcon Icon="@(isExpanded ? "expand_less" : "expand_more")" />
+            <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                Filtrar por propiedades de @RelationName
+            </RadzenText>
+        </RadzenStack>
+    </div>
+
+    @if (isExpanded)
+    {
+        <div style="margin-top: 1rem; padding: 1rem; border-radius: 4px; @GetContentStyle()">
+            @if (relationFields.Any())
+            {
+                <RadzenStack Gap="0.5rem">
+                    @foreach (var field in relationFields)
+                    {
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="4">
+                                <RadzenCheckBox @bind-Value="field.IsSelected" />
+                                <RadzenText Style="display: inline-block; margin-left: 0.5rem;">
+                                    @field.DisplayName
+                                </RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="4">
+                                @if (field.IsSelected)
+                                {
+                                    <RadzenDropDown Data="@GetOperatorsForType(field.PropertyType)"
+                                                  @bind-Value="field.SelectedOperator"
+                                                  Style="width: 100%;"
+                                                  Placeholder="Operador..." />
+                                }
+                            </RadzenColumn>
+                            <RadzenColumn Size="4">
+                                @if (field.IsSelected && !string.IsNullOrEmpty(field.SelectedOperator))
+                                {
+                                    @* Renderizar control según tipo *@
+                                    @if (field.PropertyType == typeof(string))
+                                    {
+                                        <RadzenTextBox @bind-Value="field.FilterValue"
+                                                     Placeholder="Valor..."
+                                                     Style="width: 100%;" />
+                                    }
+                                    else if (field.PropertyType == typeof(bool) || field.PropertyType == typeof(bool?))
+                                    {
+                                        <RadzenCheckBox @bind-Value="field.BoolValue" />
+                                    }
+                                    else if (field.PropertyType == typeof(int) || field.PropertyType == typeof(int?) ||
+                                           field.PropertyType == typeof(decimal) || field.PropertyType == typeof(decimal?))
+                                    {
+                                        <RadzenNumeric @bind-Value="field.NumericValue"
+                                                     Style="width: 100%;"
+                                                     TValue="decimal?" />
+                                    }
+                                    else if (field.PropertyType == typeof(DateTime) || field.PropertyType == typeof(DateTime?))
+                                    {
+                                        <RadzenDatePicker @bind-Value="field.DateValue"
+                                                        Style="width: 100%;"
+                                                        TValue="DateTime?" />
+                                    }
+
+                                    @* Si este campo también es una relación, mostrar recursivamente *@
+                                    @if (field.IsNavigationProperty)
+                                    {
+                                        <div style="margin-top: 0.5rem; margin-left: 2rem;">
+                                            <RelationFilterPanel EntityTypeName="@field.RelatedEntityTypeName"
+                                                               RelationName="@field.PropertyName"
+                                                               OnFilterChanged="@OnFilterChanged"
+                                                               Depth="@(Depth + 1)" />
+                                        </div>
+                                    }
+                                }
+                            </RadzenColumn>
+                        </RadzenRow>
+                    }
+                </RadzenStack>
+            }
+            else
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color);">
+                    Cargando campos de @RelationName...
+                </RadzenText>
+            }
+        </div>
+    }
+</RadzenCard>
+
+@code {
+    [Parameter] public string? EntityTypeName { get; set; }
+    [Parameter] public string RelationName { get; set; } = "";
+    [Parameter] public EventCallback OnFilterChanged { get; set; }
+    [Parameter] public int Depth { get; set; } = 0;
+
+    [Inject] private ILogger<RelationFilterPanel> Logger { get; set; } = default!;
+
+    private bool isExpanded = true;
+    private List<RelationFieldDefinition> relationFields = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRelationFields();
+    }
+
+    private async Task LoadRelationFields()
+    {
+        if (string.IsNullOrEmpty(EntityTypeName)) return;
+
+        try
+        {
+            // Buscar el tipo de la entidad relacionada
+            var entityType = FindEntityType(EntityTypeName);
+            if (entityType == null)
+            {
+                Logger.LogWarning("No se encontró el tipo de entidad: {EntityType}", EntityTypeName);
+                return;
+            }
+
+            // Obtener propiedades filtrables
+            var properties = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var property in properties)
+            {
+                if (IsFilterableProperty(property))
+                {
+                    var fieldDef = new RelationFieldDefinition
+                    {
+                        PropertyName = property.Name,
+                        DisplayName = ConvertToDisplayName(property.Name),
+                        PropertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType,
+                        IsNavigationProperty = IsNavigationProperty(property),
+                        RelatedEntityTypeName = IsNavigationProperty(property) ? property.PropertyType.Name : null
+                    };
+
+                    relationFields.Add(fieldDef);
+                }
+            }
+
+            relationFields = relationFields.OrderBy(f => f.DisplayName).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando campos de relación para {EntityType}", EntityTypeName);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Type? FindEntityType(string typeName)
+    {
+        var sharedModelsAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Shared.Models");
+
+        if (sharedModelsAssembly != null)
+        {
+            var fullTypeName = $"Shared.Models.Entities.{typeName}";
+            return sharedModelsAssembly.GetType(fullTypeName, false, true);
+        }
+
+        return null;
+    }
+
+    private bool IsFilterableProperty(PropertyInfo property)
+    {
+        var propertyName = property.Name.ToLower();
+
+        // Excluir campos del sistema
+        if (propertyName == "id" || propertyName.Contains("customfield") ||
+            propertyName == "creadorid" || propertyName == "modificadorid" ||
+            propertyName == "organizationid")
+        {
+            return false;
+        }
+
+        // Solo mostrar relaciones si estamos en menos de 2 niveles de profundidad
+        if (IsNavigationProperty(property) && Depth >= 2)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsNavigationProperty(PropertyInfo property)
+    {
+        return property.PropertyType.IsClass &&
+               property.PropertyType != typeof(string) &&
+               property.PropertyType.Namespace?.StartsWith("Shared.Models.Entities") == true &&
+               !property.PropertyType.IsArray &&
+               !property.PropertyType.IsGenericType;
+    }
+
+    private string ConvertToDisplayName(string propertyName)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(propertyName,
+            "([a-z])([A-Z])", "$1 $2");
+    }
+
+    private void ToggleExpand()
+    {
+        isExpanded = !isExpanded;
+    }
+
+    private string GetPanelStyle()
+    {
+        return $"border: 1px solid var(--rz-border-color); padding: 1rem; margin: 0.5rem 0;";
+    }
+
+    private string GetContentStyle()
+    {
+        var baseColor = "background-color: var(--rz-base-background-color);";
+        var opacity = Depth == 0 ? "0.05" : "0.03";
+        return $"{baseColor} background: rgba(var(--rz-primary-rgb), {opacity});";
+    }
+
+    private List<string> GetOperatorsForType(Type type)
+    {
+        if (type == typeof(string))
+            return new List<string> { "Contiene", "Igual a", "Comienza con", "Termina con", "No contiene" };
+        else if (type == typeof(bool) || type == typeof(bool?))
+            return new List<string> { "Igual a", "Diferente de" };
+        else if (IsNumericType(type))
+            return new List<string> { "Igual a", "Mayor que", "Menor que", "Mayor o igual", "Menor o igual" };
+        else if (type == typeof(DateTime) || type == typeof(DateTime?))
+            return new List<string> { "Igual a", "Antes de", "Después de", "Entre" };
+        else
+            return new List<string> { "Igual a", "Diferente de", "Es nulo", "No es nulo" };
+    }
+
+    private bool IsNumericType(Type type)
+    {
+        return type == typeof(int) || type == typeof(int?) ||
+               type == typeof(long) || type == typeof(long?) ||
+               type == typeof(decimal) || type == typeof(decimal?) ||
+               type == typeof(double) || type == typeof(double?) ||
+               type == typeof(float) || type == typeof(float?);
+    }
+
+    /// <summary>
+    /// Definición de un campo de relación con estado de filtro
+    /// </summary>
+    private class RelationFieldDefinition
+    {
+        public string PropertyName { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public Type PropertyType { get; set; } = typeof(string);
+        public bool IsNavigationProperty { get; set; }
+        public string? RelatedEntityTypeName { get; set; }
+
+        // Estado del filtro
+        public bool IsSelected { get; set; }
+        public string? SelectedOperator { get; set; }
+        public string? FilterValue { get; set; }
+        public bool? BoolValue { get; set; }
+        public decimal? NumericValue { get; set; }
+        public DateTime? DateValue { get; set; }
+    }
+}
+
+<style>
+    /* Estilos para modo día/noche automáticos usando variables CSS de Radzen */
+    .relation-filter-panel {
+        transition: all 0.3s ease;
+    }
+
+    .relation-filter-panel:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>

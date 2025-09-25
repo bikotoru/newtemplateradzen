@@ -1,0 +1,44 @@
+@page "/core/localidades/region/list"
+@using Frontend.Components.Base.Forms.PageWithCommandBar
+@using Frontend.Components.Base.Tables
+@using Shared.Models.Entities
+@using Radzen
+@inherits AuthorizedPageBase
+@attribute [AuthorizePermission("REGION.VIEW")]
+
+<PageTitle>Regions</PageTitle>
+
+@if (HasRequiredPermissions && !IsCheckingPermissions)
+{
+    <PageWithCommandBar BackPath="/"
+                        ShowNew
+                        NewPath="/core/localidades/region/formulario"
+                        >
+
+        <RadzenCard>
+            <EntityTable T="Region" 
+                         @ref="entityTable"
+                         @key="@GetGridKey()"
+                         ShowSearchBar="true"
+                         ShowExcelExport="true"
+                         ShowRefreshButton="true"
+                         ShowAutoRefresh="true"
+                         ShowColumnConfig="true"
+                         ShowActions="true"
+                         SearchPlaceholder="Buscar regions..."
+                         BaseQuery="@(currentView?.QueryBuilder)"
+                         ColumnConfigs="@(currentView?.ColumnConfigs)"
+                         ForceOrderByIndex="true"
+                         EnableSelectOptimization="true"
+                         SelectOnlyVisibleColumns="true"
+                         ViewConfigurations="@ViewConfigurationsTyped"
+                         CurrentView="@currentView"
+                         OnViewChanged="@OnViewChanged"
+                         ViewDisplayNameProperty="DisplayName"
+                         OnEdit="@HandleEdit"
+                         OnDelete="@HandleDelete">
+            </EntityTable>
+        </RadzenCard>
+
+    </PageWithCommandBar>
+}

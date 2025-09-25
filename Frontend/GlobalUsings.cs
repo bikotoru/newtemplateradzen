@@ -24,6 +24,8 @@ global using Shared.Models.Entities.SystemEntities;
 global using Frontend.Modules.Admin.SystemPermissions;
 global using Frontend.Modules.Admin.SystemRoles;
 global using Frontend.Modules.Admin.SystemUsers;
+global using Frontend.Modules.Core.Localidades.Regions;
+global using Frontend.Modules.Core.Localidades.Comunas;
 // Components
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Web;

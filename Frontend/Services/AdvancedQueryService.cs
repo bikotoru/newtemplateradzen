@@ -132,11 +132,33 @@ public class AdvancedQueryService
 
             foreach (var property in properties)
             {
-                // Crear definición de campo desde la propiedad
-                var fieldDefinition = CreateFieldDefinitionFromProperty(property);
-                if (fieldDefinition != null)
+                // Para propiedades de navegación, crear un campo especial
+                if (IsNavigationProperty(property))
                 {
-                    fields.Add(fieldDefinition);
+                    _logger.LogInformation("✅ Propiedad de navegación detectada: {PropertyName} de tipo {PropertyType}",
+                        property.Name, property.PropertyType.Name);
+
+                    var navigationField = new EntityFieldDefinition
+                    {
+                        PropertyName = property.Name,
+                        DisplayName = ConvertToDisplayName(property.Name),
+                        PropertyType = typeof(object), // Tipo especial para relaciones
+                        IsSearchable = true,
+                        FieldCategory = "Relation",
+                        IsNavigationProperty = true,
+                        RelatedEntityTypeName = property.PropertyType.Name,
+                        SortOrder = 150 // Entre campos business y system
+                    };
+                    fields.Add(navigationField);
+                }
+                else
+                {
+                    // Crear definición de campo normal
+                    var fieldDefinition = CreateFieldDefinitionFromProperty(property);
+                    if (fieldDefinition != null)
+                    {
+                        fields.Add(fieldDefinition);
+                    }
                 }
             }
 
@@ -226,9 +248,14 @@ public class AdvancedQueryService
     {
         var propertyName = property.Name;
 
-        // Excluir propiedades de navegación complejas y CustomFields
-        if (propertyName.ToLower().Contains("customfield") ||
-            (property.PropertyType.IsClass && property.PropertyType != typeof(string) && !property.PropertyType.IsArray))
+        // Excluir CustomFields
+        if (propertyName.ToLower().Contains("customfield"))
+        {
+            return null;
+        }
+
+        // Excluir propiedades de navegación (ahora se manejan por separado)
+        if (IsNavigationProperty(property))
         {
             return null;
         }
@@ -461,6 +488,67 @@ public class AdvancedQueryService
     }
 
     /// <summary>
+    /// Determinar si una propiedad es de navegación (relación)
+    /// </summary>
+    private bool IsNavigationProperty(PropertyInfo property)
+    {
+        // Excluir tipos primitivos y strings
+        if (property.PropertyType.IsPrimitive || property.PropertyType == typeof(string) ||
+            property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?) ||
+            property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?) ||
+            property.PropertyType == typeof(decimal) || property.PropertyType == typeof(decimal?))
+        {
+            return false;
+        }
+
+        // Excluir arrays y colecciones genéricas (estas son colecciones, no propiedades de navegación individuales)
+        if (property.PropertyType.IsArray ||
+            (property.PropertyType.IsGenericType &&
+             typeof(System.Collections.IEnumerable).IsAssignableFrom(property.PropertyType)))
+        {
+            return false;
+        }
+
+        // Excluir CustomFields y propiedades del sistema
+        var propertyName = property.Name.ToLower();
+        if (propertyName.Contains("customfield"))
+        {
+            return false;
+        }
+
+        // Es una propiedad de navegación si es una clase del namespace Shared.Models.Entities
+        return property.PropertyType.IsClass &&
+               property.PropertyType.Namespace?.StartsWith("Shared.Models.Entities") == true;
+    }
+
+
+    /// <summary>
+    /// Determinar si una propiedad es básica y filtrable (no es otra relación)
+    /// </summary>
+    private bool IsBasicFilterableProperty(PropertyInfo property)
+    {
+        var propertyName = property.Name.ToLower();
+
+        // Excluir campos del sistema y CustomFields
+        if (propertyName.Contains("customfield") ||
+            propertyName == "creadorid" || propertyName == "modificadorid" ||
+            propertyName == "organizationid")
+        {
+            return false;
+        }
+
+        // Incluir solo tipos básicos filtrables
+        var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        return propertyType == typeof(string) ||
+               propertyType == typeof(int) || propertyType == typeof(long) ||
+               propertyType == typeof(decimal) || propertyType == typeof(double) ||
+               propertyType == typeof(bool) ||
+               propertyType == typeof(DateTime) ||
+               propertyType == typeof(Guid);
+    }
+
+    /// <summary>
     /// Obtener orden específico para campos del sistema
     /// </summary>
     private int GetSystemFieldSortOrder(string propertyName)
@@ -535,11 +623,24 @@ public class AdvancedQueryService
             // Convertir CompositeFilterDescriptor[] a QueryRequest.Filter usando Radzen
             var filterString = ConvertFiltersToLinqString(request.Filters, request.LogicalOperator, request.FilterCaseSensitivity);
 
+            // Auto-detectar includes necesarios basándose en los filtros
+            var autoDetectedIncludes = DetectRequiredIncludes(request.Filters);
+
+            // Combinar includes explícitos con auto-detectados
+            var finalIncludes = request.Include?.ToList() ?? new List<string>();
+            foreach (var autoInclude in autoDetectedIncludes)
+            {
+                if (!finalIncludes.Contains(autoInclude, StringComparer.OrdinalIgnoreCase))
+                {
+                    finalIncludes.Add(autoInclude);
+                }
+            }
+
             var queryRequest = new QueryRequest
             {
                 Filter = filterString,
                 OrderBy = request.OrderBy,
-                Include = request.Include,
+                Include = finalIncludes.Any() ? finalIncludes.ToArray() : null,
                 Select = request.Select,
                 Skip = request.Skip,
                 Take = request.Take ?? 50 // Default limit
@@ -753,6 +854,66 @@ public class AdvancedQueryService
     }
 
     /// <summary>
+    /// Detectar automáticamente los includes necesarios basándose en los filtros
+    /// </summary>
+    private string[] DetectRequiredIncludes(CompositeFilterDescriptor[] filters)
+    {
+        var requiredIncludes = new HashSet<string>();
+
+        if (filters == null || !filters.Any())
+            return Array.Empty<string>();
+
+        try
+        {
+            foreach (var filter in filters)
+            {
+                ExtractIncludesFromFilter(filter, requiredIncludes);
+            }
+
+            _logger.LogInformation("Auto-detected includes: [{Includes}]", string.Join(", ", requiredIncludes));
+            return requiredIncludes.ToArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error detecting required includes from filters");
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Extraer includes necesarios de un filtro individual de forma recursiva
+    /// </summary>
+    private void ExtractIncludesFromFilter(CompositeFilterDescriptor filter, HashSet<string> requiredIncludes)
+    {
+        // Si el filtro tiene sub-filtros, procesarlos recursivamente
+        if (filter.Filters != null && filter.Filters.Any())
+        {
+            foreach (var subFilter in filter.Filters)
+            {
+                ExtractIncludesFromFilter(subFilter, requiredIncludes);
+            }
+        }
+
+        // Si es un filtro simple con Property, verificar si contiene navegación
+        if (!string.IsNullOrEmpty(filter.Property) && filter.Property.Contains('.'))
+        {
+            // Extraer la parte de navegación (todo antes del último punto)
+            var lastDotIndex = filter.Property.LastIndexOf('.');
+            var navigationPath = filter.Property.Substring(0, lastDotIndex);
+
+            // Solo agregar el primer nivel de navegación por ahora
+            // Por ejemplo: "Region.Nombre" -> agregar "Region"
+            var firstDotIndex = navigationPath.IndexOf('.');
+            var includeProperty = firstDotIndex > 0 ? navigationPath.Substring(0, firstDotIndex) : navigationPath;
+
+            requiredIncludes.Add(includeProperty);
+
+            _logger.LogDebug("Detected navigation property in filter: {Property} -> Include: {Include}",
+                           filter.Property, includeProperty);
+        }
+    }
+
+    /// <summary>
     /// Convertir filtros de RadzenDataFilter a string LINQ
     /// Implementación manual basada en la lógica de Radzen
     /// </summary>
@@ -920,11 +1081,15 @@ public class EntityFieldDefinition
     public Type PropertyType { get; set; } = typeof(string);
     public bool IsNullable { get; set; }
     public bool IsSearchable { get; set; } = true;
-    public string FieldCategory { get; set; } = ""; // "System" or "Business"
+    public string FieldCategory { get; set; } = ""; // "System", "Business", "Relation"
     public string? Description { get; set; }
-    public bool IsVisible { get; set; } = true; // Si el campo es visible para selección
-    public bool IsSelectedByDefault { get; set; } = false; // Si el campo viene seleccionado por defecto
-    public int SortOrder { get; set; } = 100; // Orden de clasificación
+    public bool IsVisible { get; set; } = true;
+    public bool IsSelectedByDefault { get; set; } = false;
+    public int SortOrder { get; set; } = 100;
+
+    // Para relaciones
+    public bool IsNavigationProperty { get; set; } = false;
+    public string? RelatedEntityTypeName { get; set; } // Nombre del tipo de la entidad relacionada
 }
 
 /// <summary>

@@ -1,0 +1,46 @@
+@using Frontend.Components.Validation
+@using Shared.Models.Entities
+@using Frontend.Modules.Core.Localidades
+@inherits ComponentBase
+
+<FormValidator Entity="entity" Rules="@GetValidationRules()">
+    <RadzenStack Gap="1.5rem">
+    <RadzenRow>
+        <RadzenColumn Size="12">
+            <ValidatedInput FieldName="CustomFields" Value="@entity.CustomFields">
+                <RadzenFormField Text="CustomFields" Style="width: 100%">
+                    <RadzenTextBox @oninput="@(v => entity.CustomFields = v.Value?.ToString())" 
+                                   Value="@entity.CustomFields"
+                                   Placeholder="Ingrese customfields"
+                                   Disabled="@(!CanEdit)" />
+                </RadzenFormField>
+            </ValidatedInput>
+                <ValidatedInput FieldName="Nombre" Value="@entity.Nombre">
+                <RadzenFormField Text="Nombre" Style="width: 100%">
+                    <RadzenTextBox @oninput="@(v => entity.Nombre = v.Value?.ToString())" 
+                                   Value="@entity.Nombre"
+                                   Placeholder="Ingrese nombre"
+                                   Disabled="@(!CanEdit)" />
+                </RadzenFormField>
+            </ValidatedInput>
+        </RadzenColumn>
+    </RadzenRow>
+
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.End" JustifyContent="JustifyContent.End">
+        <RadzenStack Orientation="Orientation.Horizontal">
+            <RadzenButton Text="Crear"
+                          Icon="save"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@SaveEntity"
+                          IsBusy="@isLoading" />
+            <RadzenButton Text="Cancelar"
+                          Icon="cancel"
+                          ButtonStyle="ButtonStyle.Light"
+                          Click="@Cancel"
+                          class="ms-2" />
+        </RadzenStack>
+    </RadzenStack>
+
+ </RadzenStack>
+</FormValidator>

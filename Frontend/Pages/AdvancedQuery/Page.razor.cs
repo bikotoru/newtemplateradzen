@@ -6,6 +6,7 @@ using System.Text.Json;
 using Frontend.Services;
 using Frontend.Pages.AdvancedQuery.Components;
 using Frontend.Pages.AdvancedQuery.Components.Modals;
+using FilterRow = Frontend.Pages.AdvancedQuery.Components.HierarchicalFilter.FilterRow;
 using Shared.Models.Requests;
 
 namespace Frontend.Pages.AdvancedQuery;
@@ -51,16 +52,16 @@ public partial class Page : ComponentBase
     // Variable para almacenar el último request ejecutado (para exportación)
     private AdvancedQueryRequest? lastExecutedRequest;
     
-    // Filtros pendientes para cargar cuando DataFilter esté listo
+    // Filtros pendientes para cargar cuando HierarchicalFilter esté listo
     private List<SerializableFilter>? pendingFilters;
     
     // Modal states for sharing
     private bool showShareModal = false;
 
     // Variables para PageWithCommandBar y SavedQueries
-    private bool CanSave => !string.IsNullOrEmpty(selectedEntityName) && 
+    private bool CanSave => !string.IsNullOrEmpty(selectedEntityName) &&
                            !string.IsNullOrWhiteSpace(queryName) &&
-                           filterConfigurationRef?.DataFilter != null &&
+                           filterConfigurationRef != null &&
                            HasConfiguredFilters();
     
     // SavedQueries state
@@ -158,11 +159,11 @@ public partial class Page : ComponentBase
     private async Task ExecuteQuery()
     {
         // En modo play, permitir ejecutar sin filtros si no hay filtros configurados
-        var hasFilters = IsPlayMode ? 
-            (readOnlyFilters?.Any() == true) : 
-            (filterConfigurationRef?.DataFilter?.Filters?.Any() == true);
-            
-        if (!IsPlayMode && (filterConfigurationRef?.DataFilter?.Filters == null || !filterConfigurationRef.DataFilter.Filters.Any()))
+        var hasFilters = IsPlayMode ?
+            (readOnlyFilters?.Any() == true) :
+            (filterConfigurationRef?.GetFilters()?.Any() == true);
+
+        if (!IsPlayMode && (filterConfigurationRef?.GetFilters() == null || !filterConfigurationRef.GetFilters().Any()))
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -204,7 +205,16 @@ public partial class Page : ComponentBase
             }
             else
             {
-                filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>();
+                // Convertir los filtros del HierarchicalFilter a CompositeFilterDescriptor
+                var hierarchicalFilters = filterConfigurationRef?.GetFilters();
+                if (hierarchicalFilters != null && hierarchicalFilters.Any())
+                {
+                    filters = ConvertHierarchicalToComposite(hierarchicalFilters).ToArray();
+                }
+                else
+                {
+                    filters = Array.Empty<CompositeFilterDescriptor>();
+                }
             }
 
             var request = new AdvancedQueryRequest
@@ -260,9 +270,10 @@ public partial class Page : ComponentBase
 
     private async Task ClearFilters()
     {
-        if (filterConfigurationRef?.DataFilter != null)
+        if (filterConfigurationRef != null)
         {
-            await filterConfigurationRef.DataFilter.ClearFilters();
+            // TODO: Limpiar filtros del HierarchicalFilter
+            // Por ahora limpiar los resultados y refrescar
             queryResults = null;
             lastExecutedRequest = null;
             // Refrescar el estado del componente de filtros
@@ -623,15 +634,15 @@ public partial class Page : ComponentBase
                         {
                             Console.WriteLine("✅ filterConfigurationRef found");
                             
-                            // Intentar múltiples veces hasta que DataFilter esté disponible
+                            // Intentar múltiples veces hasta que HierarchicalFilter esté disponible
                             var maxAttempts = 10;
                             var attempt = 0;
                             var delayMs = 200;
                             
-                            while (filterConfigurationRef.DataFilter == null && attempt < maxAttempts)
+                            while (filterConfigurationRef == null && attempt < maxAttempts)
                             {
                                 attempt++;
-                                Console.WriteLine($"⏳ Attempt {attempt}/{maxAttempts}: DataFilter is null, waiting {delayMs}ms...");
+                                Console.WriteLine($"⏳ Attempt {attempt}/{maxAttempts}: FilterConfiguration is null, waiting {delayMs}ms...");
                                 await Task.Delay(delayMs);
                                 
                                 // Forzar re-render para asegurar que el componente se inicialice
@@ -642,16 +653,16 @@ public partial class Page : ComponentBase
                                 delayMs = Math.Min(delayMs + 100, 1000);
                             }
                             
-                            if (filterConfigurationRef.DataFilter != null)
+                            if (filterConfigurationRef != null)
                             {
-                                Console.WriteLine($"✅ DataFilter found after {attempt} attempts!");
-                                Console.WriteLine("🚀 Starting LoadFiltersIntoDataFilter...");
-                                await LoadFiltersIntoDataFilter(filters);
+                                Console.WriteLine($"✅ FilterConfiguration found after {attempt} attempts!");
+                                Console.WriteLine("🚀 Starting LoadFiltersIntoHierarchical...");
+                                await LoadFiltersIntoHierarchical(filters);
                             }
                             else
                             {
-                                Console.WriteLine($"❌ DataFilter is still null after {maxAttempts} attempts");
-                                Console.WriteLine("💾 Storing filters to load when DataFilter becomes ready...");
+                                Console.WriteLine($"❌ FilterConfiguration is still null after {maxAttempts} attempts");
+                                Console.WriteLine("💾 Storing filters to load when HierarchicalFilter becomes ready...");
                                 pendingFilters = filters;
                             }
                         }
@@ -722,7 +733,7 @@ public partial class Page : ComponentBase
     {
         try
         {
-            return filterConfigurationRef?.DataFilter?.Filters?.Any() == true;
+            return filterConfigurationRef?.GetFilters()?.Any() == true;
         }
         catch
         {
@@ -796,12 +807,14 @@ public partial class Page : ComponentBase
     {
         try
         {
-            var filters = filterConfigurationRef?.DataFilter?.Filters;
-            if (filters == null || !filters.Any())
+            var hierarchicalFilters = filterConfigurationRef?.GetFilters();
+            if (hierarchicalFilters == null || !hierarchicalFilters.Any())
             {
                 return JsonSerializer.Serialize(new List<SerializableFilter>());
             }
 
+            // Convertir FilterRow a SerializableFilter
+            var filters = ConvertHierarchicalToComposite(hierarchicalFilters);
             var serializableFilters = filters.Select(f => new SerializableFilter
             {
                 PropertyName = f.Property?.ToString() ?? "",
@@ -842,102 +855,94 @@ public partial class Page : ComponentBase
     }
 
     /// <summary>
-    /// Carga los filtros deserializados en el componente RadzenDataFilter
+    /// Carga los filtros deserializados en el componente HierarchicalFilter
     /// </summary>
-    private async Task LoadFiltersIntoDataFilter(List<SerializableFilter> serializableFilters)
+    private async Task LoadFiltersIntoHierarchical(List<SerializableFilter> serializableFilters)
     {
         try
         {
-            Console.WriteLine($"LoadFiltersIntoDataFilter called with {serializableFilters.Count} filters");
-            
+            Console.WriteLine($"LoadFiltersIntoHierarchical called with {serializableFilters.Count} filters");
+
             if (filterConfigurationRef == null)
             {
                 Console.WriteLine("filterConfigurationRef is null");
                 return;
             }
 
-            if (filterConfigurationRef.DataFilter == null)
-            {
-                Console.WriteLine("DataFilter is null, waiting a bit more...");
-                await Task.Delay(1000); // Esperar más tiempo
-                
-                if (filterConfigurationRef.DataFilter == null)
-                {
-                    Console.WriteLine("DataFilter is still null after waiting");
-                    return;
-                }
-            }
+            // TODO: Implementar la carga de filtros en HierarchicalFilter
+            // Por ahora, guardar los filtros para cuando el componente esté listo
+            readOnlyFilters = serializableFilters;
 
-            Console.WriteLine("DataFilter found, clearing existing filters");
-            
-            // Limpiar filtros existentes
-            await filterConfigurationRef.DataFilter.ClearFilters();
+            Console.WriteLine($"✓ Stored {serializableFilters.Count} filters for HierarchicalFilter");
 
-            Console.WriteLine("Starting to convert and add filters");
-
-            // Convertir SerializableFilter a CompositeFilterDescriptor y agregar uno por uno
-            foreach (var serializableFilter in serializableFilters)
-            {
-                Console.WriteLine($"Processing filter: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
-                
-                var compositeFilter = ConvertToCompositeFilterDescriptor(serializableFilter);
-                if (compositeFilter != null)
-                {
-                    Console.WriteLine($"Filter converted successfully, adding to DataFilter");
-                    
-                    // Agregar filtro al DataFilter usando diferentes enfoques
-                    try 
-                    {
-                        // Método 1: Agregar directamente
-                        ((IList<CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
-                        Console.WriteLine($"✓ Added filter using direct method: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
-                    }
-                    catch (Exception addEx)
-                    {
-                        Console.WriteLine($"✗ Failed to add filter directly: {addEx.Message}");
-                        
-                        // Método 2: Crear nueva lista
-                        try
-                        {
-                            var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<CompositeFilterDescriptor>();
-                            currentFilters.Add(compositeFilter);
-                            filterConfigurationRef.DataFilter.Filters = currentFilters;
-                            Console.WriteLine($"✓ Added filter using new list method: {serializableFilter.PropertyName}");
-                        }
-                        catch (Exception listEx)
-                        {
-                            Console.WriteLine($"✗ Failed to add filter using list method: {listEx.Message}");
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"✗ Failed to convert filter: {serializableFilter.PropertyName}");
-                }
-            }
-
-            Console.WriteLine("Refreshing filter state and forcing re-render");
-            
-            // Forzar actualización del componente con múltiples enfoques
+            // Refrescar el estado del componente
             filterConfigurationRef.RefreshFilterState();
             await InvokeAsync(StateHasChanged);
-            
-            // Esperar un poco y volver a actualizar
-            await Task.Delay(100);
-            await InvokeAsync(StateHasChanged);
-            
-            // Verificar si los filtros se agregaron correctamente
-            var filterCount = filterConfigurationRef.DataFilter.Filters?.Count() ?? 0;
-            Console.WriteLine($"Current filter count in DataFilter: {filterCount}");
-
-            Console.WriteLine($"✓ Successfully loaded {serializableFilters.Count} filters into DataFilter");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"✗ Error loading filters into DataFilter: {ex.Message}");
+            Console.WriteLine($"✗ Error loading filters into HierarchicalFilter: {ex.Message}");
             Console.WriteLine($"StackTrace: {ex.StackTrace}");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Convierte los filtros del HierarchicalFilter a CompositeFilterDescriptor
+    /// </summary>
+    private List<CompositeFilterDescriptor> ConvertHierarchicalToComposite(List<FilterRow> hierarchicalFilters)
+    {
+        var compositeFilters = new List<CompositeFilterDescriptor>();
+
+        foreach (var row in hierarchicalFilters)
+        {
+            if (!string.IsNullOrEmpty(row.SelectedOperator) && row.Value != null)
+            {
+                // Convertir operador a FilterOperator
+                var filterOperator = ConvertToFilterOperator(row.SelectedOperator);
+                if (filterOperator.HasValue)
+                {
+                    compositeFilters.Add(new CompositeFilterDescriptor
+                    {
+                        Property = row.PropertyPath,
+                        FilterOperator = filterOperator.Value,
+                        FilterValue = row.Value,
+                        LogicalFilterOperator = logicalOperator
+                    });
+                }
+            }
+
+            // Procesar hijos recursivamente
+            if (row.Children?.Any() == true)
+            {
+                compositeFilters.AddRange(ConvertHierarchicalToComposite(row.Children));
+            }
+        }
+
+        return compositeFilters;
+    }
+
+    /// <summary>
+    /// Convierte el operador string a FilterOperator enum
+    /// </summary>
+    private FilterOperator? ConvertToFilterOperator(string operatorString)
+    {
+        return operatorString switch
+        {
+            "Igual a" or "Equal" or "Equals" => FilterOperator.Equals,
+            "Diferente de" or "NotEqual" or "NotEquals" => FilterOperator.NotEquals,
+            "Mayor que" or "GreaterThan" => FilterOperator.GreaterThan,
+            "Mayor o igual" or "GreaterThanOrEqual" or "GreaterThanOrEquals" => FilterOperator.GreaterThanOrEquals,
+            "Menor que" or "LessThan" => FilterOperator.LessThan,
+            "Menor o igual" or "LessThanOrEqual" or "LessThanOrEquals" => FilterOperator.LessThanOrEquals,
+            "Contiene" or "Contains" => FilterOperator.Contains,
+            "No contiene" or "DoesNotContain" => FilterOperator.DoesNotContain,
+            "Comienza con" or "StartsWith" => FilterOperator.StartsWith,
+            "Termina con" or "EndsWith" => FilterOperator.EndsWith,
+            "Es nulo" or "IsNull" => FilterOperator.IsNull,
+            "No es nulo" or "IsNotNull" => FilterOperator.IsNotNull,
+            _ => null
+        };
     }
 
     /// <summary>
@@ -1006,16 +1011,16 @@ public partial class Page : ComponentBase
     }
 
     /// <summary>
-    /// Se ejecuta cuando el DataFilter del componente FilterConfiguration está listo
+    /// Se ejecuta cuando el HierarchicalFilter del componente FilterConfiguration está listo
     /// </summary>
     private async Task OnDataFilterReady()
     {
         Console.WriteLine("🎯 OnDataFilterReady called");
-        
+
         if (pendingFilters != null && pendingFilters.Any())
         {
             Console.WriteLine($"🔄 Loading {pendingFilters.Count} pending filters...");
-            await LoadFiltersIntoDataFilter(pendingFilters);
+            await LoadFiltersIntoHierarchical(pendingFilters);
             pendingFilters = null; // Limpiar filtros pendientes
         }
         else
