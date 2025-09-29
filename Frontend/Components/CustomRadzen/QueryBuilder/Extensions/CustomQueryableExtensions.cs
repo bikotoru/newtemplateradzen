@@ -138,8 +138,38 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Extensions
                 FilterOperator.IsNotNull => Expression.NotEqual(property, Expression.Constant(null, property.Type)),
                 FilterOperator.IsEmpty => Expression.Equal(property, Expression.Constant(String.Empty)),
                 FilterOperator.IsNotEmpty => Expression.NotEqual(property, Expression.Constant(String.Empty)),
+                FilterOperator.Related => HandleRelatedFilter<T>(parameter, filter),
                 _ => null
             };
+        }
+
+        private static Expression HandleRelatedFilter<T>(ParameterExpression parameter, CompositeFilterDescriptor filter)
+        {
+            try
+            {
+                // For "Related" operator, we need to filter based on navigation property
+                // E.g., if filter.Property is "RegionId", we filter by "Region.SomeProperty"
+                if (string.IsNullOrEmpty(filter.Property) || !filter.Property.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                var navigationPropertyName = filter.Property.Substring(0, filter.Property.Length - 2);
+                var navigationProperty = typeof(T).GetProperty(navigationPropertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+                if (navigationProperty == null)
+                    return null;
+
+                // Build expression for related entity property
+                // Example: Comuna.Region.Nombre contains "Santiago"
+                var navigationExpression = Expression.PropertyOrField(parameter, navigationPropertyName);
+
+                // For now, we'll filter by the navigation property not being null (basic "Related" functionality)
+                // This can be extended to filter by specific properties of the related entity
+                return Expression.NotEqual(navigationExpression, Expression.Constant(null, navigationProperty.PropertyType));
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static Expression NotNullCheck(Expression property) =>

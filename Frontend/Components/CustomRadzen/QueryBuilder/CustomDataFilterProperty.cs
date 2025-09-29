@@ -163,7 +163,8 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
             }
             else
             {
-                return Property;
+                // Use display name logic to show "Region" instead of "RegionId"
+                return PropertyAccess.GetDisplayName(typeof(TItem), Property);
             }
         }
 
@@ -320,6 +321,18 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
         {
             if (FilterOperators != null) return FilterOperators;
 
+            // Check if this is a Guid relation field (like RegionId with Region navigation property)
+            if (PropertyAccess.IsGuidRelation(typeof(TItem), Property))
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull,
+                    FilterOperator.Related  // New operator for Guid relations
+                };
+            }
+
             if (PropertyAccess.IsEnum(FilterPropertyType))
                 return new FilterOperator[] { FilterOperator.Equals, FilterOperator.NotEquals };
 
@@ -369,6 +382,8 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
             {
                 case FilterOperator.Custom:
                     return DataFilter?.CustomText;
+                case FilterOperator.Related:
+                    return DataFilter?.RelatedText ?? "Relacionado";
                 case FilterOperator.Contains:
                     return DataFilter?.ContainsText;
                 case FilterOperator.DoesNotContain:

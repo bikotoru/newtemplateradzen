@@ -84,6 +84,54 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Models
             return underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset) || underlyingType == typeof(DateOnly);
         }
 
+        /// <summary>
+        /// Checks if a property is a Guid that represents a foreign key relationship
+        /// </summary>
+        public static bool IsGuidRelation(Type entityType, string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return false;
+
+            var property = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (property == null)
+                return false;
+
+            var underlyingType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+            if (underlyingType != typeof(Guid))
+                return false;
+
+            // Check if property name ends with "Id" and there's a corresponding navigation property
+            if (propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            {
+                var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+                var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
+                return navigationProperty != null && navigationProperty.PropertyType.IsClass;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the display name for a property, using the navigation property name if it's a foreign key
+        /// </summary>
+        public static string GetDisplayName(Type entityType, string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return propertyName;
+
+            if (IsGuidRelation(entityType, propertyName) && propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            {
+                var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+                var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
+                if (navigationProperty != null)
+                {
+                    return navigationPropertyName;
+                }
+            }
+
+            return propertyName;
+        }
+
         private static Expression GetNestedPropertyExpression(Expression expression, string property)
         {
             var parts = property.Split('.');

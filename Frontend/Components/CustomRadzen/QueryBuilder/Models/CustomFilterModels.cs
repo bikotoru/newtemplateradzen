@@ -75,7 +75,11 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Models
         /// <summary>
         /// Use a custom filter.
         /// </summary>
-        Custom
+        Custom,
+        /// <summary>
+        /// Filter by related entity (for Guid foreign keys).
+        /// </summary>
+        Related
     }
 
     /// <summary>

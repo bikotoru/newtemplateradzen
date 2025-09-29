@@ -133,7 +133,7 @@
                                 @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
                                 {
                                     <CustomDataFilterProperty Property="@field.PropertyName"
-                                                            Title="@field.DisplayName"
+                                                            Title="@GetImprovedDisplayName(field)"
                                                             Type="@field.PropertyType" />
                                 }
                             </Properties>
@@ -326,6 +326,53 @@
             "IsNotEmpty" => "No está vacío",
             _ => operatorValue
         };
+    }
+
+    /// <summary>
+    /// Obtiene el nombre mejorado para mostrar en el filtro
+    /// Convierte "RegionId" a "Region" para campos de relación
+    /// </summary>
+    private string GetImprovedDisplayName(dynamic field)
+    {
+        var propertyName = field.PropertyName;
+        var displayName = field.DisplayName;
+
+        // Si el campo es una relación Guid (como RegionId -> Region)
+        if (!string.IsNullOrEmpty(propertyName) && propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+        {
+            // Buscar si existe una propiedad de navegación correspondiente
+            var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+
+            // Buscar en EntityFields si existe la propiedad de navegación
+            var hasNavigationProperty = EntityFields.Any(f => f.PropertyName.Equals(navigationPropertyName, StringComparison.OrdinalIgnoreCase));
+
+            if (hasNavigationProperty || IsLikelyNavigationProperty(propertyName))
+            {
+                return navigationPropertyName;
+            }
+        }
+
+        // Si no es una relación, devolver el DisplayName original
+        return displayName;
+    }
+
+    /// <summary>
+    /// Determina si un campo es probablemente una propiedad de navegación
+    /// basado en patrones comunes como RegionId, CreadorId, etc.
+    /// </summary>
+    private bool IsLikelyNavigationProperty(string propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName) || !propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Lista de patrones comunes de relaciones
+        var commonRelationPatterns = new[]
+        {
+            "RegionId", "CreadorId", "ModificadorId", "OrganizationId", "UserId", "RoleId",
+            "CategoryId", "StatusId", "TypeId", "StateId", "CountryId", "CityId"
+        };
+
+        return commonRelationPatterns.Any(pattern => propertyName.Equals(pattern, StringComparison.OrdinalIgnoreCase));
     }
 
     public void Dispose()

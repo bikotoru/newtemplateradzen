@@ -287,6 +287,13 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
         public string CustomText { get; set; } = "Custom";
 
         /// <summary>
+        /// Gets or sets the related filter operator text.
+        /// </summary>
+        /// <value>The related filter operator text.</value>
+        [Parameter]
+        public string RelatedText { get; set; } = "Relacionado";
+
+        /// <summary>
         /// Gets or sets a value indicating whether the columns can be filtered.
         /// </summary>
         /// <value><c>true</c> if columns can be filtered; otherwise, <c>false</c>.</value>
