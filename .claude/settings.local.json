@@ -14,7 +14,9 @@
       "Read(//mnt/c/Users/vuret/OneDrive/Escritorio/**)",
       "Bash(cd:*)",
       "Bash(grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

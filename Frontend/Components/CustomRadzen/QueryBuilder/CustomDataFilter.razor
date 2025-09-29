@@ -1,0 +1,87 @@
+@using System.Linq.Expressions
+@using Frontend.Components.CustomRadzen.QueryBuilder.Models
+@using Radzen
+@using Radzen.Blazor
+@typeparam TItem
+@inherits RadzenComponent
+
+@if (Properties != null)
+{
+    <CascadingValue Value=this>
+        @Properties
+    </CascadingValue>
+}
+
+@if (Visible)
+{
+    <div @ref="@Element"
+         style="@Style"
+         @attributes="Attributes"
+         class="@GetCssClass()"
+         id="@GetId()">
+
+        <!-- Barra de operadores lógicos -->
+        <RadzenSelectBar @bind-Value=LogicalFilterOperator
+                        Change="@((LogicalFilterOperator args) => { InvokeAsync(ChangeState); if(Auto) { InvokeAsync(Filter); } })"
+                        Size="ButtonSize.Small"
+                        class="@Configuration.Styles.OperatorBarClass">
+            <Items>
+                <RadzenSelectBarItem Text="@Configuration.Texts.AndOperatorText"
+                                   Value="LogicalFilterOperator.And"
+                                   title="@Configuration.Texts.AndOperatorText" />
+                <RadzenSelectBarItem Text="@Configuration.Texts.OrOperatorText"
+                                   Value="LogicalFilterOperator.Or"
+                                   title="@Configuration.Texts.OrOperatorText" />
+            </Items>
+        </RadzenSelectBar>
+
+        <!-- Botón para limpiar todos los filtros -->
+        <RadzenButton title="@Configuration.Texts.ClearFilterText"
+                     class="@($"{Configuration.Styles.ClearButtonClass} rz-datafilter-item-clear rz-datafilter-all-items-clear")"
+                     Icon="clear"
+                     Click="@(args => ClearFilters())"
+                     Visible=@(Filters.Any())
+                     Variant="Variant.Text"
+                     Size="ButtonSize.Small"
+                     ButtonStyle="ButtonStyle.Base" />
+
+        <!-- Lista de filtros -->
+        <ul class="@Configuration.Styles.GroupClass rz-datafilter-group">
+            @foreach(var filter in Filters)
+            {
+                <li class="@Configuration.Styles.ItemClass @(filter.Filters != null ? "rz-datafilter-group-item" : "") rz-datafilter-item">
+                    <CustomDataFilterItem @key=@filter.GetHashCode()
+                                        DataFilter="@this"
+                                        Filter="@CustomCompositeFilterDescriptor.FromRadzenFilter(filter)"
+                                        Configuration="@Configuration" />
+                </li>
+            }
+
+            <!-- Botón para agregar nuevos filtros -->
+            <li class="@Configuration.Styles.ItemClass rz-datafilter-item rz-datafilter-bar">
+                <RadzenSplitButton Icon="add"
+                                 Click="@(args => AddFilter(args?.Value == "group"))"
+                                 Size="ButtonSize.Small"
+                                 Variant="Variant.Flat"
+                                 ButtonStyle="ButtonStyle.Base"
+                                 class="@Configuration.Styles.AddButtonClass">
+                    <RadzenSplitButtonItem Icon="add" Text="@Configuration.Texts.AddFilterText" />
+                    <RadzenSplitButtonItem Icon="playlist_add"
+                                         Value="group"
+                                         Text="@Configuration.Texts.AddFilterGroupText" />
+                </RadzenSplitButton>
+            </li>
+        </ul>
+
+        @if (ShowDebugInfo)
+        {
+            <div class="mt-3 p-2 border rounded" style="background-color: #f8f9fa; font-family: monospace; font-size: 12px;">
+                <strong>Debug Info:</strong><br/>
+                Filters Count: @Filters.Count()<br/>
+                Logical Operator: @LogicalFilterOperator<br/>
+                Auto: @Auto<br/>
+                Properties Count: @properties.Count
+            </div>
+        }
+    </div>
+}

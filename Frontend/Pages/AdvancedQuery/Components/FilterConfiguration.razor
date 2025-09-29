@@ -1,4 +1,5 @@
 @using Radzen.Blazor
+@using Frontend.Components.CustomRadzen.QueryBuilder
 @implements IDisposable
 
 @if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
@@ -97,9 +98,9 @@
                             </RadzenColumn>
                         </RadzenRow>
 
-                        <!-- RadzenDataFilter -->
+                        <!-- CustomDataFilter -->
                         <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
-                        <RadzenDataFilter @ref="dataFilterRef"
+                        <CustomDataFilter @ref="customDataFilterRef"
                                         TItem="object"
                                         LogicalFilterOperator="@LogicalOperator"
                                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -123,16 +124,17 @@
                                         LessThanOrEqualsText="Menor o Igual"
                                         GreaterThanOrEqualsText="Mayor o Igual"
                                         RemoveFilterText="Quitar filtro"
-                                        ClearFilterText="Limpiar filtro">
+                                        ClearFilterText="Limpiar filtro"
+                                        ShowDebugInfo="false">
                             <Properties>
                                 @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
                                 {
-                                    <RadzenDataFilterProperty Property="@field.PropertyName"
+                                    <CustomDataFilterProperty Property="@field.PropertyName"
                                                             Title="@field.DisplayName"
                                                             Type="@field.PropertyType" />
                                 }
                             </Properties>
-                        </RadzenDataFilter>
+                        </CustomDataFilter>
                         </div>
 
                         <!-- Botones de Acción -->
@@ -166,6 +168,7 @@
     [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private RadzenDataFilter<object>? dataFilterRef;
+    private CustomDataFilter<object>? customDataFilterRef;
     private bool hasFilters = false;
     private Timer? filterCheckTimer;
 
@@ -173,6 +176,11 @@
     /// Expone la referencia del DataFilter para uso del componente padre
     /// </summary>
     public RadzenDataFilter<object>? DataFilter => dataFilterRef;
+
+    /// <summary>
+    /// Expone la referencia del CustomDataFilter para uso del componente padre
+    /// </summary>
+    public CustomDataFilter<object>? CustomDataFilter => customDataFilterRef;
 
     /// <summary>
     /// Indica si hay filtros configurados
@@ -213,23 +221,23 @@
             filterCheckTimer = new Timer(CheckFiltersState, null, 500, 500);
             
             // Notificar cuando DataFilter esté listo
-            if (dataFilterRef != null)
+            if (dataFilterRef != null || customDataFilterRef != null)
             {
-                Console.WriteLine("🎯 FilterConfiguration: DataFilter is ready on first render");
+                Console.WriteLine("🎯 FilterConfiguration: DataFilter/CustomDataFilter is ready on first render");
                 await OnDataFilterReady.InvokeAsync();
             }
             else
             {
-                Console.WriteLine("⚠️ FilterConfiguration: DataFilter is null on first render");
+                Console.WriteLine("⚠️ FilterConfiguration: DataFilter/CustomDataFilter is null on first render");
                 // Intentar notificar después de un pequeño delay
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(100);
                     await InvokeAsync(async () =>
                     {
-                        if (dataFilterRef != null)
+                        if (dataFilterRef != null || customDataFilterRef != null)
                         {
-                            Console.WriteLine("🎯 FilterConfiguration: DataFilter ready after delay");
+                            Console.WriteLine("🎯 FilterConfiguration: DataFilter/CustomDataFilter ready after delay");
                             await OnDataFilterReady.InvokeAsync();
                         }
                     });
@@ -242,7 +250,7 @@
     {
         try
         {
-            var currentHasFilters = dataFilterRef?.Filters?.Any() == true;
+            var currentHasFilters = (dataFilterRef?.Filters?.Any() == true) || (customDataFilterRef?.Filters?.Any() == true);
             if (currentHasFilters != hasFilters)
             {
                 hasFilters = currentHasFilters;
@@ -260,7 +268,7 @@
     /// </summary>
     public void RefreshFilterState()
     {
-        hasFilters = dataFilterRef?.Filters?.Any() == true;
+        hasFilters = (dataFilterRef?.Filters?.Any() == true) || (customDataFilterRef?.Filters?.Any() == true);
         StateHasChanged();
     }
 

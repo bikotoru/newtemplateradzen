@@ -1,0 +1,181 @@
+@using Frontend.Components.CustomRadzen.QueryBuilder.Models
+@using Radzen
+@using Radzen.Blazor
+@typeparam TItem
+
+@if (Filter.Filters != null)
+{
+    <!-- Filtro de grupo -->
+    <RadzenSelectBar @bind-Value=Filter.LogicalFilterOperator
+                     Change="@((LogicalFilterOperator args) => { InvokeAsync(ChangeState); InvokeAsync(ApplyFilter); })"
+                     Size="ButtonSize.Small"
+                     class="@Configuration.Styles.OperatorBarClass">
+        <Items>
+            <RadzenSelectBarItem Text="@Configuration.Texts.AndOperatorText"
+                               Value="LogicalFilterOperator.And"
+                               title="@Configuration.Texts.AndOperatorText" />
+            <RadzenSelectBarItem Text="@Configuration.Texts.OrOperatorText"
+                               Value="LogicalFilterOperator.Or"
+                               title="@Configuration.Texts.OrOperatorText" />
+        </Items>
+    </RadzenSelectBar>
+
+    <RadzenButton title="@Configuration.Texts.RemoveFilterText"
+                  class="@($"{Configuration.Styles.RemoveButtonClass} rz-datafilter-item-clear")"
+                  Icon="clear"
+                  Click="@RemoveFilter"
+                  Variant="Variant.Text"
+                  Size="ButtonSize.Small"
+                  ButtonStyle="ButtonStyle.Dark"/>
+
+    <ul class="@Configuration.Styles.GroupClass rz-datafilter-group">
+        @foreach(var filter in Filter.Filters)
+        {
+            <li class="@Configuration.Styles.ItemClass @(filter.Filters != null ? "rz-datafilter-group-item" : "") rz-datafilter-item">
+                <CustomDataFilterItem DataFilter="@this.DataFilter"
+                                    Filter="@filter"
+                                    Parent=@this
+                                    Configuration="@Configuration" />
+            </li>
+        }
+        <li class="@Configuration.Styles.ItemClass rz-datafilter-item rz-datafilter-bar">
+            <RadzenSplitButton Icon="add"
+                              Click="@(args => AddFilter(args?.Value == "group"))"
+                              Size="ButtonSize.Small"
+                              Variant="Variant.Flat"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Shade="Shade.Lighter"
+                              class="@Configuration.Styles.AddButtonClass">
+                <RadzenSplitButtonItem Icon="add" Text="@Configuration.Texts.AddFilterText" />
+                <RadzenSplitButtonItem Icon="playlist_add"
+                                     Value="group"
+                                     Text="@Configuration.Texts.AddFilterGroupText" />
+            </RadzenSplitButton>
+        </li>
+    </ul>
+}
+else
+{
+    <!-- Filtro simple -->
+    <div class="rz-datafilter-item-content d-flex align-items-center gap-2">
+        <!-- Selector de propiedad -->
+        <RadzenDropDown @bind-Value="@Filter.Property"
+                        Data="@(DataFilter?.properties)"
+                        TextProperty="Title"
+                        ValueProperty="Property"
+                        TValue="string"
+                        DisabledProperty="@(DataFilter?.Configuration.UniqueFilters == true ? nameof(property.IsSelected) : null)"
+                        Change="@OnPropertyChange"
+                        AllowFiltering="@(DataFilter?.Configuration.AllowColumnFiltering ?? false)"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        class="@($"{Configuration.Styles.PropertyDropdownClass} rz-datafilter-property")"
+                        Placeholder="Seleccionar campo...">
+            <Template>
+                @{
+                    var property = (CustomDataFilterProperty<TItem>)context;
+                }
+                @(property.Title ?? property.Property)
+            </Template>
+        </RadzenDropDown>
+
+        @if (property != null)
+        {
+            <!-- Selector de operador -->
+            <RadzenDropDown @onclick:preventDefault="true"
+                            Data="@(property.GetFilterOperators().Select(t => new { Value = property.GetFilterOperatorText(t), Key = t }))"
+                            TextProperty="Value"
+                            ValueProperty="Key"
+                            TValue="FilterOperator?"
+                            @bind-Value="@Filter.FilterOperator"
+                            Change="@OnOperatorChange"
+                            class="@($"{Configuration.Styles.OperatorDropdownClass} rz-datafilter-operator")" />
+
+            <!-- Editor de valor -->
+            @if (GetCustomTemplate() != null)
+            {
+                <!-- Template personalizado -->
+                <div class="@($"{Configuration.Styles.EditorClass} rz-datafilter-editor")" style="display:flex">
+                    @GetCustomTemplate()!.Template!(Filter)
+                </div>
+            }
+            else if (property.FilterTemplate != null)
+            {
+                <!-- Template de la propiedad -->
+                <div class="@($"{Configuration.Styles.EditorClass} rz-datafilter-editor")" style="display:flex">
+                    @property.FilterTemplate(Filter)
+                </div>
+            }
+            else if (PropertyAccess.IsNullableEnum(property.FilterPropertyType) || PropertyAccess.IsEnum(property.FilterPropertyType))
+            {
+                <!-- Editor de enum -->
+                <RadzenDropDown Disabled="@IsOperatorNullOrEmpty()"
+                                AllowClear="false"
+                                AllowFiltering="false"
+                                TValue="@object"
+                                class="@($"{Configuration.Styles.EditorClass} rz-datafilter-editor")"
+                                @bind-Value=@Filter.FilterValue
+                                Multiple="false"
+                                Placeholder="@Configuration.Texts.EnumFilterSelectText"
+                                TextProperty="Text"
+                                ValueProperty="Value"
+                                Data=@EnumExtensions.EnumAsKeyValuePair(Nullable.GetUnderlyingType(property.FilterPropertyType) ?? property.FilterPropertyType!)
+                                Change=@(args => InvokeAsync(ApplyFilter))/>
+            }
+            else if (PropertyAccess.IsNumeric(property.FilterPropertyType))
+            {
+                <!-- Editor numérico -->
+                @DrawNumericFilter()
+            }
+            else if (PropertyAccess.IsDate(property.FilterPropertyType))
+            {
+                <!-- Editor de fecha -->
+                <RadzenDatePicker Disabled="@IsOperatorNullOrEmpty()"
+                                  @bind-Value=@Filter.FilterValue
+                                  TValue="@object"
+                                  ShowTime="true"
+                                  class="@($"{Configuration.Styles.EditorClass} rz-datafilter-editor")"
+                                  ShowTimeOkButton="true"
+                                  DateFormat="@getFilterDateFormat()"
+                                  Change=@(args => InvokeAsync(ApplyFilter)) />
+            }
+            else if (property.FilterPropertyType == typeof(bool) || property.FilterPropertyType == typeof(bool?))
+            {
+                <!-- Editor booleano -->
+                <RadzenCheckBox Disabled="@IsOperatorNullOrEmpty()"
+                                TriState="true"
+                                TValue="@object"
+                                @bind-Value=@Filter.FilterValue
+                                Change=@(args => InvokeAsync(ApplyFilter))
+                                class="@($"{Configuration.Styles.EditorClass} rz-datafilter-check")" />
+            }
+            else
+            {
+                <!-- Editor de texto por defecto -->
+                <RadzenTextBox Disabled="@IsOperatorNullOrEmpty()"
+                               class="@($"{Configuration.Styles.EditorClass} rz-datafilter-editor")"
+                               Value="@($"{Filter.FilterValue}")"
+                               Change=@(args => { Filter.FilterValue = args; InvokeAsync(ApplyFilter); }) />
+            }
+
+            <!-- Botón remover -->
+            <RadzenButton title="@Configuration.Texts.RemoveFilterText"
+                          class="@($"{Configuration.Styles.RemoveButtonClass} rz-datafilter-item-clear")"
+                          Icon="clear"
+                          Click="@RemoveFilter"
+                          Variant="Variant.Text"
+                          Size="ButtonSize.Small"
+                          ButtonStyle="ButtonStyle.Dark"/>
+        }
+    </div>
+
+    @if (DataFilter?.ShowDebugInfo == true && property != null)
+    {
+        <div class="mt-2 p-2 border rounded" style="background-color: #f0f8ff; font-family: monospace; font-size: 11px;">
+            <strong>Item Debug:</strong><br/>
+            Property: @Filter.Property<br/>
+            Operator: @Filter.FilterOperator<br/>
+            Value: @Filter.FilterValue<br/>
+            Type: @property.FilterPropertyType?.Name
+        </div>
+    }
+}

@@ -6,6 +6,7 @@ using System.Text.Json;
 using Frontend.Services;
 using Frontend.Pages.AdvancedQuery.Components;
 using Frontend.Pages.AdvancedQuery.Components.Modals;
+using Frontend.Components.CustomRadzen.QueryBuilder;
 using Shared.Models.Requests;
 
 namespace Frontend.Pages.AdvancedQuery;
@@ -162,7 +163,7 @@ public partial class Page : ComponentBase
             (readOnlyFilters?.Any() == true) : 
             (filterConfigurationRef?.DataFilter?.Filters?.Any() == true);
             
-        if (!IsPlayMode && (filterConfigurationRef?.DataFilter?.Filters == null || !filterConfigurationRef.DataFilter.Filters.Any()))
+        if (!IsPlayMode && !HasAnyFilters())
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -262,7 +263,7 @@ public partial class Page : ComponentBase
     {
         if (filterConfigurationRef?.DataFilter != null)
         {
-            await filterConfigurationRef.DataFilter.ClearFilters();
+            await ClearAllFilters();
             queryResults = null;
             lastExecutedRequest = null;
             // Refrescar el estado del componente de filtros
@@ -628,7 +629,7 @@ public partial class Page : ComponentBase
                             var attempt = 0;
                             var delayMs = 200;
                             
-                            while (filterConfigurationRef.DataFilter == null && attempt < maxAttempts)
+                            while (!HasDataFilter() && attempt < maxAttempts)
                             {
                                 attempt++;
                                 Console.WriteLine($"⏳ Attempt {attempt}/{maxAttempts}: DataFilter is null, waiting {delayMs}ms...");
@@ -642,7 +643,7 @@ public partial class Page : ComponentBase
                                 delayMs = Math.Min(delayMs + 100, 1000);
                             }
                             
-                            if (filterConfigurationRef.DataFilter != null)
+                            if (HasDataFilter())
                             {
                                 Console.WriteLine($"✅ DataFilter found after {attempt} attempts!");
                                 Console.WriteLine("🚀 Starting LoadFiltersIntoDataFilter...");
@@ -856,12 +857,12 @@ public partial class Page : ComponentBase
                 return;
             }
 
-            if (filterConfigurationRef.DataFilter == null)
+            if (!HasDataFilter())
             {
                 Console.WriteLine("DataFilter is null, waiting a bit more...");
                 await Task.Delay(1000); // Esperar más tiempo
-                
-                if (filterConfigurationRef.DataFilter == null)
+
+                if (!HasDataFilter())
                 {
                     Console.WriteLine("DataFilter is still null after waiting");
                     return;
@@ -871,7 +872,7 @@ public partial class Page : ComponentBase
             Console.WriteLine("DataFilter found, clearing existing filters");
             
             // Limpiar filtros existentes
-            await filterConfigurationRef.DataFilter.ClearFilters();
+            await ClearAllFilters();
 
             Console.WriteLine("Starting to convert and add filters");
 
@@ -886,23 +887,19 @@ public partial class Page : ComponentBase
                     Console.WriteLine($"Filter converted successfully, adding to DataFilter");
                     
                     // Agregar filtro al DataFilter usando diferentes enfoques
-                    try 
+                    try
                     {
-                        // Método 1: Agregar directamente
-                        ((IList<CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
-                        Console.WriteLine($"✓ Added filter using direct method: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
+                        // Método 1: Usar helper method
+                        await AddFilterToDataFilter(compositeFilter);
                     }
                     catch (Exception addEx)
                     {
                         Console.WriteLine($"✗ Failed to add filter directly: {addEx.Message}");
-                        
-                        // Método 2: Crear nueva lista
+
+                        // Método 2: Usar helper method con lista
                         try
                         {
-                            var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<CompositeFilterDescriptor>();
-                            currentFilters.Add(compositeFilter);
-                            filterConfigurationRef.DataFilter.Filters = currentFilters;
-                            Console.WriteLine($"✓ Added filter using new list method: {serializableFilter.PropertyName}");
+                            await AddFilterToDataFilter(compositeFilter, useListMethod: true);
                         }
                         catch (Exception listEx)
                         {
@@ -927,7 +924,7 @@ public partial class Page : ComponentBase
             await InvokeAsync(StateHasChanged);
             
             // Verificar si los filtros se agregaron correctamente
-            var filterCount = filterConfigurationRef.DataFilter.Filters?.Count() ?? 0;
+            var filterCount = GetCurrentFilterCount();
             Console.WriteLine($"Current filter count in DataFilter: {filterCount}");
 
             Console.WriteLine($"✓ Successfully loaded {serializableFilters.Count} filters into DataFilter");
@@ -1055,4 +1052,96 @@ public partial class Page : ComponentBase
             return value; // Return original value if conversion fails
         }
     }
+
+    #region Helper Methods for CustomDataFilter Integration
+
+    /// <summary>
+    /// Verifica si hay algún DataFilter disponible (Radzen o Custom)
+    /// </summary>
+    private bool HasDataFilter()
+    {
+        return filterConfigurationRef?.DataFilter != null || filterConfigurationRef?.CustomDataFilter != null;
+    }
+
+    /// <summary>
+    /// Verifica si hay filtros en cualquier DataFilter
+    /// </summary>
+    private bool HasAnyFilters()
+    {
+        var radzenHasFilters = filterConfigurationRef?.DataFilter?.Filters?.Any() == true;
+        var customHasFilters = filterConfigurationRef?.CustomDataFilter?.Filters?.Any() == true;
+        return radzenHasFilters || customHasFilters;
+    }
+
+    /// <summary>
+    /// Limpia todos los filtros de los DataFilters disponibles
+    /// </summary>
+    private async Task ClearAllFilters()
+    {
+        if (filterConfigurationRef?.DataFilter != null)
+        {
+            await ClearAllFilters();
+        }
+        if (filterConfigurationRef?.CustomDataFilter != null)
+        {
+            await filterConfigurationRef.CustomDataFilter.ClearFilters();
+        }
+    }
+
+    /// <summary>
+    /// Agrega un filtro al DataFilter disponible
+    /// </summary>
+    private async Task AddFilterToDataFilter(CompositeFilterDescriptor compositeFilter, bool useListMethod = false)
+    {
+        if (filterConfigurationRef?.CustomDataFilter != null)
+        {
+            // Usar CustomDataFilter preferentemente
+            await filterConfigurationRef.CustomDataFilter.AddFilter(compositeFilter);
+            Console.WriteLine($"✓ Added filter to CustomDataFilter: {compositeFilter.Property} {compositeFilter.FilterOperator} {compositeFilter.FilterValue}");
+        }
+        else if (filterConfigurationRef?.DataFilter != null)
+        {
+            // Fallback a RadzenDataFilter
+            if (!useListMethod)
+            {
+                try
+                {
+                    ((IList<CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
+                    Console.WriteLine($"✓ Added filter to RadzenDataFilter (direct): {compositeFilter.Property} {compositeFilter.FilterOperator} {compositeFilter.FilterValue}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Failed to add filter directly to RadzenDataFilter: {ex.Message}");
+                    throw;
+                }
+            }
+            else
+            {
+                try
+                {
+                    var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<CompositeFilterDescriptor>();
+                    currentFilters.Add(compositeFilter);
+                    filterConfigurationRef.DataFilter.Filters = currentFilters;
+                    Console.WriteLine($"✓ Added filter to RadzenDataFilter (list method): {compositeFilter.Property}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Failed to add filter using list method to RadzenDataFilter: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el número actual de filtros
+    /// </summary>
+    private int GetCurrentFilterCount()
+    {
+        var radzenCount = filterConfigurationRef?.DataFilter?.Filters?.Count() ?? 0;
+        var customCount = filterConfigurationRef?.CustomDataFilter?.Filters?.Count() ?? 0;
+        return Math.Max(radzenCount, customCount);
+    }
+
+    #endregion
 }
