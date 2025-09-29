@@ -12,6 +12,8 @@ public partial class AppDbContext : DbContext
     {
     }
 
+    public virtual DbSet<Comuna> Comuna { get; set; }
+
     public virtual DbSet<Region> Region { get; set; }
 
     public virtual DbSet<SystemAuditoria> SystemAuditoria { get; set; }
@@ -60,9 +62,41 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Comuna>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__comuna__3214EC078679CE4F");
+
+            entity.ToTable("comuna", tb => tb.HasComment("Core.Localidades"));
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(255)
+                .HasColumnName("nombre");
+            entity.Property(e => e.RegionId).HasColumnName("region_id");
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.ComunaCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_comuna_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.ComunaModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_comuna_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.Comuna)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_comuna_OrganizationId");
+
+            entity.HasOne(d => d.Region).WithMany(p => p.Comuna)
+                .HasForeignKey(d => d.RegionId)
+                .HasConstraintName("FK_comuna_region_id");
+        });
+
         modelBuilder.Entity<Region>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__region__3214EC078A2E8309");
+            entity.HasKey(e => e.Id).HasName("PK__region__3214EC0773313DA2");
 
             entity.ToTable("region", tb => tb.HasComment("Core.Localidades"));
 

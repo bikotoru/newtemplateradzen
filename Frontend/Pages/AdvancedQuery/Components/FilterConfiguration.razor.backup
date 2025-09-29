@@ -1,9 +1,4 @@
 @using Radzen.Blazor
-@using Frontend.Components.CustomRadzen.QueryBuilder
-@using Frontend.Components.CustomRadzen.QueryBuilder.Models
-@using Frontend.Components.CustomRadzen.QueryBuilder.Extensions
-@using LogicalFilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator
-@using FilterCaseSensitivity = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterCaseSensitivity
 @implements IDisposable
 
 @if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
@@ -102,9 +97,9 @@
                             </RadzenColumn>
                         </RadzenRow>
 
-                        <!-- CustomDataFilter -->
+                        <!-- RadzenDataFilter -->
                         <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
-                        <CustomDataFilter @ref="dataFilterRef"
+                        <RadzenDataFilter @ref="dataFilterRef"
                                         TItem="object"
                                         LogicalFilterOperator="@LogicalOperator"
                                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -132,12 +127,12 @@
                             <Properties>
                                 @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
                                 {
-                                    <CustomDataFilterProperty Property="@field.PropertyName"
+                                    <RadzenDataFilterProperty Property="@field.PropertyName"
                                                             Title="@field.DisplayName"
                                                             Type="@field.PropertyType" />
                                 }
                             </Properties>
-                        </CustomDataFilter>
+                        </RadzenDataFilter>
                         </div>
 
                         <!-- Botones de Acción -->
@@ -170,24 +165,24 @@
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public bool IsReadOnly { get; set; } = false;
 
-    private CustomDataFilter<object>? dataFilterRef;
+    private RadzenDataFilter<object>? dataFilterRef;
     private bool hasFilters = false;
     private Timer? filterCheckTimer;
 
     /// <summary>
     /// Expone la referencia del DataFilter para uso del componente padre
     /// </summary>
-    public CustomDataFilter<object>? DataFilter => dataFilterRef;
+    public RadzenDataFilter<object>? DataFilter => dataFilterRef;
 
     /// <summary>
     /// Indica si hay filtros configurados
     /// </summary>
     private bool HasFilters => hasFilters;
 
-    [Parameter] public Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator LogicalOperator { get; set; } = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And;
+    [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
     [Parameter] public int TakeLimit { get; set; } = 50;
 
-    [Parameter] public EventCallback<Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator> LogicalOperatorChanged { get; set; }
+    [Parameter] public EventCallback<LogicalFilterOperator> LogicalOperatorChanged { get; set; }
     [Parameter] public EventCallback<int> TakeLimitChanged { get; set; }
 
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
@@ -297,8 +292,8 @@
     {
         return LogicalOperator switch
         {
-            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And => "Y (AND)",
-            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.Or => "O (OR)",
+            LogicalFilterOperator.And => "Y (AND)",
+            LogicalFilterOperator.Or => "O (OR)",
             _ => "Desconocido"
         };
     }
