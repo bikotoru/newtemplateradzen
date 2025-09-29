@@ -330,23 +330,21 @@
 
     /// <summary>
     /// Obtiene el nombre mejorado para mostrar en el filtro
-    /// Convierte "RegionId" a "Region" para campos de relación
+    /// Convierte "RegionId" a "Region" para campos de relación de forma inteligente
     /// </summary>
     private string GetImprovedDisplayName(dynamic field)
     {
-        var propertyName = field.PropertyName;
-        var displayName = field.DisplayName;
+        var propertyName = field.PropertyName as string;
+        var displayName = field.DisplayName as string;
+        var propertyType = field.PropertyType as Type;
 
         // Si el campo es una relación Guid (como RegionId -> Region)
-        if (!string.IsNullOrEmpty(propertyName) && propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+        if (IsGuidForeignKey(propertyName, propertyType))
         {
-            // Buscar si existe una propiedad de navegación correspondiente
-            var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+            var navigationPropertyName = GetNavigationPropertyName(propertyName);
 
-            // Buscar en EntityFields si existe la propiedad de navegación
-            var hasNavigationProperty = EntityFields.Any(f => f.PropertyName.Equals(navigationPropertyName, StringComparison.OrdinalIgnoreCase));
-
-            if (hasNavigationProperty || IsLikelyNavigationProperty(propertyName))
+            // Verificar si existe realmente la propiedad de navegación en los EntityFields
+            if (HasNavigationProperty(navigationPropertyName))
             {
                 return navigationPropertyName;
             }
@@ -357,22 +355,56 @@
     }
 
     /// <summary>
-    /// Determina si un campo es probablemente una propiedad de navegación
-    /// basado en patrones comunes como RegionId, CreadorId, etc.
+    /// Determina si un campo es un Guid que representa una clave foránea
     /// </summary>
-    private bool IsLikelyNavigationProperty(string propertyName)
+    private bool IsGuidForeignKey(string propertyName, Type propertyType)
     {
-        if (string.IsNullOrEmpty(propertyName) || !propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(propertyName) || propertyType == null)
             return false;
 
-        // Lista de patrones comunes de relaciones
-        var commonRelationPatterns = new[]
-        {
-            "RegionId", "CreadorId", "ModificadorId", "OrganizationId", "UserId", "RoleId",
-            "CategoryId", "StatusId", "TypeId", "StateId", "CountryId", "CityId"
-        };
+        // Debe terminar en "Id"
+        if (!propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            return false;
 
-        return commonRelationPatterns.Any(pattern => propertyName.Equals(pattern, StringComparison.OrdinalIgnoreCase));
+        // Debe ser Guid o Guid?
+        var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        return underlyingType == typeof(Guid);
+    }
+
+    /// <summary>
+    /// Obtiene el nombre de la propiedad de navegación a partir del nombre del campo Id
+    /// Ejemplo: "RegionId" -> "Region"
+    /// </summary>
+    private string GetNavigationPropertyName(string propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName) || !propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            return propertyName;
+
+        return propertyName.Substring(0, propertyName.Length - 2);
+    }
+
+    /// <summary>
+    /// Verifica si existe una propiedad de navegación correspondiente en los EntityFields
+    /// </summary>
+    private bool HasNavigationProperty(string navigationPropertyName)
+    {
+        if (string.IsNullOrEmpty(navigationPropertyName) || EntityFields == null)
+            return false;
+
+        // Buscar en EntityFields si existe una propiedad con ese nombre
+        // que sea de un tipo de clase (no primitivo)
+        var navigationField = EntityFields.FirstOrDefault(f =>
+            f.PropertyName.Equals(navigationPropertyName, StringComparison.OrdinalIgnoreCase));
+
+        if (navigationField == null)
+            return false;
+
+        // La propiedad de navegación debe ser una clase, no un tipo primitivo
+        var underlyingType = Nullable.GetUnderlyingType(navigationField.PropertyType) ?? navigationField.PropertyType;
+
+        return underlyingType.IsClass &&
+               underlyingType != typeof(string) &&
+               !underlyingType.IsPrimitive;
     }
 
     public void Dispose()

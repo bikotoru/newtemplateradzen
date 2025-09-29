@@ -86,49 +86,60 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Models
 
         /// <summary>
         /// Checks if a property is a Guid that represents a foreign key relationship
+        /// Uses intelligent analysis to detect navigation properties
         /// </summary>
         public static bool IsGuidRelation(Type entityType, string propertyName)
         {
-            if (string.IsNullOrEmpty(propertyName))
+            if (string.IsNullOrEmpty(propertyName) || entityType == null)
                 return false;
 
             var property = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
             if (property == null)
                 return false;
 
+            // Must be a Guid or Guid? type
             var underlyingType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
             if (underlyingType != typeof(Guid))
                 return false;
 
-            // Check if property name ends with "Id" and there's a corresponding navigation property
-            if (propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
-            {
-                var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
-                var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
-                return navigationProperty != null && navigationProperty.PropertyType.IsClass;
-            }
+            // Must end with "Id" (convention for foreign keys)
+            if (!propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+                return false;
 
-            return false;
+            // Get potential navigation property name by removing "Id" suffix
+            var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+
+            // Look for corresponding navigation property
+            var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
+
+            if (navigationProperty == null)
+                return false;
+
+            // Navigation property should be a class (not string or primitive)
+            var navigationUnderlyingType = Nullable.GetUnderlyingType(navigationProperty.PropertyType) ?? navigationProperty.PropertyType;
+
+            return navigationUnderlyingType.IsClass &&
+                   navigationUnderlyingType != typeof(string) &&
+                   !navigationUnderlyingType.IsPrimitive;
         }
 
         /// <summary>
         /// Gets the display name for a property, using the navigation property name if it's a foreign key
+        /// Uses intelligent analysis to convert "RegionId" -> "Region" automatically
         /// </summary>
         public static string GetDisplayName(Type entityType, string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
                 return propertyName;
 
-            if (IsGuidRelation(entityType, propertyName) && propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            // If it's a Guid relation (detected intelligently), return the navigation property name
+            if (IsGuidRelation(entityType, propertyName))
             {
                 var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
-                var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (navigationProperty != null)
-                {
-                    return navigationPropertyName;
-                }
+                return navigationPropertyName;
             }
 
+            // If not a relation, return the original property name
             return propertyName;
         }
 

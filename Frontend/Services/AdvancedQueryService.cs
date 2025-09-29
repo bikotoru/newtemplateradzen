@@ -226,12 +226,16 @@ public class AdvancedQueryService
     {
         var propertyName = property.Name;
 
-        // Excluir propiedades de navegación complejas y CustomFields
-        if (propertyName.ToLower().Contains("customfield") ||
-            (property.PropertyType.IsClass && property.PropertyType != typeof(string) && !property.PropertyType.IsArray))
+        // Excluir CustomFields solamente
+        if (propertyName.ToLower().Contains("customfield"))
         {
             return null;
         }
+
+        // Para propiedades de navegación (clases complejas), incluirlas pero marcarlas como no searchables
+        var isNavigationProperty = property.PropertyType.IsClass &&
+                                  property.PropertyType != typeof(string) &&
+                                  !property.PropertyType.IsArray;
 
         var displayName = ConvertToDisplayName(propertyName);
         var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
@@ -242,7 +246,7 @@ public class AdvancedQueryService
             DisplayName = displayName,
             PropertyType = propertyType,
             IsNullable = IsNullableProperty(property),
-            IsSearchable = IsSearchableProperty(property),
+            IsSearchable = !isNavigationProperty && IsSearchableProperty(property), // No searchable si es navegación
             FieldCategory = GetFieldCategory(propertyName),
             SortOrder = GetFieldSortOrder(propertyName)
         };
