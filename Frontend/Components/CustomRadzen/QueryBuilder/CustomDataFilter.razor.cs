@@ -280,13 +280,6 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
         public string IsNotEmptyText { get; set; } = "Is not empty";
 
         /// <summary>
-        /// Gets or sets the custom filter operator text.
-        /// </summary>
-        /// <value>The custom filter operator text.</value>
-        [Parameter]
-        public string CustomText { get; set; } = "Custom";
-
-        /// <summary>
         /// Gets or sets the related filter operator text.
         /// </summary>
         /// <value>The related filter operator text.</value>

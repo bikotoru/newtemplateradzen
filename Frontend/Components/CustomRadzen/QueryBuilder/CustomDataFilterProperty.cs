@@ -315,13 +315,13 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
         }
 
         /// <summary>
-        /// Get possible property filter operators.
+        /// Get possible property filter operators based on field type.
         /// </summary>
         public virtual IEnumerable<FilterOperator> GetFilterOperators()
         {
             if (FilterOperators != null) return FilterOperators;
 
-            // Check if this is a Guid relation field (like RegionId with Region navigation property)
+            // 🆕 Operadores específicos para campos Guid de relación (RegionId, PaisId, etc.)
             if (PropertyAccess.IsGuidRelation(typeof(TItem), Property))
             {
                 return new FilterOperator[] {
@@ -329,21 +329,116 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
                     FilterOperator.NotEquals,
                     FilterOperator.IsNull,
                     FilterOperator.IsNotNull,
-                    FilterOperator.Related  // New operator for Guid relations
+                    FilterOperator.Related
                 };
             }
 
+            // 🆕 Operadores específicos para campos Guid que NO son relación (Id puro)
+            if (IsGuidField())
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull
+                };
+            }
+
+            // 🆕 Operadores específicos para entidades/clases complejas (Region, Pais, etc.)
+            if (IsComplexEntityField())
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull,
+                    FilterOperator.Related
+                };
+            }
+
+            // Operadores para Enums
             if (PropertyAccess.IsEnum(FilterPropertyType))
-                return new FilterOperator[] { FilterOperator.Equals, FilterOperator.NotEquals };
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals
+                };
+            }
 
+            // Operadores para Enums nullable
             if (PropertyAccess.IsNullableEnum(FilterPropertyType))
-                return new FilterOperator[] { FilterOperator.Equals, FilterOperator.NotEquals, FilterOperator.IsNull, FilterOperator.IsNotNull };
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull
+                };
+            }
 
+            // Operadores para tipos numéricos
+            if (PropertyAccess.IsNumeric(FilterPropertyType))
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.LessThan,
+                    FilterOperator.LessThanOrEquals,
+                    FilterOperator.GreaterThan,
+                    FilterOperator.GreaterThanOrEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull
+                };
+            }
+
+            // Operadores para fechas
+            if (PropertyAccess.IsDate(FilterPropertyType))
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.LessThan,
+                    FilterOperator.LessThanOrEquals,
+                    FilterOperator.GreaterThan,
+                    FilterOperator.GreaterThanOrEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull
+                };
+            }
+
+            // Operadores para booleanos
+            if (FilterPropertyType == typeof(bool) || FilterPropertyType == typeof(bool?))
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull
+                };
+            }
+
+            // Operadores para strings
+            if (FilterPropertyType == typeof(string))
+            {
+                return new FilterOperator[] {
+                    FilterOperator.Equals,
+                    FilterOperator.NotEquals,
+                    FilterOperator.Contains,
+                    FilterOperator.DoesNotContain,
+                    FilterOperator.StartsWith,
+                    FilterOperator.EndsWith,
+                    FilterOperator.IsNull,
+                    FilterOperator.IsNotNull,
+                    FilterOperator.IsEmpty,
+                    FilterOperator.IsNotEmpty
+                };
+            }
+
+            // Operadores para colecciones
             if ((typeof(IEnumerable).IsAssignableFrom(FilterPropertyType) || typeof(IEnumerable<>).IsAssignableFrom(FilterPropertyType))
                 && FilterPropertyType != typeof(string))
             {
-                var operators = new FilterOperator[]
-                {
+                return new FilterOperator[] {
                     FilterOperator.Contains,
                     FilterOperator.DoesNotContain,
                     FilterOperator.Equals,
@@ -353,35 +448,41 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
                     FilterOperator.IsEmpty,
                     FilterOperator.IsNotEmpty
                 };
-
-                if (!string.IsNullOrEmpty(Property))
-                {
-                    var type = PropertyAccess.GetPropertyType(typeof(TItem), Property);
-                    if ((typeof(IEnumerable).IsAssignableFrom(type) || typeof(IEnumerable<>).IsAssignableFrom(type)) && type != typeof(string))
-                    {
-                        operators = operators.Concat(new FilterOperator[] { FilterOperator.In, FilterOperator.NotIn }).ToArray();
-                    }
-                }
-
-                return operators;
             }
 
-            return Enum.GetValues(typeof(FilterOperator)).Cast<FilterOperator>().Where(o => o != FilterOperator.In && o != FilterOperator.NotIn).Where(o => {
-                var isStringOperator = o == FilterOperator.Contains || o == FilterOperator.DoesNotContain
-                    || o == FilterOperator.StartsWith || o == FilterOperator.EndsWith || o == FilterOperator.IsEmpty || o == FilterOperator.IsNotEmpty;
-                return FilterPropertyType == typeof(string) ? isStringOperator
-                      || o == FilterOperator.Equals || o == FilterOperator.NotEquals
-                      || o == FilterOperator.IsNull || o == FilterOperator.IsNotNull
-                    : !isStringOperator;
-            });
+            // Default para otros tipos (sin Custom)
+            return new FilterOperator[] {
+                FilterOperator.Equals,
+                FilterOperator.NotEquals,
+                FilterOperator.IsNull,
+                FilterOperator.IsNotNull
+            };
+        }
+
+        /// <summary>
+        /// Determina si el campo es un Guid que NO es una relación
+        /// </summary>
+        private bool IsGuidField()
+        {
+            var underlyingType = Nullable.GetUnderlyingType(FilterPropertyType) ?? FilterPropertyType;
+            return underlyingType == typeof(Guid) && !PropertyAccess.IsGuidRelation(typeof(TItem), Property);
+        }
+
+        /// <summary>
+        /// Determina si el campo es una entidad compleja/clase
+        /// </summary>
+        private bool IsComplexEntityField()
+        {
+            return FilterPropertyType.IsClass &&
+                   FilterPropertyType != typeof(string) &&
+                   !FilterPropertyType.IsArray &&
+                   !FilterPropertyType.IsPrimitive;
         }
 
         internal string GetFilterOperatorText(FilterOperator filterOperator)
         {
             switch (filterOperator)
             {
-                case FilterOperator.Custom:
-                    return DataFilter?.CustomText;
                 case FilterOperator.Related:
                     return DataFilter?.RelatedText ?? "Relacionado";
                 case FilterOperator.Contains:
