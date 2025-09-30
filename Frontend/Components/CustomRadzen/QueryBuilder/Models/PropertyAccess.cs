@@ -143,6 +143,24 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Models
             return propertyName;
         }
 
+        /// <summary>
+        /// Gets the type of the related entity for a Guid relation property
+        /// </summary>
+        public static Type GetRelatedEntityType(Type entityType, string propertyName)
+        {
+            if (!IsGuidRelation(entityType, propertyName))
+                return null;
+
+            var navigationPropertyName = propertyName.Substring(0, propertyName.Length - 2);
+            var navigationProperty = entityType.GetProperty(navigationPropertyName, BindingFlags.Public | BindingFlags.Instance);
+
+            if (navigationProperty == null)
+                return null;
+
+            // Get the actual type, handling nullable types
+            return Nullable.GetUnderlyingType(navigationProperty.PropertyType) ?? navigationProperty.PropertyType;
+        }
+
         private static Expression GetNestedPropertyExpression(Expression expression, string property)
         {
             var parts = property.Split('.');

@@ -73,11 +73,38 @@ else
         {
             <RadzenCheckBox Disabled="@IsOperatorNullOrEmpty()" TriState="true" TValue="@object" @bind-Value=@Filter.FilterValue Change=@(args => InvokeAsync(ApplyFilter)) class="rz-datafilter-check" />
         }
-        else
+        else if (Filter.FilterOperator != FilterOperator.Related)
         {
             <RadzenTextBox Disabled="@IsOperatorNullOrEmpty()" class="rz-datafilter-editor" Value="@($"{Filter.FilterValue}")" Change=@(args => { Filter.FilterValue = args; InvokeAsync(ApplyFilter); }) />
         }
 
+        @* 🆕 UI para operador Related (filtros anidados) *@
+        @if (Filter.FilterOperator == FilterOperator.Related && ShouldShowNestedFilter())
+        {
+            <div class="related-filter-controls" style="margin-left: 10px;">
+                <RadzenButton Icon="@(Filter.IsExpanded ? "expand_less" : "expand_more")"
+                              Text="@($"Filtrar por {Filter.NavigationPath}")"
+                              Click="@ToggleNestedFilter"
+                              ButtonStyle="ButtonStyle.Light"
+                              Size="ButtonSize.Small"
+                              title="@($"Expandir/colapsar filtros de {Filter.NavigationPath}")" />
+            </div>
+        }
+
         <RadzenButton title="@DataFilter.RemoveFilterText" class="rz-datafilter-item-clear" Icon="clear" Click="@RemoveFilter" Variant="Variant.Text" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Dark"/>
+    }
+
+    @* 🆕 Área expandible para filtros anidados *@
+    @if (Filter.FilterOperator == FilterOperator.Related && Filter.IsExpanded && ShouldShowNestedFilter())
+    {
+        <div class="nested-filter-area" style="width: 100%; margin-top: 15px;">
+            <Frontend.Components.CustomRadzen.QueryBuilder.NestedDataFilter TItem="TItem"
+                             RelatedEntityType="@Filter.RelatedEntityType"
+                             NestingLevel="@(Filter.NestingLevel + 1)"
+                             MaxNestingLevel="@Filter.MaxNestingLevel"
+                             LogicalFilterOperator="@Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And"
+                             Filters="@Filter.NestedFilters"
+                             OnFiltersUpdated="@OnNestedFiltersUpdated" />
+        </div>
     }
 }

@@ -148,7 +148,162 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
                 Filter.FilterValue = null;
             }
 
+            // 🆕 Inicializar propiedades para operador Related
+            if (Filter.FilterOperator == FilterOperator.Related)
+            {
+                await InitializeRelatedFilter();
+            }
+
             await ApplyFilter();
+        }
+
+        // 🆕 Métodos para manejar filtros anidados
+
+        /// <summary>
+        /// Inicializa las propiedades necesarias para un filtro Related
+        /// </summary>
+        private async Task InitializeRelatedFilter()
+        {
+            if (property == null)
+            {
+                Console.WriteLine("⚠️ InitializeRelatedFilter: property is null");
+                return;
+            }
+
+            Console.WriteLine($"🔧 InitializeRelatedFilter: property={property.Property}, RelatedEntityType={Filter.RelatedEntityType}");
+
+            try
+            {
+                // Detectar el tipo de entidad relacionada y el path de navegación
+                var entityType = GetActualEntityType();
+                Console.WriteLine($"🔍 Checking if {entityType.Name}.{property.Property} is Guid relation");
+
+                if (PropertyAccess.IsGuidRelation(entityType, property.Property))
+                {
+                    Console.WriteLine($"✅ {property.Property} is a Guid relation!");
+
+                    Filter.NavigationPath = PropertyAccess.GetDisplayName(entityType, property.Property);
+                    Filter.RelatedEntityType = PropertyAccess.GetRelatedEntityType(entityType, property.Property);
+                    Filter.NestingLevel = 0; // Será incrementado por el componente anidado
+                    Filter.MaxNestingLevel = 3;
+                    Filter.NestedFilters = new List<CompositeFilterDescriptor>();
+                    Filter.IsExpanded = false;
+
+                    Console.WriteLine($"🎯 RelatedFilter initialized: NavigationPath={Filter.NavigationPath}, RelatedEntityType={Filter.RelatedEntityType?.Name}");
+
+                    // Forzar re-render del componente
+                    await InvokeAsync(StateHasChanged);
+                }
+                else
+                {
+                    Console.WriteLine($"❌ {property.Property} is NOT a Guid relation");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error pero no fallar
+                Console.WriteLine($"💥 Error initializing related filter: {ex.Message}");
+                Console.WriteLine($"💥 Stack trace: {ex.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// Determina si debe mostrar el filtro anidado
+        /// </summary>
+        private bool ShouldShowNestedFilter()
+        {
+            var hasRelatedEntityType = Filter.RelatedEntityType != null;
+            var hasNavigationPath = !string.IsNullOrEmpty(Filter.NavigationPath);
+            var withinNestingLimit = Filter.NestingLevel < Filter.MaxNestingLevel;
+
+            var shouldShow = hasRelatedEntityType && hasNavigationPath && withinNestingLimit;
+
+            Console.WriteLine($"🔍 ShouldShowNestedFilter: RelatedEntityType={Filter.RelatedEntityType?.Name}, NavigationPath='{Filter.NavigationPath}', NestingLevel={Filter.NestingLevel}, MaxNesting={Filter.MaxNestingLevel} → {shouldShow}");
+
+            return shouldShow;
+        }
+
+        /// <summary>
+        /// Alterna la expansión del filtro anidado
+        /// </summary>
+        private async Task ToggleNestedFilter()
+        {
+            Filter.IsExpanded = !Filter.IsExpanded;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Maneja la actualización de filtros anidados
+        /// </summary>
+        private async Task OnNestedFiltersUpdated()
+        {
+            // Notificar al componente padre que los filtros han cambiado
+            await ApplyFilter();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Obtiene el tipo real de la entidad basándose en las propiedades disponibles
+        /// </summary>
+        private Type GetActualEntityType()
+        {
+            // Si TItem es object, necesitamos inferir el tipo real de la entidad
+            if (typeof(TItem) == typeof(object))
+            {
+                // Intentar obtener el tipo de la primera propiedad disponible
+                var firstProperty = DataFilter?.properties?.FirstOrDefault();
+                if (firstProperty?.FilterPropertyType != null)
+                {
+                    // Buscar tipos que contengan esta propiedad
+                    var entityType = FindEntityTypeByProperty(firstProperty.Property, firstProperty.FilterPropertyType);
+                    if (entityType != null)
+                    {
+                        Console.WriteLine($"🎯 Inferred entity type: {entityType.Name}");
+                        return entityType;
+                    }
+                }
+
+                Console.WriteLine($"⚠️ Could not infer entity type, using default: {typeof(TItem).Name}");
+                return typeof(TItem);
+            }
+
+            return typeof(TItem);
+        }
+
+        /// <summary>
+        /// Busca un tipo de entidad que contenga la propiedad especificada
+        /// </summary>
+        private Type FindEntityTypeByProperty(string propertyName, Type propertyType)
+        {
+            try
+            {
+                // Buscar en el assembly de las entidades compartidas
+                var entitiesAssembly = typeof(Shared.Models.Entities.Comuna).Assembly;
+                var entityTypes = entitiesAssembly.GetTypes()
+                    .Where(t => t.IsClass && !t.IsAbstract && t.Namespace?.Contains("Entities") == true);
+
+                foreach (var entityType in entityTypes)
+                {
+                    var prop = entityType.GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (prop != null)
+                    {
+                        var propType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                        var expectedType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+
+                        if (propType == expectedType)
+                        {
+                            Console.WriteLine($"🔍 Found matching entity type: {entityType.Name} for property {propertyName}");
+                            return entityType;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"💥 Error finding entity type: {ex.Message}");
+            }
+
+            return null;
         }
 
         async Task AddFilter(bool isGroup)

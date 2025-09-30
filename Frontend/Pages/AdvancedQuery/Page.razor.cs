@@ -229,13 +229,26 @@ public partial class Page : ComponentBase
                 }).ToArray();
             }
 
+            // 🆕 Auto-generar includes basándose en filtros anidados
+            var autoIncludes = new List<string>();
+            if (!IsReadOnlyMode && filterConfigurationRef?.DataFilter?.Filters != null)
+            {
+                autoIncludes = Frontend.Components.CustomRadzen.QueryBuilder.Extensions.FilterToQueryExtensions
+                    .ExtractRequiredIncludes(filterConfigurationRef.DataFilter.Filters);
+
+                // Log para debugging
+                Frontend.Components.CustomRadzen.QueryBuilder.Extensions.FilterToQueryExtensions
+                    .LogGeneratedIncludes(autoIncludes, selectedEntityName);
+            }
+
             var request = new AdvancedQueryRequest
             {
                 Filters = filters,
                 LogicalOperator = logicalOperator == Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And ? LogicalFilterOperator.And : LogicalFilterOperator.Or,
                 FilterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive,
                 Take = takeLimit,
-                Select = selectFields
+                Select = selectFields,
+                Include = autoIncludes.Any() ? autoIncludes.ToArray() : null // 🆕 Auto-includes
             };
 
             // Almacenar el request para uso en exportación

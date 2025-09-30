@@ -1,0 +1,159 @@
+@using Frontend.Components.CustomRadzen.QueryBuilder.Models
+@using Frontend.Services
+@using LogicalFilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator
+@using CompositeFilterDescriptor = Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor
+@using FilterCaseSensitivity = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterCaseSensitivity
+@inject AdvancedQueryService AdvancedQueryService
+@inject ILogger<NestedDataFilter<TItem>> Logger
+@typeparam TItem
+
+@if (ShouldRender && RelatedProperties.Any())
+{
+    <div class="nested-filter-container" style="margin-left: @(NestingLevel * 20)px; border-left: 2px solid var(--rz-primary-light); padding-left: 15px; margin-top: 10px;">
+        <div class="nested-filter-header">
+            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-color-secondary">
+                <RadzenIcon Icon="filter_list" class="rz-me-1" />
+                Filtros de @RelatedEntityDisplayName
+            </RadzenText>
+        </div>
+
+        <CustomDataFilter @ref="nestedFilterRef"
+                          TItem="object"
+                          LogicalFilterOperator="@LogicalFilterOperator"
+                          FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                          Auto="false"
+                          ContainsText="Contiene"
+                          StartsWithText="Comienza con"
+                          EndsWithText="Termina con"
+                          EqualsText="Igual a"
+                          NotEqualsText="Diferente de"
+                          LessThanText="Menor que"
+                          DoesNotContainText="No Contiene"
+                          GreaterThanText="Mayor que"
+                          IsNullText="Es nulo"
+                          AddFilterGroupText="Agregar Grupo de Filtro"
+                          IsNotNullText="No es nulo"
+                          IsEmptyText="Está vacío"
+                          IsNotEmptyText="No está vacío"
+                          AndOperatorText="Y"
+                          OrOperatorText="O"
+                          AddFilterText="Agregar filtro"
+                          LessThanOrEqualsText="Menor o Igual"
+                          GreaterThanOrEqualsText="Mayor o Igual"
+                          RemoveFilterText="Quitar filtro"
+                          ClearFilterText="Limpiar filtro"
+                          RelatedText="Relacionado">
+            <Properties>
+                @foreach (var field in RelatedProperties.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
+                {
+                    <CustomDataFilterProperty Property="@field.PropertyName"
+                                            Title="@GetImprovedDisplayName(field)"
+                                            Type="@field.PropertyType" />
+                }
+            </Properties>
+        </CustomDataFilter>
+    </div>
+}
+
+@code {
+    [Parameter] public Type RelatedEntityType { get; set; }
+    [Parameter] public int NestingLevel { get; set; } = 1;
+    [Parameter] public int MaxNestingLevel { get; set; } = 3;
+    [Parameter] public LogicalFilterOperator LogicalFilterOperator { get; set; } = LogicalFilterOperator.And;
+    [Parameter] public IEnumerable<CompositeFilterDescriptor> Filters { get; set; } = Enumerable.Empty<CompositeFilterDescriptor>();
+    [Parameter] public EventCallback<IEnumerable<CompositeFilterDescriptor>> FiltersChanged { get; set; }
+    [Parameter] public EventCallback OnFiltersUpdated { get; set; }
+
+    private CustomDataFilter<object>? nestedFilterRef;
+    private List<EntityFieldDefinition> RelatedProperties = new();
+    private string RelatedEntityDisplayName = "";
+    private bool ShouldRender => NestingLevel <= MaxNestingLevel && RelatedEntityType != null;
+
+    /// <summary>
+    /// Expone la referencia del DataFilter anidado para uso del componente padre
+    /// </summary>
+    public CustomDataFilter<object>? DataFilter => nestedFilterRef;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ShouldRender)
+        {
+            await LoadRelatedProperties();
+        }
+    }
+
+    private async Task LoadRelatedProperties()
+    {
+        try
+        {
+            if (RelatedEntityType == null) return;
+
+            var entityName = RelatedEntityType.Name;
+            RelatedEntityDisplayName = ConvertToDisplayName(entityName);
+
+            Logger.LogInformation("Loading properties for related entity: {EntityName}", entityName);
+
+            // Obtener las propiedades de la entidad relacionada
+            RelatedProperties = await AdvancedQueryService.GetEntityFieldDefinitionsAsync(entityName);
+
+            Logger.LogInformation("Loaded {Count} properties for related entity {EntityName}", RelatedProperties.Count, entityName);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading properties for related entity {EntityType}", RelatedEntityType?.Name);
+            RelatedProperties = new List<EntityFieldDefinition>();
+        }
+    }
+
+    /// <summary>
+    /// Obtiene los filtros actuales del componente anidado
+    /// </summary>
+    public IEnumerable<CompositeFilterDescriptor> GetCurrentFilters()
+    {
+        return nestedFilterRef?.Filters ?? Enumerable.Empty<CompositeFilterDescriptor>();
+    }
+
+    /// <summary>
+    /// Limpia todos los filtros anidados
+    /// </summary>
+    public async Task ClearFilters()
+    {
+        if (nestedFilterRef != null)
+        {
+            await nestedFilterRef.ClearFilters();
+            await OnFiltersUpdated.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Determina si un campo es un campo del sistema que debe ser excluido de los filtros
+    /// </summary>
+    private bool IsSystemField(string propertyName)
+    {
+        var systemFields = new[] { "OrganizationId", "CreadorId", "ModificadorId", "Active" };
+        return systemFields.Contains(propertyName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Obtiene el nombre mejorado para mostrar en el filtro
+    /// Convierte "RegionId" a "Region" para campos de relación de forma inteligente
+    /// </summary>
+    private string GetImprovedDisplayName(EntityFieldDefinition field)
+    {
+        if (RelatedEntityType == null) return field.DisplayName;
+
+        // Usar la lógica inteligente de PropertyAccess
+        return Frontend.Components.CustomRadzen.QueryBuilder.Models.PropertyAccess.GetDisplayName(RelatedEntityType, field.PropertyName);
+    }
+
+    /// <summary>
+    /// Convierte un nombre de entidad a nombre de display
+    /// </summary>
+    private string ConvertToDisplayName(string entityName)
+    {
+        // Convertir PascalCase a palabras separadas
+        return System.Text.RegularExpressions.Regex.Replace(entityName, "([a-z])([A-Z])", "$1 $2");
+    }
+}

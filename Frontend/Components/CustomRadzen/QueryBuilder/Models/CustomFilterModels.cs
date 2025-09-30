@@ -158,5 +158,43 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Models
         /// </summary>
         /// <value>The filters.</value>
         public IEnumerable<CompositeFilterDescriptor> Filters { get; set; }
+
+        // 🆕 Propiedades para filtros anidados (Related operator)
+
+        /// <summary>
+        /// Gets or sets the nested filters for Related operator.
+        /// </summary>
+        /// <value>The nested filters.</value>
+        public List<CompositeFilterDescriptor> NestedFilters { get; set; } = new();
+
+        /// <summary>
+        /// Gets or sets the navigation property name (e.g., "Region" for "RegionId").
+        /// </summary>
+        /// <value>The navigation path.</value>
+        public string NavigationPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of the related entity.
+        /// </summary>
+        /// <value>The related entity type.</value>
+        public Type RelatedEntityType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the nesting level for UI rendering.
+        /// </summary>
+        /// <value>The nesting level.</value>
+        public int NestingLevel { get; set; } = 0;
+
+        /// <summary>
+        /// Gets or sets whether the nested filter is expanded in UI.
+        /// </summary>
+        /// <value>True if expanded; otherwise, false.</value>
+        public bool IsExpanded { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the maximum allowed nesting level.
+        /// </summary>
+        /// <value>The maximum nesting level.</value>
+        public int MaxNestingLevel { get; set; } = 3;
     }
 }

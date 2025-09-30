@@ -147,8 +147,7 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Extensions
         {
             try
             {
-                // For "Related" operator, we need to filter based on navigation property
-                // E.g., if filter.Property is "RegionId", we filter by "Region.SomeProperty"
+                // Verificar que es un filtro de relación válido
                 if (string.IsNullOrEmpty(filter.Property) || !filter.Property.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
                     return null;
 
@@ -158,13 +157,145 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder.Extensions
                 if (navigationProperty == null)
                     return null;
 
-                // Build expression for related entity property
-                // Example: Comuna.Region.Nombre contains "Santiago"
                 var navigationExpression = Expression.PropertyOrField(parameter, navigationPropertyName);
 
-                // For now, we'll filter by the navigation property not being null (basic "Related" functionality)
-                // This can be extended to filter by specific properties of the related entity
+                // 🆕 Si hay filtros anidados, construir expresión compleja
+                if (filter.NestedFilters?.Any() == true)
+                {
+                    return BuildNestedFilterExpression<T>(parameter, filter, navigationExpression, navigationProperty.PropertyType);
+                }
+
+                // Si no hay filtros anidados, solo verificar que la relación no sea null
                 return Expression.NotEqual(navigationExpression, Expression.Constant(null, navigationProperty.PropertyType));
+            }
+            catch (Exception ex)
+            {
+                // Log para debugging
+                Console.WriteLine($"Error in HandleRelatedFilter: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Construye una expresión de filtro anidada para entidades relacionadas
+        /// </summary>
+        private static Expression BuildNestedFilterExpression<T>(
+            ParameterExpression rootParameter,
+            CompositeFilterDescriptor filter,
+            Expression navigationExpression,
+            Type relatedEntityType)
+        {
+            try
+            {
+                var nestedExpressions = new List<Expression>();
+
+                // Agregar verificación de que la navegación no sea null
+                var notNullExpression = Expression.NotEqual(navigationExpression, Expression.Constant(null, relatedEntityType));
+                nestedExpressions.Add(notNullExpression);
+
+                // Procesar cada filtro anidado
+                foreach (var nestedFilter in filter.NestedFilters)
+                {
+                    var nestedExpression = BuildSingleNestedExpression(navigationExpression, nestedFilter, relatedEntityType);
+                    if (nestedExpression != null)
+                    {
+                        nestedExpressions.Add(nestedExpression);
+                    }
+                }
+
+                if (!nestedExpressions.Any())
+                    return notNullExpression;
+
+                // Combinar todas las expresiones con AND
+                Expression combinedExpression = nestedExpressions.First();
+                foreach (var expr in nestedExpressions.Skip(1))
+                {
+                    combinedExpression = Expression.AndAlso(combinedExpression, expr);
+                }
+
+                return combinedExpression;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in BuildNestedFilterExpression: {ex.Message}");
+                return Expression.NotEqual(navigationExpression, Expression.Constant(null, relatedEntityType));
+            }
+        }
+
+        /// <summary>
+        /// Construye una expresión para un solo filtro anidado
+        /// </summary>
+        private static Expression BuildSingleNestedExpression(
+            Expression navigationExpression,
+            CompositeFilterDescriptor nestedFilter,
+            Type relatedEntityType)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(nestedFilter.Property) || nestedFilter.FilterOperator == null)
+                    return null;
+
+                // Obtener la propiedad de la entidad relacionada
+                var nestedProperty = relatedEntityType.GetProperty(nestedFilter.Property, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (nestedProperty == null)
+                    return null;
+
+                // Construir expresión: navigationExpression.Property
+                var nestedPropertyExpression = Expression.PropertyOrField(navigationExpression, nestedFilter.Property);
+
+                // 🔄 Recursivo: Si este filtro anidado también es Related, procesar recursivamente
+                if (nestedFilter.FilterOperator == FilterOperator.Related && nestedFilter.NestedFilters?.Any() == true)
+                {
+                    return BuildNestedFilterExpression<object>(null, nestedFilter, nestedPropertyExpression, nestedProperty.PropertyType);
+                }
+
+                // Crear constante para el valor del filtro
+                var filterValue = nestedFilter.FilterValue;
+                var constant = Expression.Constant(filterValue, nestedProperty.PropertyType);
+
+                // Construir expresión según el operador
+                return nestedFilter.FilterOperator switch
+                {
+                    FilterOperator.Equals => Expression.Equal(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.NotEquals => Expression.NotEqual(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.LessThan => Expression.LessThan(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.LessThanOrEquals => Expression.LessThanOrEqual(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.GreaterThan => Expression.GreaterThan(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.GreaterThanOrEquals => Expression.GreaterThanOrEqual(NotNullCheck(nestedPropertyExpression), constant),
+                    FilterOperator.Contains => BuildStringMethodExpression(nestedPropertyExpression, "Contains", filterValue),
+                    FilterOperator.DoesNotContain => Expression.Not(BuildStringMethodExpression(nestedPropertyExpression, "Contains", filterValue)),
+                    FilterOperator.StartsWith => BuildStringMethodExpression(nestedPropertyExpression, "StartsWith", filterValue),
+                    FilterOperator.EndsWith => BuildStringMethodExpression(nestedPropertyExpression, "EndsWith", filterValue),
+                    FilterOperator.IsNull => Expression.Equal(nestedPropertyExpression, Expression.Constant(null, nestedProperty.PropertyType)),
+                    FilterOperator.IsNotNull => Expression.NotEqual(nestedPropertyExpression, Expression.Constant(null, nestedProperty.PropertyType)),
+                    FilterOperator.IsEmpty => Expression.Equal(nestedPropertyExpression, Expression.Constant(string.Empty)),
+                    FilterOperator.IsNotEmpty => Expression.NotEqual(nestedPropertyExpression, Expression.Constant(string.Empty)),
+                    _ => null
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in BuildSingleNestedExpression: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Construye expresiones para métodos de string (Contains, StartsWith, EndsWith)
+        /// </summary>
+        private static Expression BuildStringMethodExpression(Expression propertyExpression, string methodName, object filterValue)
+        {
+            try
+            {
+                if (propertyExpression.Type != typeof(string))
+                    return null;
+
+                var method = typeof(string).GetMethod(methodName, new[] { typeof(string) });
+                if (method == null)
+                    return null;
+
+                var valueExpression = Expression.Constant(filterValue?.ToString() ?? string.Empty, typeof(string));
+                return Expression.Call(NotNullCheck(propertyExpression), method, valueExpression);
             }
             catch
             {
