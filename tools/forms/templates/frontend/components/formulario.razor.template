@@ -3,6 +3,7 @@
 @using Frontend.Components.Base.Forms.PageWithCommandBar
 @using Frontend.Components.Base
 @using Frontend.Components.Validation
+@using Frontend.Components.Forms
 @using Shared.Models.Entities
 @inherits AuthorizedPageBase
 @attribute [AuthorizePermission("{{ENTITY_UPPER}}.VIEW", "{{ENTITY_UPPER}}.CREATE", "{{ENTITY_UPPER}}.UPDATE")]
@@ -62,7 +63,23 @@
                         </RadzenRow>
                     </div>
                 </CrmTab>
-                
+
+                @if (hasCustomFields)
+                {
+                    <CrmTab Id="tab2" Title="Campos Adicionales" Icon="extension" IconColor="#6B46C1">
+                        <div class="scrollable-content" style="padding: 1rem;">
+                            @if (entity != null)
+                            {
+                                <CustomFieldsTab EntityName="{{ENTITY_NAME}}"
+                                               CustomFieldsValue="@entity.CustomFields"
+                                               CustomFieldsValueChanged="@OnCustomFieldsChanged"
+                                               IsReadOnly="@(!CanEdit)"
+                                               @ref="customFieldsTab" />
+                            }
+                        </div>
+                    </CrmTab>
+                }
+
             </CrmTabs>
         </div>
 
