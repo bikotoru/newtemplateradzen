@@ -27,10 +27,6 @@ public partial class SystemUsers
 
     public bool Active { get; set; }
 
-    public virtual ICollection<Comuna> ComunaCreador { get; set; } = new List<Comuna>();
-
-    public virtual ICollection<Comuna> ComunaModificador { get; set; } = new List<Comuna>();
-
     public virtual SystemUsers? Creador { get; set; }
 
     public virtual ICollection<SystemUsers> InverseCreador { get; set; } = new List<SystemUsers>();
@@ -40,10 +36,6 @@ public partial class SystemUsers
     public virtual SystemUsers? Modificador { get; set; }
 
     public virtual SystemOrganization? Organization { get; set; }
-
-    public virtual ICollection<Region> RegionCreador { get; set; } = new List<Region>();
-
-    public virtual ICollection<Region> RegionModificador { get; set; } = new List<Region>();
 
     public virtual ICollection<SystemAuditoria> SystemAuditoriaCreador { get; set; } = new List<SystemAuditoria>();
 

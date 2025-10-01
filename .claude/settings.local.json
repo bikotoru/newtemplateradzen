@@ -14,7 +14,9 @@
       "Read(//mnt/c/Users/vuret/OneDrive/Escritorio/**)",
       "Bash(cd:*)",
       "Bash(grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(python3 tools/forms/register_entity.py:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

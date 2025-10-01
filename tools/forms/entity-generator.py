@@ -599,7 +599,33 @@ class EntityGenerator:
             
             # Actualizar archivo JSON con URLs
             self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
-            
+
+            # 🆕 REGISTRAR AUTOMÁTICAMENTE PARA LOOKUP
+            print()
+            print("🔄 REGISTRANDO ENTIDAD PARA LOOKUPS...")
+            try:
+                # Importar y ejecutar registro automático
+                from register_entity import EntityRegistrationAPI
+
+                registrator = EntityRegistrationAPI()
+                registration_success = registrator.register_entity(
+                    entity_name=config.entity_name,
+                    module_path=config.module
+                    # display_property y search_fields se auto-detectan
+                )
+
+                if registration_success:
+                    print("✅ Entidad registrada automáticamente para Lookups")
+                    print(f"🎯 '{config.entity_name}' está disponible para campos de referencia")
+                    print("🔄 REINICIA LA APLICACIÓN para que los Lookups estén disponibles")
+                else:
+                    print("⚠️ Error en el registro automático, pero la entidad fue creada exitosamente")
+
+            except Exception as e:
+                print(f"⚠️ Error registrando para Lookup: {e}")
+                print("💡 Se puede registrar manualmente con:")
+                print(f"   python tools/forms/register_entity.py {config.entity_name} {config.module}")
+
             return True
             
         except Exception as e:
@@ -633,9 +659,37 @@ class EntityGenerator:
         print("✅ Backend y Frontend completamente generados")
         print("🔗 Con soporte automático para lookups")
         print("⚡ Incluye creación rápida como componente independiente")
-        
+
         # Actualizar archivo JSON con URLs
         self.update_entities_urls_json(config.entity_name, config.module, config.entity_plural)
+
+        # 🆕 REGISTRAR AUTOMÁTICAMENTE PARA LOOKUP
+        print()
+        print("🔄 REGISTRANDO ENTIDAD PARA LOOKUPS...")
+        try:
+            # Importar y ejecutar registro automático
+            from register_entity import EntityRegistrationAPI
+
+            registrator = EntityRegistrationAPI()
+            registration_success = registrator.register_entity(
+                entity_name=config.entity_name,
+                module_path=config.module
+                # display_property y search_fields se auto-detectan
+            )
+
+            if registration_success:
+                print("✅ Entidad registrada automáticamente para Lookups")
+                print(f"🎯 '{config.entity_name}' está disponible para campos de referencia")
+            else:
+                print("⚠️ Error en el registro automático, pero la entidad fue creada exitosamente")
+
+        except Exception as e:
+            print(f"⚠️ Error registrando para Lookup: {e}")
+            print("💡 Se puede registrar manualmente con:")
+            print(f"   python tools/forms/register_entity.py {config.entity_name} {config.module}")
+
+        print()
+        print("🔄 REINICIA LA APLICACIÓN para que los Lookups estén disponibles")
 
         # Auto-registrar en SystemFormEntity (siempre cuando target=todo)
         print()

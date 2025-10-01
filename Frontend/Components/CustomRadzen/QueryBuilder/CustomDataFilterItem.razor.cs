@@ -8,6 +8,8 @@ using Frontend.Components.CustomRadzen.QueryBuilder.Models;
 using CompositeFilterDescriptor = Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor;
 using FilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterOperator;
 using PropertyAccess = Frontend.Components.CustomRadzen.QueryBuilder.Models.PropertyAccess;
+using Frontend.Services;
+using Radzen.Blazor;
 
 namespace Frontend.Components.CustomRadzen.QueryBuilder
 {
@@ -18,6 +20,8 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
 
         [Parameter]
         public CustomDataFilterItem<TItem> Parent { get; set; }
+
+        [Inject] private EntityRegistrationService EntityRegistrationService { get; set; }
 
         CompositeFilterDescriptor _filter;
         [Parameter]
@@ -277,8 +281,40 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
         {
             try
             {
-                // Buscar en el assembly de las entidades compartidas
-                var entitiesAssembly = typeof(Shared.Models.Entities.Comuna).Assembly;
+                // Buscar el assembly de Shared.Models de manera genérica
+                System.Reflection.Assembly? entitiesAssembly = null;
+                
+                try
+                {
+                    // Opción 1: Buscar por nombre de assembly
+                    entitiesAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.GetName().Name == "Shared.Models");
+                    
+                    // Opción 2: Si no encontramos por nombre, buscar cualquier assembly que contenga Shared.Models.Entities
+                    if (entitiesAssembly == null)
+                    {
+                        entitiesAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                            .FirstOrDefault(a => a.GetTypes().Any(t => t.Namespace?.StartsWith("Shared.Models.Entities") == true));
+                    }
+                    
+                    // Opción 3: Como último recurso, cargar el assembly por referencia
+                    if (entitiesAssembly == null)
+                    {
+                        entitiesAssembly = System.Reflection.Assembly.Load("Shared.Models");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"💥 Error loading Shared.Models assembly: {ex.Message}");
+                    return null;
+                }
+
+                if (entitiesAssembly == null)
+                {
+                    Console.WriteLine("⚠️ Could not find Shared.Models assembly");
+                    return null;
+                }
+
                 var entityTypes = entitiesAssembly.GetTypes()
                     .Where(t => t.IsClass && !t.IsAbstract && t.Namespace?.Contains("Entities") == true);
 
@@ -412,6 +448,207 @@ namespace Frontend.Components.CustomRadzen.QueryBuilder
             }
 
             return DataFilter.FilterDateFormat;
+        }
+
+        /// <summary>
+        /// Determina si debe mostrar el Lookup para campos relacionados
+        /// </summary>
+        private bool ShouldShowLookupForRelatedField()
+        {
+            if (property == null || Filter == null) return false;
+
+            // Solo para operadores Equals y NotEquals
+            var isEqualsOperator = Filter.FilterOperator == FilterOperator.Equals || Filter.FilterOperator == FilterOperator.NotEquals;
+            if (!isEqualsOperator) return false;
+
+            // Solo para campos Guid de relación o entidades complejas
+            var entityType = GetActualEntityType();
+            var isGuidRelation = PropertyAccess.IsGuidRelation(entityType, property.Property);
+            var isComplexEntity = IsComplexEntityField();
+
+            var shouldShow = isGuidRelation || isComplexEntity;
+
+            Console.WriteLine($"🔍 ShouldShowLookupForRelatedField: Property={property.Property}, Operator={Filter.FilterOperator}, IsGuidRelation={isGuidRelation}, IsComplexEntity={isComplexEntity} → {shouldShow}");
+
+            return shouldShow;
+        }
+
+        /// <summary>
+        /// Renderiza el componente Lookup para campos relacionados
+        /// </summary>
+        private RenderFragment RenderLookupForRelatedField()
+        {
+            return new RenderFragment(builder =>
+            {
+                try
+                {
+                    if (property == null || Filter == null)
+                    {
+                        Console.WriteLine("⚠️ RenderLookupForRelatedField: property or Filter is null");
+                        return;
+                    }
+
+                    var entityType = GetActualEntityType();
+
+                    // Determinar la entidad relacionada
+                    Type relatedEntityType = null;
+                    string entityKey = null;
+
+                    if (PropertyAccess.IsGuidRelation(entityType, property.Property))
+                    {
+                        // Para campos Guid de relación (RegionId, PaisId, etc.)
+                        relatedEntityType = PropertyAccess.GetRelatedEntityType(entityType, property.Property);
+                        entityKey = relatedEntityType?.Name?.ToLowerInvariant();
+                    }
+                    else if (IsComplexEntityField())
+                    {
+                        // Para entidades complejas (Region, Pais, etc.)
+                        relatedEntityType = property.FilterPropertyType;
+                        entityKey = relatedEntityType?.Name?.ToLowerInvariant();
+                    }
+
+                    if (relatedEntityType == null || string.IsNullOrEmpty(entityKey))
+                    {
+                        Console.WriteLine($"⚠️ Could not determine related entity type for property: {property.Property}");
+                        RenderFallbackTextBox(builder);
+                        return;
+                    }
+
+                    Console.WriteLine($"🎯 Rendering Lookup for entity: {relatedEntityType.Name}, key: {entityKey}");
+
+                    // Obtener configuración de la entidad
+                    var entityConfig = EntityRegistrationService?.GetEntityConfiguration(entityKey);
+                    if (entityConfig == null)
+                    {
+                        Console.WriteLine($"⚠️ No entity configuration found for: {entityKey}");
+                        RenderFallbackTextBox(builder);
+                        return;
+                    }
+
+                    // Crear el tipo de Lookup genérico
+                    var lookupType = typeof(Frontend.Components.Base.Lookup<,>).MakeGenericType(relatedEntityType, typeof(Guid?));
+
+                    builder.OpenComponent(100, lookupType);
+
+                    // Configurar propiedades del Lookup
+                    builder.AddAttribute(101, "Value", GetLookupValue());
+                    builder.AddAttribute(102, "ValueChanged", CreateLookupValueChangedCallback());
+                    builder.AddAttribute(103, "DisplayProperty", entityConfig.DisplayProperty ?? "Name");
+                    builder.AddAttribute(104, "ValueProperty", entityConfig.ValueProperty ?? "Id");
+                    builder.AddAttribute(105, "Placeholder", $"Seleccione {GetDisplayNameForProperty()}");
+                    builder.AddAttribute(106, "AllowClear", true);
+                    builder.AddAttribute(107, "Disabled", IsOperatorNullOrEmpty());
+                    builder.AddAttribute(108, "ShowAdd", false); // Sin crear en filtros
+                    builder.AddAttribute(109, "EnableCache", false);
+                    builder.AddAttribute(110, "ShowSearch", true);
+
+                    // Obtener y configurar el servicio
+                    var service = GetEntityService(entityKey, entityConfig);
+                    if (service != null)
+                    {
+                        builder.AddAttribute(112, "Service", service);
+                        Console.WriteLine($"✅ Service configured for entity: {entityKey}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Could not obtain service for entity: {entityKey}");
+                    }
+
+                    builder.CloseComponent();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"💥 Error rendering Lookup: {ex.Message}");
+                    RenderFallbackTextBox(builder);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Obtiene el valor actual para el Lookup
+        /// </summary>
+        private Guid? GetLookupValue()
+        {
+            if (Filter.FilterValue == null) return null;
+
+            if (Filter.FilterValue is Guid guidValue)
+                return guidValue;
+
+            if (Guid.TryParse(Filter.FilterValue.ToString(), out var parsedGuid))
+                return parsedGuid;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Crea el callback para cuando cambia el valor del Lookup
+        /// </summary>
+        private EventCallback<Guid?> CreateLookupValueChangedCallback()
+        {
+            return EventCallback.Factory.Create<Guid?>(this, async newValue =>
+            {
+                Filter.FilterValue = newValue;
+                await ApplyFilter();
+                Console.WriteLine($"🔄 Lookup value changed to: {newValue}");
+            });
+        }
+
+        /// <summary>
+        /// Obtiene un nombre de display amigable para la propiedad
+        /// </summary>
+        private string GetDisplayNameForProperty()
+        {
+            if (property == null) return "elemento";
+
+            var entityType = GetActualEntityType();
+            return PropertyAccess.GetDisplayName(entityType, property.Property);
+        }
+
+        /// <summary>
+        /// Obtiene el servicio para una entidad usando EntityRegistrationService
+        /// </summary>
+        private object GetEntityService(string entityKey, EntityRegistrationService.EntityConfiguration entityConfig)
+        {
+            try
+            {
+                // Usar el método del EntityRegistrationService
+                return EntityRegistrationService?.GetEntityService(entityKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"💥 Error getting service for {entityKey}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Renderiza un TextBox de fallback cuando no se puede usar Lookup
+        /// </summary>
+        private void RenderFallbackTextBox(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<RadzenTextBox>(200);
+            builder.AddAttribute(201, "Disabled", IsOperatorNullOrEmpty());
+            builder.AddAttribute(202, "class", "rz-datafilter-editor");
+            builder.AddAttribute(203, "Value", Filter.FilterValue?.ToString() ?? "");
+            builder.AddAttribute(204, "Change", EventCallback.Factory.Create<string>(this, async args =>
+            {
+                Filter.FilterValue = args;
+                await ApplyFilter();
+            }));
+            builder.CloseComponent();
+        }
+
+        /// <summary>
+        /// Determina si el campo es una entidad compleja/clase
+        /// </summary>
+        private bool IsComplexEntityField()
+        {
+            if (property?.FilterPropertyType == null) return false;
+
+            return property.FilterPropertyType.IsClass &&
+                   property.FilterPropertyType != typeof(string) &&
+                   !property.FilterPropertyType.IsArray &&
+                   !property.FilterPropertyType.IsPrimitive;
         }
     }
 }

@@ -73,6 +73,10 @@ else
         {
             <RadzenCheckBox Disabled="@IsOperatorNullOrEmpty()" TriState="true" TValue="@object" @bind-Value=@Filter.FilterValue Change=@(args => InvokeAsync(ApplyFilter)) class="rz-datafilter-check" />
         }
+        else if (ShouldShowLookupForRelatedField())
+        {
+            @(RenderLookupForRelatedField())
+        }
         else if (Filter.FilterOperator != FilterOperator.Related)
         {
             <RadzenTextBox Disabled="@IsOperatorNullOrEmpty()" class="rz-datafilter-editor" Value="@($"{Filter.FilterValue}")" Change=@(args => { Filter.FilterValue = args; InvokeAsync(ApplyFilter); }) />

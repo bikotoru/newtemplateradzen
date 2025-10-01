@@ -19,10 +19,6 @@ public partial class SystemOrganization
 
     public bool Active { get; set; }
 
-    public virtual ICollection<Comuna> Comuna { get; set; } = new List<Comuna>();
-
-    public virtual ICollection<Region> Region { get; set; } = new List<Region>();
-
     public virtual ICollection<SystemAuditoria> SystemAuditoria { get; set; } = new List<SystemAuditoria>();
 
     public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalle { get; set; } = new List<SystemAuditoriaDetalle>();
