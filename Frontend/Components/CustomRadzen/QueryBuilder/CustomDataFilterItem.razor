@@ -1,0 +1,114 @@
+@using Radzen.Blazor
+@using Frontend.Components.CustomRadzen.QueryBuilder.Models
+@using LogicalFilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator
+@using FilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterOperator
+@using FilterCaseSensitivity = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterCaseSensitivity
+@using PropertyAccess = Frontend.Components.CustomRadzen.QueryBuilder.Models.PropertyAccess
+@using EnumExtensions = Frontend.Components.CustomRadzen.QueryBuilder.Models.EnumExtensions
+@typeparam TItem
+@if (Filter.Filters != null)
+{
+    <RadzenSelectBar @bind-Value=Filter.LogicalFilterOperator Change="@((LogicalFilterOperator args) => { InvokeAsync(ChangeState); InvokeAsync(ApplyFilter); })" Size="ButtonSize.Small">
+        <Items>
+            <RadzenSelectBarItem Text="@DataFilter.AndOperatorText" Value="LogicalFilterOperator.And" title="@DataFilter.AndOperatorText" />
+            <RadzenSelectBarItem Text="@DataFilter.OrOperatorText" Value="LogicalFilterOperator.Or" title="@DataFilter.OrOperatorText" />
+        </Items>
+    </RadzenSelectBar>
+
+    <RadzenButton title="@DataFilter.RemoveFilterText" class="rz-datafilter-item-clear" Icon="clear" Click="@RemoveFilter" Variant="Variant.Text" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Dark"/>
+
+    <ul class="rz-datafilter-group">
+        @foreach(var filter in Filter.Filters)
+        {
+            <li class="rz-datafilter-item @(filter.Filters != null ? "rz-datafilter-group-item" : "")">
+                <CustomDataFilterItem DataFilter="@this.DataFilter" Filter="@filter" Parent=@this />
+            </li>
+        }
+        <li class="rz-datafilter-item rz-datafilter-bar">
+            <RadzenSplitButton Icon="add" Click="@(args => AddFilter(args?.Value == "group"))" Size="ButtonSize.Small" Variant="Variant.Flat" ButtonStyle="ButtonStyle.Primary" Shade="Shade.Lighter">
+                <RadzenSplitButtonItem Icon="add" Text="@DataFilter.AddFilterText" />
+                <RadzenSplitButtonItem Icon="playlist_add" Value="group" Text="@DataFilter.AddFilterGroupText" />
+            </RadzenSplitButton>
+        </li>
+    </ul>
+}
+else
+{
+    <RadzenDropDown @bind-Value="@Filter.Property" Data="@(DataFilter?.properties)" TextProperty="Title" ValueProperty="Property" TValue="string"
+                    DisabledProperty="@(DataFilter?.UniqueFilters == true ? nameof(property.IsSelected) : null)"
+                    Change="@OnPropertyChange" AllowFiltering="@(DataFilter?.AllowColumnFiltering ?? false)" FilterCaseSensitivity="Radzen.FilterCaseSensitivity.CaseInsensitive" class="rz-datafilter-property">
+        <Template>
+            @{
+                var property = (CustomDataFilterProperty<TItem>)context;
+            }
+            @(property.Title ?? property.Property)
+        </Template>
+    </RadzenDropDown>
+    if (property != null)
+    {
+        <RadzenDropDown @onclick:preventDefault="true" Data="@(property.GetFilterOperators().Select(t => new { Value = property.GetFilterOperatorText(t), Key = t }))"
+                TextProperty="Value" ValueProperty="Key" TValue="FilterOperator?" @bind-Value="@Filter.FilterOperator" Change="@OnOperatorChange" class="rz-datafilter-operator" />
+        @if (property.FilterTemplate != null)
+        {
+            <div class="rz-datafilter-editor" style="display:flex">
+                @property.FilterTemplate(Filter)
+            </div>
+        }
+        else if (PropertyAccess.IsNullableEnum(property.FilterPropertyType) || PropertyAccess.IsEnum(property.FilterPropertyType))
+        {
+            <RadzenDropDown Disabled="@IsOperatorNullOrEmpty()" AllowClear="false" AllowFiltering="false" TValue="@object" class="rz-datafilter-editor"
+                            @bind-Value=@Filter.FilterValue Multiple="false" Placeholder="@DataFilter.EnumFilterSelectText" TextProperty="Text" ValueProperty="Value"
+                            Data=@EnumExtensions.EnumAsKeyValuePair(Nullable.GetUnderlyingType(property.FilterPropertyType) ?? property.FilterPropertyType) Change=@(args  => InvokeAsync(ApplyFilter))/>
+        }
+        else if (PropertyAccess.IsNumeric(property.FilterPropertyType))
+        {
+            @(DrawNumericFilter())
+        }
+        else if (PropertyAccess.IsDate(property.FilterPropertyType))
+        {
+            <RadzenDatePicker Disabled="@IsOperatorNullOrEmpty()" @bind-Value=@Filter.FilterValue TValue="@object" ShowTime="true" class="rz-datafilter-editor"
+                              ShowTimeOkButton="true" DateFormat="@getFilterDateFormat()" Change=@(args => InvokeAsync(ApplyFilter)) />
+        }
+        else if (property.FilterPropertyType == typeof(bool) || property.FilterPropertyType == typeof(bool?))
+        {
+            <RadzenCheckBox Disabled="@IsOperatorNullOrEmpty()" TriState="true" TValue="@object" @bind-Value=@Filter.FilterValue Change=@(args => InvokeAsync(ApplyFilter)) class="rz-datafilter-check" />
+        }
+        else if (ShouldShowLookupForRelatedField())
+        {
+            @(RenderLookupForRelatedField())
+        }
+        else if (Filter.FilterOperator != FilterOperator.Related)
+        {
+            <RadzenTextBox Disabled="@IsOperatorNullOrEmpty()" class="rz-datafilter-editor" Value="@($"{Filter.FilterValue}")" Change=@(args => { Filter.FilterValue = args; InvokeAsync(ApplyFilter); }) />
+        }
+
+        @* 🆕 UI para operador Related (filtros anidados) *@
+        @if (Filter.FilterOperator == FilterOperator.Related && ShouldShowNestedFilter())
+        {
+            <div class="related-filter-controls" style="margin-left: 10px;">
+                <RadzenButton Icon="@(Filter.IsExpanded ? "expand_less" : "expand_more")"
+                              Text="@($"Filtrar por {Filter.NavigationPath}")"
+                              Click="@ToggleNestedFilter"
+                              ButtonStyle="ButtonStyle.Light"
+                              Size="ButtonSize.Small"
+                              title="@($"Expandir/colapsar filtros de {Filter.NavigationPath}")" />
+            </div>
+        }
+
+        <RadzenButton title="@DataFilter.RemoveFilterText" class="rz-datafilter-item-clear" Icon="clear" Click="@RemoveFilter" Variant="Variant.Text" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Dark"/>
+    }
+
+    @* 🆕 Área expandible para filtros anidados *@
+    @if (Filter.FilterOperator == FilterOperator.Related && Filter.IsExpanded && ShouldShowNestedFilter())
+    {
+        <div class="nested-filter-area" style="width: 100%; margin-top: 15px;">
+            <Frontend.Components.CustomRadzen.QueryBuilder.NestedDataFilter TItem="TItem"
+                             RelatedEntityType="@Filter.RelatedEntityType"
+                             NestingLevel="@(Filter.NestingLevel + 1)"
+                             MaxNestingLevel="@Filter.MaxNestingLevel"
+                             LogicalFilterOperator="@Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And"
+                             Filters="@Filter.NestedFilters"
+                             OnFiltersUpdated="@OnNestedFiltersUpdated" />
+        </div>
+    }
+}

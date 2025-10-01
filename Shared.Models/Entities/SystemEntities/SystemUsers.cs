@@ -37,10 +37,6 @@ public partial class SystemUsers
 
     public virtual SystemOrganization? Organization { get; set; }
 
-    public virtual ICollection<Region> RegionCreador { get; set; } = new List<Region>();
-
-    public virtual ICollection<Region> RegionModificador { get; set; } = new List<Region>();
-
     public virtual ICollection<SystemAuditoria> SystemAuditoriaCreador { get; set; } = new List<SystemAuditoria>();
 
     public virtual ICollection<SystemAuditoriaDetalle> SystemAuditoriaDetalleCreador { get; set; } = new List<SystemAuditoriaDetalle>();

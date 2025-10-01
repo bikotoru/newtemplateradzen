@@ -1,4 +1,9 @@
 @using Radzen.Blazor
+@using Frontend.Components.CustomRadzen.QueryBuilder
+@using Frontend.Components.CustomRadzen.QueryBuilder.Models
+@using Frontend.Components.CustomRadzen.QueryBuilder.Extensions
+@using LogicalFilterOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator
+@using FilterCaseSensitivity = Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterCaseSensitivity
 @implements IDisposable
 
 @if (!string.IsNullOrEmpty(SelectedEntityName) && EntityFields.Any())
@@ -97,9 +102,9 @@
                             </RadzenColumn>
                         </RadzenRow>
 
-                        <!-- RadzenDataFilter -->
+                        <!-- CustomDataFilter -->
                         <div @onclick="@RefreshFilterState" @onclick:stopPropagation="false">
-                        <RadzenDataFilter @ref="dataFilterRef"
+                        <CustomDataFilter @ref="dataFilterRef"
                                         TItem="object"
                                         LogicalFilterOperator="@LogicalOperator"
                                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -127,12 +132,12 @@
                             <Properties>
                                 @foreach (var field in EntityFields.Where(f => f.IsSearchable && !IsSystemField(f.PropertyName)))
                                 {
-                                    <RadzenDataFilterProperty Property="@field.PropertyName"
-                                                            Title="@field.DisplayName"
+                                    <CustomDataFilterProperty Property="@field.PropertyName"
+                                                            Title="@GetImprovedDisplayName(field)"
                                                             Type="@field.PropertyType" />
                                 }
                             </Properties>
-                        </RadzenDataFilter>
+                        </CustomDataFilter>
                         </div>
 
                         <!-- Botones de Acción -->
@@ -165,24 +170,24 @@
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public bool IsReadOnly { get; set; } = false;
 
-    private RadzenDataFilter<object>? dataFilterRef;
+    private CustomDataFilter<object>? dataFilterRef;
     private bool hasFilters = false;
     private Timer? filterCheckTimer;
 
     /// <summary>
     /// Expone la referencia del DataFilter para uso del componente padre
     /// </summary>
-    public RadzenDataFilter<object>? DataFilter => dataFilterRef;
+    public CustomDataFilter<object>? DataFilter => dataFilterRef;
 
     /// <summary>
     /// Indica si hay filtros configurados
     /// </summary>
     private bool HasFilters => hasFilters;
 
-    [Parameter] public LogicalFilterOperator LogicalOperator { get; set; } = LogicalFilterOperator.And;
+    [Parameter] public Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator LogicalOperator { get; set; } = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And;
     [Parameter] public int TakeLimit { get; set; } = 50;
 
-    [Parameter] public EventCallback<LogicalFilterOperator> LogicalOperatorChanged { get; set; }
+    [Parameter] public EventCallback<Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator> LogicalOperatorChanged { get; set; }
     [Parameter] public EventCallback<int> TakeLimitChanged { get; set; }
 
     [Parameter] public EventCallback OnExecuteQuery { get; set; }
@@ -292,8 +297,8 @@
     {
         return LogicalOperator switch
         {
-            LogicalFilterOperator.And => "Y (AND)",
-            LogicalFilterOperator.Or => "O (OR)",
+            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And => "Y (AND)",
+            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.Or => "O (OR)",
             _ => "Desconocido"
         };
     }
@@ -321,6 +326,85 @@
             "IsNotEmpty" => "No está vacío",
             _ => operatorValue
         };
+    }
+
+    /// <summary>
+    /// Obtiene el nombre mejorado para mostrar en el filtro
+    /// Convierte "RegionId" a "Region" para campos de relación de forma inteligente
+    /// </summary>
+    private string GetImprovedDisplayName(dynamic field)
+    {
+        var propertyName = field.PropertyName as string;
+        var displayName = field.DisplayName as string;
+        var propertyType = field.PropertyType as Type;
+
+        // Si el campo es una relación Guid (como RegionId -> Region)
+        if (IsGuidForeignKey(propertyName, propertyType))
+        {
+            var navigationPropertyName = GetNavigationPropertyName(propertyName);
+
+            // Verificar si existe realmente la propiedad de navegación en los EntityFields
+            if (HasNavigationProperty(navigationPropertyName))
+            {
+                return navigationPropertyName;
+            }
+        }
+
+        // Si no es una relación, devolver el DisplayName original
+        return displayName;
+    }
+
+    /// <summary>
+    /// Determina si un campo es un Guid que representa una clave foránea
+    /// </summary>
+    private bool IsGuidForeignKey(string propertyName, Type propertyType)
+    {
+        if (string.IsNullOrEmpty(propertyName) || propertyType == null)
+            return false;
+
+        // Debe terminar en "Id"
+        if (!propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Debe ser Guid o Guid?
+        var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        return underlyingType == typeof(Guid);
+    }
+
+    /// <summary>
+    /// Obtiene el nombre de la propiedad de navegación a partir del nombre del campo Id
+    /// Ejemplo: "RegionId" -> "Region"
+    /// </summary>
+    private string GetNavigationPropertyName(string propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName) || !propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+            return propertyName;
+
+        return propertyName.Substring(0, propertyName.Length - 2);
+    }
+
+    /// <summary>
+    /// Verifica si existe una propiedad de navegación correspondiente en los EntityFields
+    /// </summary>
+    private bool HasNavigationProperty(string navigationPropertyName)
+    {
+        if (string.IsNullOrEmpty(navigationPropertyName) || EntityFields == null)
+            return false;
+
+        // Buscar en EntityFields si existe una propiedad con ese nombre
+        // que sea de un tipo de clase (no primitivo)
+        var navigationField = EntityFields.FirstOrDefault(f =>
+            f.PropertyName.Equals(navigationPropertyName, StringComparison.OrdinalIgnoreCase));
+
+        if (navigationField == null)
+            return false;
+
+        // La propiedad de navegación debe ser una clase, no un tipo primitivo
+        var underlyingType = Nullable.GetUnderlyingType(navigationField.PropertyType) ?? navigationField.PropertyType;
+
+        return underlyingType.IsClass &&
+               underlyingType != typeof(string) &&
+               !underlyingType.IsPrimitive;
     }
 
     public void Dispose()

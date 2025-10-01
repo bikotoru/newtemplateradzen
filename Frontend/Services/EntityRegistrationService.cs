@@ -153,9 +153,20 @@ public class EntityRegistrationService
 
         try
         {
-            // Usar scope para obtener servicios scoped de forma segura
+            // Intentar obtener el servicio del DI container (tanto genéricos como específicos)
             using var scope = _serviceProvider.CreateScope();
-            return scope.ServiceProvider.GetService(config.ServiceType);
+            var service = scope.ServiceProvider.GetService(config.ServiceType);
+
+            if (service != null)
+            {
+                _logger.LogDebug("Retrieved service for entity: {EntityKey} of type: {ServiceType}", entityKey, config.ServiceType.Name);
+                return service;
+            }
+            else
+            {
+                _logger.LogWarning("Service not found for entity: {EntityKey} of type: {ServiceType}", entityKey, config.ServiceType.Name);
+                return null;
+            }
         }
         catch (Exception ex)
         {
@@ -245,11 +256,63 @@ public class EntityRegistrationService
     {
         try
         {
-            throw new Exception("Not implemented");
-            //// Buscar en Shared.Models.Entities
-            //var assembly = typeof(Shared.Models.Entities.Region).Assembly;
-            //var entityType = assembly.GetType($"Shared.Models.Entities.{entityName}");
-            //return entityType;
+            // Buscar el assembly de Shared.Models de manera genérica
+            Assembly? assembly = null;
+            
+            // Intentar obtener el assembly de Shared.Models de diferentes formas
+            try
+            {
+                // Opción 1: Buscar por nombre de assembly
+                assembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == "Shared.Models");
+                
+                // Opción 2: Si no encontramos por nombre, buscar cualquier assembly que contenga Shared.Models.Entities
+                if (assembly == null)
+                {
+                    assembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.GetTypes().Any(t => t.Namespace?.StartsWith("Shared.Models.Entities") == true));
+                }
+                
+                // Opción 3: Como último recurso, cargar el assembly por referencia
+                if (assembly == null)
+                {
+                    assembly = Assembly.Load("Shared.Models");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Error loading Shared.Models assembly");
+                return null;
+            }
+
+            if (assembly == null)
+            {
+                _logger.LogWarning("Could not find Shared.Models assembly");
+                return null;
+            }
+
+            // Intentar diferentes variaciones del nombre
+            var entityNameTitle = char.ToUpper(entityName[0]) + entityName.Substring(1).ToLower();
+            var possibleTypeNames = new[]
+            {
+                $"Shared.Models.Entities.{entityName}",
+                $"Shared.Models.Entities.{entityNameTitle}",
+                $"Shared.Models.Entities.SystemEntities.{entityName}",
+                $"Shared.Models.Entities.SystemEntities.{entityNameTitle}"
+            };
+
+            foreach (var typeName in possibleTypeNames)
+            {
+                var entityType = assembly.GetType(typeName);
+                if (entityType != null)
+                {
+                    _logger.LogDebug("Found entity type: {TypeName} for entity: {EntityName}", typeName, entityName);
+                    return entityType;
+                }
+            }
+
+            _logger.LogDebug("Entity type not found for: {EntityName}", entityName);
+            return null;
         }
         catch (Exception ex)
         {

@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
+using CompositeFilterDescriptor = Radzen.CompositeFilterDescriptor;
+using LogicalFilterOperator = Radzen.LogicalFilterOperator;
+using FilterOperator = Radzen.FilterOperator;
 using System.Text.Json;
 using Frontend.Services;
 using Frontend.Pages.AdvancedQuery.Components;
@@ -40,7 +43,7 @@ public partial class Page : ComponentBase
     private FilterConfiguration? filterConfigurationRef;
 
     // Filter configuration
-    private LogicalFilterOperator logicalOperator = LogicalFilterOperator.And;
+    private Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator logicalOperator = Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And;
     private int takeLimit = 50;
 
     // Variables para selección de campos
@@ -189,14 +192,14 @@ public partial class Page : ComponentBase
                 foreach (var filter in readOnlyFilters)
                 {
                     if (Enum.TryParse<FilterOperator>(filter.Operator, out var filterOperator) &&
-                        Enum.TryParse<LogicalFilterOperator>(filter.LogicalOperator, out var logicalOperator))
+                        Enum.TryParse<LogicalFilterOperator>(filter.LogicalOperator, out var parsedLogicalOperator))
                     {
                         compositeFilters.Add(new CompositeFilterDescriptor
                         {
                             Property = filter.PropertyName,
                             FilterOperator = filterOperator,
                             FilterValue = filter.Value,
-                            LogicalFilterOperator = logicalOperator
+                            LogicalFilterOperator = parsedLogicalOperator
                         });
                     }
                 }
@@ -204,16 +207,48 @@ public partial class Page : ComponentBase
             }
             else
             {
-                filters = filterConfigurationRef?.DataFilter?.Filters?.ToArray() ?? Array.Empty<CompositeFilterDescriptor>();
+                var customFilters = filterConfigurationRef?.DataFilter?.Filters ??
+                    Enumerable.Empty<Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor>();
+                filters = customFilters.Select(f => new CompositeFilterDescriptor
+                {
+                    Property = f.Property,
+                    FilterProperty = f.FilterProperty,
+                    FilterValue = f.FilterValue,
+                    FilterOperator = (FilterOperator?)f.FilterOperator,
+                    LogicalFilterOperator = (LogicalFilterOperator)f.LogicalFilterOperator,
+                    Type = f.Type,
+                    Filters = f.Filters?.Select(subF => new CompositeFilterDescriptor
+                    {
+                        Property = subF.Property,
+                        FilterProperty = subF.FilterProperty,
+                        FilterValue = subF.FilterValue,
+                        FilterOperator = (FilterOperator?)subF.FilterOperator,
+                        LogicalFilterOperator = (LogicalFilterOperator)subF.LogicalFilterOperator,
+                        Type = subF.Type
+                    })
+                }).ToArray();
+            }
+
+            // 🆕 Auto-generar includes basándose en filtros anidados
+            var autoIncludes = new List<string>();
+            if (!IsReadOnlyMode && filterConfigurationRef?.DataFilter?.Filters != null)
+            {
+                autoIncludes = Frontend.Components.CustomRadzen.QueryBuilder.Extensions.FilterToQueryExtensions
+                    .ExtractRequiredIncludes(filterConfigurationRef.DataFilter.Filters);
+
+                // Log para debugging
+                Frontend.Components.CustomRadzen.QueryBuilder.Extensions.FilterToQueryExtensions
+                    .LogGeneratedIncludes(autoIncludes, selectedEntityName);
             }
 
             var request = new AdvancedQueryRequest
             {
                 Filters = filters,
-                LogicalOperator = logicalOperator,
+                LogicalOperator = logicalOperator == Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And ? LogicalFilterOperator.And : LogicalFilterOperator.Or,
                 FilterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive,
                 Take = takeLimit,
-                Select = selectFields
+                Select = selectFields,
+                Include = autoIncludes.Any() ? autoIncludes.ToArray() : null // 🆕 Auto-includes
             };
 
             // Almacenar el request para uso en exportación
@@ -680,7 +715,9 @@ public partial class Page : ComponentBase
             }
             
             // Cargar configuración de operador lógico y límite
-            logicalOperator = (LogicalFilterOperator)currentSavedQuery.LogicalOperator;
+            logicalOperator = currentSavedQuery.LogicalOperator == (byte)LogicalFilterOperator.And ?
+                Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And :
+                Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.Or;
             takeLimit = currentSavedQuery.TakeLimit;
             Console.WriteLine($"⚙️ LogicalOperator: {logicalOperator}, TakeLimit: {takeLimit}");
             
@@ -880,16 +917,39 @@ public partial class Page : ComponentBase
             {
                 Console.WriteLine($"Processing filter: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
                 
-                var compositeFilter = ConvertToCompositeFilterDescriptor(serializableFilter);
-                if (compositeFilter != null)
+                var radzenCompositeFilter = ConvertToCompositeFilterDescriptor(serializableFilter);
+                if (radzenCompositeFilter != null)
                 {
+                    // Convertir de Radzen.CompositeFilterDescriptor a nuestro CustomCompositeFilterDescriptor
+                    var compositeFilter = new Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor
+                    {
+                        Property = radzenCompositeFilter.Property,
+                        FilterProperty = radzenCompositeFilter.FilterProperty,
+                        FilterValue = radzenCompositeFilter.FilterValue,
+                        FilterOperator = (Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterOperator?)radzenCompositeFilter.FilterOperator,
+                        LogicalFilterOperator = radzenCompositeFilter.LogicalFilterOperator == LogicalFilterOperator.And ?
+                            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And :
+                            Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.Or,
+                        Type = radzenCompositeFilter.Type,
+                        Filters = radzenCompositeFilter.Filters?.Select(subF => new Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor
+                        {
+                            Property = subF.Property,
+                            FilterProperty = subF.FilterProperty,
+                            FilterValue = subF.FilterValue,
+                            FilterOperator = (Frontend.Components.CustomRadzen.QueryBuilder.Models.FilterOperator?)subF.FilterOperator,
+                            LogicalFilterOperator = subF.LogicalFilterOperator == LogicalFilterOperator.And ?
+                                Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.And :
+                                Frontend.Components.CustomRadzen.QueryBuilder.Models.LogicalFilterOperator.Or,
+                            Type = subF.Type
+                        })
+                    };
                     Console.WriteLine($"Filter converted successfully, adding to DataFilter");
                     
                     // Agregar filtro al DataFilter usando diferentes enfoques
                     try 
                     {
                         // Método 1: Agregar directamente
-                        ((IList<CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
+                        ((IList<Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor>)filterConfigurationRef.DataFilter.Filters).Add(compositeFilter);
                         Console.WriteLine($"✓ Added filter using direct method: {serializableFilter.PropertyName} {serializableFilter.Operator} {serializableFilter.Value}");
                     }
                     catch (Exception addEx)
@@ -899,7 +959,7 @@ public partial class Page : ComponentBase
                         // Método 2: Crear nueva lista
                         try
                         {
-                            var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<CompositeFilterDescriptor>();
+                            var currentFilters = filterConfigurationRef.DataFilter.Filters?.ToList() ?? new List<Frontend.Components.CustomRadzen.QueryBuilder.Models.CompositeFilterDescriptor>();
                             currentFilters.Add(compositeFilter);
                             filterConfigurationRef.DataFilter.Filters = currentFilters;
                             Console.WriteLine($"✓ Added filter using new list method: {serializableFilter.PropertyName}");
