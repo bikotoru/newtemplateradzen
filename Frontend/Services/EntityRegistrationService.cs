@@ -49,7 +49,12 @@ public class EntityRegistrationService
     {
         try
         {
-           
+            // ===== ENTIDADES DE DOMINIO =====
+            // Aquí se registran automáticamente las entidades de dominio creadas con entity-generator.py
+
+
+
+            // ===== ENTIDADES DEL SISTEMA =====
 
             // SystemUsers (múltiples alias)
             var systemUsersConfig = new EntityConfiguration

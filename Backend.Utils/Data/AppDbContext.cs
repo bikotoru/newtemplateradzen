@@ -60,7 +60,7 @@ public partial class AppDbContext : DbContext
     {
         modelBuilder.Entity<SystemAuditoria>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_a__3214EC073D80A7F7");
+            entity.HasKey(e => e.Id).HasName("PK__system_a__3214EC07AA9F2508");
 
             entity.ToTable("system_auditoria");
 
@@ -97,7 +97,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemAuditoriaDetalle>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_a__3214EC078F2AA1E8");
+            entity.HasKey(e => e.Id).HasName("PK__system_a__3214EC07511B13FF");
 
             entity.ToTable("system_auditoria_detalle");
 
@@ -134,13 +134,13 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemCamposAuditables>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3213E83F85BACA2B");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3213E83F93355E32");
 
             entity.ToTable("system_campos_auditables");
 
             entity.HasIndex(e => new { e.Tabla, e.Activo }, "IX_system_campos_auditables_tabla_activo").HasFilter("([activo]=(1))");
 
-            entity.HasIndex(e => new { e.OrganizacionId, e.Tabla, e.Campo }, "UQ__system_c__18C6AACB92F5F062").IsUnique();
+            entity.HasIndex(e => new { e.OrganizacionId, e.Tabla, e.Campo }, "UQ__system_c__18C6AACB9D5C0C7D").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
@@ -166,7 +166,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemConfig>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC07E3CD3930");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC07A2DBC507");
 
             entity.ToTable("system_config");
 
@@ -190,7 +190,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemConfigValues>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC072C31AD9D");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC075AA15431");
 
             entity.ToTable("system_config_values");
 
@@ -214,7 +214,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemCustomFieldAuditLog>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC07BB842A91");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC0766F4D59F");
 
             entity.ToTable("system_custom_field_audit_log");
 
@@ -245,7 +245,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemCustomFieldDefinitions>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC07A3F6A09E");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC07CCF7CA04");
 
             entity.ToTable("system_custom_field_definitions");
 
@@ -291,7 +291,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemCustomFieldTemplates>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC072D9ACCEC");
+            entity.HasKey(e => e.Id).HasName("PK__system_c__3214EC074835CCEE");
 
             entity.ToTable("system_custom_field_templates");
 
@@ -323,11 +323,9 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemFormEntities>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_f__3214EC07FEBA3E89");
+            entity.HasKey(e => e.Id).HasName("PK__system_f__3214EC0752CF3046");
 
             entity.ToTable("system_form_entities");
-
-            entity.HasIndex(e => e.Active, "IX_system_form_entities_Active");
 
             entity.HasIndex(e => e.Category, "IX_system_form_entities_Category");
 
@@ -350,6 +348,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.IconName).HasMaxLength(50);
+            entity.Property(e => e.Module).HasMaxLength(255);
             entity.Property(e => e.SortOrder).HasDefaultValue(100);
             entity.Property(e => e.TableName).HasMaxLength(100);
 
@@ -368,15 +367,28 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemFormLayouts>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_f__3214EC075CFFCC67");
+            entity.HasKey(e => e.Id).HasName("PK__system_f__3214EC07DD1C0A62");
 
             entity.ToTable("system_form_layouts");
 
-            entity.HasIndex(e => e.EntityName, "IX_FormLayouts_Entity");
+            entity.HasIndex(e => e.Active, "IX_system_form_layouts_Active");
 
-            entity.HasIndex(e => e.OrganizationId, "IX_FormLayouts_Org");
+            entity.HasIndex(e => e.CreadorId, "IX_system_form_layouts_CreadorId");
+
+            entity.HasIndex(e => new { e.EntityName, e.IsDefault }, "IX_system_form_layouts_Default").HasFilter("([IsDefault]=(1))");
+
+            entity.HasIndex(e => e.EntityName, "IX_system_form_layouts_EntityName");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_form_layouts_FechaCreacion");
+
+            entity.HasIndex(e => e.OrganizationId, "IX_system_form_layouts_OrganizationId");
+
+            entity.HasIndex(e => new { e.EntityName, e.OrganizationId }, "UX_system_form_layouts_DefaultUnique")
+                .IsUnique()
+                .HasFilter("([IsDefault]=(1) AND [IsActive]=(1))");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.EntityName).HasMaxLength(100);
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
@@ -384,11 +396,23 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FormName).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Version).HasDefaultValue(1);
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemFormLayoutsCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_form_layouts_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemFormLayoutsModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_form_layouts_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemFormLayouts)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_form_layouts_OrganizationId");
         });
 
         modelBuilder.Entity<SystemOrganization>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_o__3214EC0751ED52ED");
+            entity.HasKey(e => e.Id).HasName("PK__system_o__3214EC07BD4D1A59");
 
             entity.ToTable("system_organization");
 
@@ -410,7 +434,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemPermissions>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_p__3214EC07B035D284");
+            entity.HasKey(e => e.Id).HasName("PK__system_p__3214EC075ED8F9AC");
 
             entity.ToTable("system_permissions");
 
@@ -453,7 +477,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemRoles>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC0796B36133");
+            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC07072D8E90");
 
             entity.ToTable("system_roles");
 
@@ -492,7 +516,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemRolesPermissions>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC07C99FBBD8");
+            entity.HasKey(e => e.Id).HasName("PK__system_r__3214EC074D3E0D75");
 
             entity.ToTable("system_roles_permissions");
 
@@ -536,9 +560,19 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemSavedQueries>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC0708E124FF");
+            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC07C0192EE3");
 
             entity.ToTable("system_saved_queries");
+
+            entity.HasIndex(e => new { e.CreadorId, e.Active, e.OrganizationId }, "IX_system_saved_queries_CreadorId_Active");
+
+            entity.HasIndex(e => new { e.EntityName, e.OrganizationId, e.Active }, "IX_system_saved_queries_EntityName_Org_Active");
+
+            entity.HasIndex(e => e.FechaCreacion, "IX_system_saved_queries_FechaCreacion").IsDescending();
+
+            entity.HasIndex(e => new { e.IsPublic, e.Active, e.OrganizationId, e.EntityName }, "IX_system_saved_queries_Public_Active").HasFilter("([IsPublic]=(1))");
+
+            entity.HasIndex(e => new { e.IsTemplate, e.Active, e.EntityName }, "IX_system_saved_queries_Template_Active").HasFilter("([IsTemplate]=(1))");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Active).HasDefaultValue(true);
@@ -548,13 +582,37 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.TakeLimit).HasDefaultValue(50);
+
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemSavedQueriesCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_saved_queries_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemSavedQueriesModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_saved_queries_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemSavedQueries)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_saved_queries_OrganizationId");
         });
 
         modelBuilder.Entity<SystemSavedQueryShares>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC0709A50420");
+            entity.HasKey(e => e.Id).HasName("PK__system_s__3214EC07C653605E");
 
             entity.ToTable("system_saved_query_shares");
+
+            entity.HasIndex(e => new { e.CreadorId, e.Active }, "IX_system_saved_query_shares_CreadorId");
+
+            entity.HasIndex(e => new { e.SavedQueryId, e.Active }, "IX_system_saved_query_shares_SavedQueryId_Active");
+
+            entity.HasIndex(e => new { e.SharedWithRoleId, e.Active }, "IX_system_saved_query_shares_SharedWithRoleId").HasFilter("([SharedWithRoleId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.SharedWithUserId, e.Active }, "IX_system_saved_query_shares_SharedWithUserId").HasFilter("([SharedWithUserId] IS NOT NULL)");
+
+            entity.HasIndex(e => new { e.SavedQueryId, e.SharedWithUserId, e.SharedWithRoleId, e.SharedWithOrganizationId }, "UX_system_saved_query_shares_Unique")
+                .IsUnique()
+                .HasFilter("([Active]=(1))");
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Active).HasDefaultValue(true);
@@ -563,15 +621,38 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("(getutcdate())");
 
+            entity.HasOne(d => d.Creador).WithMany(p => p.SystemSavedQuerySharesCreador)
+                .HasForeignKey(d => d.CreadorId)
+                .HasConstraintName("FK_system_saved_query_shares_CreadorId");
+
+            entity.HasOne(d => d.Modificador).WithMany(p => p.SystemSavedQuerySharesModificador)
+                .HasForeignKey(d => d.ModificadorId)
+                .HasConstraintName("FK_system_saved_query_shares_ModificadorId");
+
+            entity.HasOne(d => d.Organization).WithMany(p => p.SystemSavedQuerySharesOrganization)
+                .HasForeignKey(d => d.OrganizationId)
+                .HasConstraintName("FK_system_saved_query_shares_OrganizationId");
+
             entity.HasOne(d => d.SavedQuery).WithMany(p => p.SystemSavedQueryShares)
                 .HasForeignKey(d => d.SavedQueryId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__system_sa__Saved__15DA3E5D");
+                .HasConstraintName("FK_system_saved_query_shares_SavedQueryId");
+
+            entity.HasOne(d => d.SharedWithOrganization).WithMany(p => p.SystemSavedQuerySharesSharedWithOrganization)
+                .HasForeignKey(d => d.SharedWithOrganizationId)
+                .HasConstraintName("FK_system_saved_query_shares_SharedWithOrganizationId");
+
+            entity.HasOne(d => d.SharedWithRole).WithMany(p => p.SystemSavedQueryShares)
+                .HasForeignKey(d => d.SharedWithRoleId)
+                .HasConstraintName("FK_system_saved_query_shares_SharedWithRoleId");
+
+            entity.HasOne(d => d.SharedWithUser).WithMany(p => p.SystemSavedQuerySharesSharedWithUser)
+                .HasForeignKey(d => d.SharedWithUserId)
+                .HasConstraintName("FK_system_saved_query_shares_SharedWithUserId");
         });
 
         modelBuilder.Entity<SystemTablasAuditables>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_t__3213E83FF4FD7864");
+            entity.HasKey(e => e.Id).HasName("PK__system_t__3213E83F16A44E9A");
 
             entity.ToTable("system_tablas_auditables");
 
@@ -579,7 +660,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.Tabla, e.Activo }, "IX_system_tablas_auditables_tabla_activo");
 
-            entity.HasIndex(e => new { e.OrganizacionId, e.Tabla }, "UQ__system_t__62D073F09D231801").IsUnique();
+            entity.HasIndex(e => new { e.OrganizacionId, e.Tabla }, "UQ__system_t__62D073F018146D8E").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
@@ -605,7 +686,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemUsers>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC073D04B979");
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC072A8FB61B");
 
             entity.ToTable("system_users");
 
@@ -619,7 +700,7 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.OrganizationId, "IX_system_users_OrganizationId");
 
-            entity.HasIndex(e => e.Email, "UQ__system_u__A9D10534ED600C9D").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__system_u__A9D10534D519BCFF").IsUnique();
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.Active).HasDefaultValue(true);
@@ -644,7 +725,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemUsersPermissions>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC0756931A72");
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07DF863EDB");
 
             entity.ToTable("system_users_permissions");
 
@@ -688,7 +769,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemUsersRoles>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC078B524898");
+            entity.HasKey(e => e.Id).HasName("PK__system_u__3214EC07117DA81D");
 
             entity.ToTable("system_users_roles");
 
@@ -743,7 +824,7 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<ZToken>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__z_token__3213E83F8EC393A0");
+            entity.HasKey(e => e.Id).HasName("PK__z_token__3213E83F7B10A326");
 
             entity.ToTable("z_token");
 
