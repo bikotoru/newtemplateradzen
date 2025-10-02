@@ -16,6 +16,7 @@ public partial class CrmTabs : ComponentBase, IDisposable
     [Parameter] public bool DisableUrlSync { get; set; } = false;
 
     private readonly List<CrmTabModel> _tabs = new();
+    private readonly HashSet<string> _visitedTabs = new(); // Tabs que ya fueron visitados
     private string _activeTabId = "";
     private bool _initialized = false;
     private bool _firstRender = true;
@@ -108,11 +109,14 @@ public partial class CrmTabs : ComponentBase, IDisposable
             return;
 
         _isUpdating = true;
-        
+
         try
         {
             // Solo cambiar si es diferente
             _activeTabId = tabId;
+
+            // Marcar el tab como visitado (lazy loading con caché)
+            _visitedTabs.Add(tabId);
 
             // Actualizar estado de tabs - Optimizado para solo cambiar el estado
             foreach (var tab in _tabs)

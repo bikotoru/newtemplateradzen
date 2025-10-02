@@ -36,10 +36,13 @@
 
 <!-- Main Content Container -->
 <div class="crm-main-content">
-    <!-- Tab Contents - Solo renderizar tab activo -->
-    @foreach (var tab in _tabs.Where(t => t.IsActive))
+    <!-- Tab Contents - Lazy loading con caché: Solo renderizar tabs que ya fueron visitados -->
+    @foreach (var tab in _tabs.Where(t => _visitedTabs.Contains(t.Id)))
     {
-        <div class="crm-tab-content active" id="@tab.Id" @key="@tab.Id">
+        <div class="crm-tab-content @(tab.IsActive ? "active" : "")"
+             id="@tab.Id"
+             @key="@tab.Id"
+             style="@(tab.IsActive ? "" : "display: none;")">
             @tab.Content
         </div>
     }
