@@ -184,8 +184,7 @@ class FastFieldGenerator:
         
         return f'''<ValidatedInput FieldName="{field_name}" Value="@entity.{field_name}">
                     <RadzenFormField Text="{display_name}">
-                        <RadzenTextBox @oninput="@(v => entity.{field_name} = v.Value?.ToString())" 
-                                       Value="@entity.{field_name}"
+                        <RadzenTextBox @bind-Value="@entity.{field_name}"
                                        Placeholder="{placeholder}" />
                     </RadzenFormField>
                 </ValidatedInput>'''
@@ -197,10 +196,9 @@ class FastFieldGenerator:
         
         return f'''<ValidatedInput FieldName="{field_name}" Value="@entity.{field_name}">
                     <RadzenFormField Text="{display_name}">
-                        <RadzenTextArea @oninput="@(v => entity.{field_name} = v.Value?.ToString())" 
-                                        Value="@entity.{field_name}"
-                                        Placeholder="{placeholder}" 
-                                        Rows="3" />
+                        <RadzenTextArea @bind-Value="@entity.{field_name}"
+                                       Placeholder="{placeholder}"
+                                       Rows="3" />
                     </RadzenFormField>
                 </ValidatedInput>'''
     

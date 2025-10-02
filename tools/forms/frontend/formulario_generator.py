@@ -70,8 +70,7 @@ class FormularioFieldGenerator:
         """Generar TextBox para formulario con width: 100%"""
         return f'''<ValidatedInput FieldName="{field_name}" Value="@entity.{field_name}">
                                                 <RadzenFormField Text="{field_display}" Style="width: 100%">
-                                                    <RadzenTextBox @oninput="@(v => entity.{field_name} = v.Value?.ToString())" 
-                                                                   Value="@entity.{field_name}"
+                                                    <RadzenTextBox @bind-Value="@entity.{field_name}" 
                                                                    Placeholder="{field_placeholder}" />
                                                 </RadzenFormField>
                                             </ValidatedInput>'''
@@ -80,8 +79,7 @@ class FormularioFieldGenerator:
         """Generar TextArea para formulario con width: 100%"""
         return f'''<ValidatedInput FieldName="{field_name}" Value="@entity.{field_name}">
                                                 <RadzenFormField Text="{field_display} (Opcional)" Style="width: 100%">
-                                                    <RadzenTextArea @oninput="@(v => entity.{field_name} = v.Value?.ToString())" 
-                                                                    Value="@entity.{field_name}"
+                                                    <RadzenTextArea @bind-Value="@entity.{field_name}" 
                                                                     Placeholder="{field_placeholder}" 
                                                                     Rows="3" />
                                                 </RadzenFormField>
